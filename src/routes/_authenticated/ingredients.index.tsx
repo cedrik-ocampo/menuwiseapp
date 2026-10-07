@@ -145,6 +145,7 @@ function Inventory() {
               );
             })}
           </div>
+          )}
           <p className="text-center text-xs text-muted-foreground">All {rows.length} ingredients shown · Updated {shortDate(todayISO())}</p>
         </div>
 
