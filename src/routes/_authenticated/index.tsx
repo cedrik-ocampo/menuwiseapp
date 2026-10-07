@@ -179,7 +179,7 @@ function Dashboard() {
       <div className="sticky bottom-20 z-40 md:bottom-4">
         <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-3 shadow-lg">
           <Link to="/log-waste" className={btnPrimary}><Trash2 className="h-4 w-4" /> Log Waste</Link>
-          <Link to="/log-production" className={btnSecondary}><PackagePlus className="h-4 w-4" /> Log Production</Link>
+          <Link to="/log-production" search={{ item: undefined }} className={btnSecondary}><PackagePlus className="h-4 w-4" /> Log Production</Link>
         </div>
       </div>
     </div>

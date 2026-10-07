@@ -45,7 +45,10 @@ function MenuItemView() {
 
   function addSale() {
     const q = parseFloat(sold);
-    if (!Number.isFinite(q) || q < 0) return toast.error("Enter units sold (0 or more)");
+    if (!Number.isFinite(q) || q < 0) {
+      toast.error("Enter units sold (0 or more)");
+      return;
+    }
     put("sales", { id: uid("S-"), menuItemId: m!.id, date: soldDate, quantity: q });
     setSold("");
     toast.success("Sales recorded");
