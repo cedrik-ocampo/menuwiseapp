@@ -177,7 +177,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
       </div>
 
       <Field label="Unit cost" error={errors.unitCost} hint={stage === "Ingredient" ? "Purchase unit cost." : menu?.type === "Outsourced" ? "Purchase cost per unit." : "Standard recipe cost or batch cost ÷ yield."}>
-        <input inputMode="decimal" className={inputCls} value={unitCost} onChange={(e) => setUnitCost(e.target.value)} placeholder="P0.00" />
+        <input inputMode="decimal" className={inputCls} value={unitCost} onChange={(e) => setUnitCost(e.target.value)} placeholder="₱0.00" />
       </Field>
 
       <div className="rounded-xl bg-info-soft p-4">
