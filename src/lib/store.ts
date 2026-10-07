@@ -95,7 +95,7 @@ export function resetStore() {
 }
 
 export function put<K extends CollectionName>(collection: K, item: Collections[K] & { id: string }) {
-  state.tables[collection][item.id] = { data: item, updated_at: new Date().toISOString() } as Rec<Collections[K]>;
+  (state.tables[collection] as Record<string, Rec>)[item.id] = { data: item, updated_at: new Date().toISOString() };
   const key = `${collection}|${item.id}`;
   if (!state.pending.includes(key)) state.pending.push(key);
   emit();

@@ -20,6 +20,7 @@ import { Route as AuthenticatedIngredientsIdRouteImport } from './routes/_authen
 import { Route as AuthenticatedIngredientsNewRouteImport } from './routes/_authenticated/ingredients.new'
 import { Route as AuthenticatedMenuIndexRouteImport } from './routes/_authenticated/menu.index'
 import { Route as AuthenticatedMenuIdRouteImport } from './routes/_authenticated/menu.$id'
+import { Route as AuthenticatedMenuNewRouteImport } from './routes/_authenticated/menu.new'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -79,6 +80,11 @@ const AuthenticatedMenuIdRoute = AuthenticatedMenuIdRouteImport.update({
   path: '/menu/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMenuNewRoute = AuthenticatedMenuNewRouteImport.update({
+  id: '/menu/new',
+  path: '/menu/new',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/menu/new': typeof AuthenticatedMenuNewRoute
   '/ingredients/': typeof AuthenticatedIngredientsIndexRoute
   '/menu/': typeof AuthenticatedMenuIndexRoute
 }
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/menu/new': typeof AuthenticatedMenuNewRoute
   '/ingredients': typeof AuthenticatedIngredientsIndexRoute
   '/menu': typeof AuthenticatedMenuIndexRoute
 }
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/_authenticated/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/_authenticated/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/_authenticated/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/_authenticated/menu/new': typeof AuthenticatedMenuNewRoute
   '/_authenticated/ingredients/': typeof AuthenticatedIngredientsIndexRoute
   '/_authenticated/menu/': typeof AuthenticatedMenuIndexRoute
 }
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/ingredients/$id'
     | '/ingredients/new'
     | '/menu/$id'
+    | '/menu/new'
     | '/ingredients/'
     | '/menu/'
   fileRoutesByTo: FileRoutesByTo
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/ingredients/$id'
     | '/ingredients/new'
     | '/menu/$id'
+    | '/menu/new'
     | '/ingredients'
     | '/menu'
   id:
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ingredients/$id'
     | '/_authenticated/ingredients/new'
     | '/_authenticated/menu/$id'
+    | '/_authenticated/menu/new'
     | '/_authenticated/ingredients/'
     | '/_authenticated/menu/'
   fileRoutesById: FileRoutesById
@@ -243,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMenuIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/menu/new': {
+      id: '/_authenticated/menu/new'
+      path: '/menu/new'
+      fullPath: '/menu/new'
+      preLoaderRoute: typeof AuthenticatedMenuNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -253,6 +272,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIngredientsIdRoute: typeof AuthenticatedIngredientsIdRoute
   AuthenticatedIngredientsNewRoute: typeof AuthenticatedIngredientsNewRoute
   AuthenticatedMenuIdRoute: typeof AuthenticatedMenuIdRoute
+  AuthenticatedMenuNewRoute: typeof AuthenticatedMenuNewRoute
   AuthenticatedIngredientsIndexRoute: typeof AuthenticatedIngredientsIndexRoute
   AuthenticatedMenuIndexRoute: typeof AuthenticatedMenuIndexRoute
 }
@@ -264,6 +284,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIngredientsIdRoute: AuthenticatedIngredientsIdRoute,
   AuthenticatedIngredientsNewRoute: AuthenticatedIngredientsNewRoute,
   AuthenticatedMenuIdRoute: AuthenticatedMenuIdRoute,
+  AuthenticatedMenuNewRoute: AuthenticatedMenuNewRoute,
   AuthenticatedIngredientsIndexRoute: AuthenticatedIngredientsIndexRoute,
   AuthenticatedMenuIndexRoute: AuthenticatedMenuIndexRoute,
 }
