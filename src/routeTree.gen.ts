@@ -9,50 +9,272 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedLogProductionRouteImport } from './routes/_authenticated/log-production'
+import { Route as AuthenticatedLogWasteRouteImport } from './routes/_authenticated/log-waste'
+import { Route as AuthenticatedIngredientsIndexRouteImport } from './routes/_authenticated/ingredients.index'
+import { Route as AuthenticatedIngredientsIdRouteImport } from './routes/_authenticated/ingredients.$id'
+import { Route as AuthenticatedIngredientsNewRouteImport } from './routes/_authenticated/ingredients.new'
+import { Route as AuthenticatedMenuIndexRouteImport } from './routes/_authenticated/menu.index'
+import { Route as AuthenticatedMenuIdRouteImport } from './routes/_authenticated/menu.$id'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLogProductionRoute =
+  AuthenticatedLogProductionRouteImport.update({
+    id: '/log-production',
+    path: '/log-production',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLogWasteRoute = AuthenticatedLogWasteRouteImport.update({
+  id: '/log-waste',
+  path: '/log-waste',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIngredientsIndexRoute =
+  AuthenticatedIngredientsIndexRouteImport.update({
+    id: '/ingredients/',
+    path: '/ingredients/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIngredientsIdRoute =
+  AuthenticatedIngredientsIdRouteImport.update({
+    id: '/ingredients/$id',
+    path: '/ingredients/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIngredientsNewRoute =
+  AuthenticatedIngredientsNewRouteImport.update({
+    id: '/ingredients/new',
+    path: '/ingredients/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMenuIndexRoute = AuthenticatedMenuIndexRouteImport.update({
+  id: '/menu/',
+  path: '/menu/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMenuIdRoute = AuthenticatedMenuIdRouteImport.update({
+  id: '/menu/$id',
+  path: '/menu/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/log-production': typeof AuthenticatedLogProductionRoute
+  '/log-waste': typeof AuthenticatedLogWasteRoute
+  '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
+  '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
+  '/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/ingredients/': typeof AuthenticatedIngredientsIndexRoute
+  '/menu/': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/log-production': typeof AuthenticatedLogProductionRoute
+  '/log-waste': typeof AuthenticatedLogWasteRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
+  '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
+  '/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/ingredients': typeof AuthenticatedIngredientsIndexRoute
+  '/menu': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/log-production': typeof AuthenticatedLogProductionRoute
+  '/_authenticated/log-waste': typeof AuthenticatedLogWasteRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
+  '/_authenticated/ingredients/new': typeof AuthenticatedIngredientsNewRoute
+  '/_authenticated/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/_authenticated/ingredients/': typeof AuthenticatedIngredientsIndexRoute
+  '/_authenticated/menu/': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/reset-password'
+    | '/log-production'
+    | '/log-waste'
+    | '/ingredients/$id'
+    | '/ingredients/new'
+    | '/menu/$id'
+    | '/ingredients/'
+    | '/menu/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/login'
+    | '/reset-password'
+    | '/log-production'
+    | '/log-waste'
+    | '/'
+    | '/ingredients/$id'
+    | '/ingredients/new'
+    | '/menu/$id'
+    | '/ingredients'
+    | '/menu'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/login'
+    | '/reset-password'
+    | '/_authenticated/log-production'
+    | '/_authenticated/log-waste'
+    | '/_authenticated/'
+    | '/_authenticated/ingredients/$id'
+    | '/_authenticated/ingredients/new'
+    | '/_authenticated/menu/$id'
+    | '/_authenticated/ingredients/'
+    | '/_authenticated/menu/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/log-production': {
+      id: '/_authenticated/log-production'
+      path: '/log-production'
+      fullPath: '/log-production'
+      preLoaderRoute: typeof AuthenticatedLogProductionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/log-waste': {
+      id: '/_authenticated/log-waste'
+      path: '/log-waste'
+      fullPath: '/log-waste'
+      preLoaderRoute: typeof AuthenticatedLogWasteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ingredients/': {
+      id: '/_authenticated/ingredients/'
+      path: '/ingredients'
+      fullPath: '/ingredients/'
+      preLoaderRoute: typeof AuthenticatedIngredientsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ingredients/$id': {
+      id: '/_authenticated/ingredients/$id'
+      path: '/ingredients/$id'
+      fullPath: '/ingredients/$id'
+      preLoaderRoute: typeof AuthenticatedIngredientsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ingredients/new': {
+      id: '/_authenticated/ingredients/new'
+      path: '/ingredients/new'
+      fullPath: '/ingredients/new'
+      preLoaderRoute: typeof AuthenticatedIngredientsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/menu/': {
+      id: '/_authenticated/menu/'
+      path: '/menu'
+      fullPath: '/menu/'
+      preLoaderRoute: typeof AuthenticatedMenuIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/menu/$id': {
+      id: '/_authenticated/menu/$id'
+      path: '/menu/$id'
+      fullPath: '/menu/$id'
+      preLoaderRoute: typeof AuthenticatedMenuIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedLogProductionRoute: typeof AuthenticatedLogProductionRoute
+  AuthenticatedLogWasteRoute: typeof AuthenticatedLogWasteRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedIngredientsIdRoute: typeof AuthenticatedIngredientsIdRoute
+  AuthenticatedIngredientsNewRoute: typeof AuthenticatedIngredientsNewRoute
+  AuthenticatedMenuIdRoute: typeof AuthenticatedMenuIdRoute
+  AuthenticatedIngredientsIndexRoute: typeof AuthenticatedIngredientsIndexRoute
+  AuthenticatedMenuIndexRoute: typeof AuthenticatedMenuIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedLogProductionRoute: AuthenticatedLogProductionRoute,
+  AuthenticatedLogWasteRoute: AuthenticatedLogWasteRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedIngredientsIdRoute: AuthenticatedIngredientsIdRoute,
+  AuthenticatedIngredientsNewRoute: AuthenticatedIngredientsNewRoute,
+  AuthenticatedMenuIdRoute: AuthenticatedMenuIdRoute,
+  AuthenticatedIngredientsIndexRoute: AuthenticatedIngredientsIndexRoute,
+  AuthenticatedMenuIndexRoute: AuthenticatedMenuIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
