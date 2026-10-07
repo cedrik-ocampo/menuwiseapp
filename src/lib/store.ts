@@ -6,7 +6,6 @@ import { useSyncExternalStore } from "react";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
 import { COLLECTIONS, type CollectionName, type Collections } from "./types";
-import { buildSeed } from "./seed";
 
 interface Rec<T = unknown> {
   data: T;
