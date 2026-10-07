@@ -17,6 +17,7 @@ export interface Ingredient {
   unitCost: number;
   supplier?: string;
   notes?: string;
+  image?: string; // data URL
 }
 
 /** A purchase lot of an ingredient. */
@@ -70,6 +71,7 @@ export interface MenuItem {
   defaultWasteType: WasteType;
   allowQuickAdd: boolean;
   recipe: RecipeLine[];
+  image?: string; // data URL
 }
 
 export interface Batch {

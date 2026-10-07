@@ -6,6 +6,7 @@ import { useDB, put } from "@/lib/store";
 import { costPerUnit, foodCostPct, margin, recipeCost } from "@/lib/calc";
 import { ALLOCATIONS, ITEM_TYPES, STAGES, WASTE_TYPES, type Allocation, type MenuItem, type RecipeLine } from "@/lib/types";
 import { formatPeso } from "@/lib/format";
+import { fileToDataUrl } from "@/lib/image";
 import { Field, Panel, Segmented, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 import { IngredientForm } from "@/components/mw/IngredientForm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -184,7 +185,16 @@ function AddMenuItem() {
                 </select>
               </Field>
               <div className="sm:col-span-2"><Field label="Description"><textarea className={`${inputCls} h-20 py-2`} maxLength={300} value={d.description} onChange={(e) => set("description", e.target.value)} /></Field></div>
-              <Field label="Image · optional" hint="Stored on this device only for now."><input type="file" accept="image/*" className={`${inputCls} py-2`} /></Field>
+              <Field label="Image · optional" hint="Shown on the menu inventory grid.">
+                <div className="flex items-center gap-3">
+                  {d.image && <img src={d.image} alt="" className="h-12 w-12 rounded-lg border border-border object-cover" />}
+                  <input type="file" accept="image/*" className={`${inputCls} py-2`} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try { set("image", await fileToDataUrl(file)); } catch { toast.error("Couldn't read that image"); }
+                  }} />
+                </div>
+              </Field>
               <Field label="Tags" hint="Separate with commas"><input className={inputCls} value={d.tagsText} onChange={(e) => set("tagsText", e.target.value)} placeholder="bestseller, breakfast" /></Field>
               <label className="flex items-center gap-3 text-sm font-semibold text-primary"><Switch checked={d.available} onCheckedChange={(v) => set("available", v)} /> Available for Sale</label>
             </Panel>
