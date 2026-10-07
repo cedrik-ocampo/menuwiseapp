@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useDB, put } from "@/lib/store";
 import type { Ingredient } from "@/lib/types";
 import { addDays, formatPeso, todayISO } from "@/lib/format";
+import { fileToDataUrl } from "@/lib/image";
 import { Field, Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "./ui";
 
 const UNITS = ["L", "ml", "kg", "g", "pc", "pack", "box"];
@@ -16,7 +17,7 @@ export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: In
   const nextId = `ING-${String(db.ingredients.length + 1).padStart(3, "0")}`;
   const [f, setF] = useState({
     id: nextId, name: "", category: "Dairy", storage: "Refrigerated", unit: "kg", supplier: "",
-    purchaseDate: todayISO(), expiryDate: addDays(todayISO(), 7), quantity: "", unitCost: "", notes: "",
+    purchaseDate: todayISO(), expiryDate: addDays(todayISO(), 7), quantity: "", unitCost: "", notes: "", image: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
@@ -47,7 +48,7 @@ export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: In
       setErrors(errs);
       return;
     }
-    const ing: Ingredient = { id: f.id.trim(), name: f.name.trim(), category: f.category, storage: f.storage, unit: f.unit, unitCost: cost, supplier: f.supplier.trim() || undefined, notes: f.notes.trim() || undefined };
+    const ing: Ingredient = { id: f.id.trim(), name: f.name.trim(), category: f.category, storage: f.storage, unit: f.unit, unitCost: cost, supplier: f.supplier.trim() || undefined, notes: f.notes.trim() || undefined, image: f.image || undefined };
     put("ingredients", ing);
     put("purchases", { id: `${ing.id}-P1`, ingredientId: ing.id, purchaseDate: f.purchaseDate, expiryDate: f.expiryDate, quantity: qty, remaining: qty, unitCost: cost });
     toast.success(`${ing.name} added`);
@@ -66,6 +67,16 @@ export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: In
           <Field label="Storage"><select className={inputCls} value={f.storage} onChange={set("storage")}>{STORAGE.map((c) => <option key={c}>{c}</option>)}</select></Field>
           <Field label="Unit" error={errors.unit}><select className={inputCls} value={f.unit} onChange={set("unit")}>{UNITS.map((c) => <option key={c}>{c}</option>)}</select></Field>
           <Field label="Supplier · optional"><input className={inputCls} value={f.supplier} onChange={set("supplier")} /></Field>
+          <Field label="Image · optional" hint="Shown on the inventory grid.">
+            <div className="flex items-center gap-3">
+              {f.image && <img src={f.image} alt="" className="h-12 w-12 rounded-lg border border-border object-cover" />}
+              <input type="file" accept="image/*" className={`${inputCls} py-2`} onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try { setF({ ...f, image: await fileToDataUrl(file) }); } catch { toast.error("Couldn't read that image"); }
+              }} />
+            </div>
+          </Field>
         </div>
       </Wrap>
       <Wrap className="space-y-4">
