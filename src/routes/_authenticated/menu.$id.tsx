@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { deleteMenuItem } from "@/lib/deletes";
 import { useState } from "react";
-import { Plus, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useDB, put } from "@/lib/store";
+import { useDB, put, remove } from "@/lib/store";
 import { attributedWaste, avgWeeklyProduction, avgWeeklySales, costPerUnit, directWaste, producedThisWeek, sumValue, weekStart } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, timeOf, todayISO, uid } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
@@ -26,6 +27,7 @@ function MenuItemView() {
   const db = useDB();
   const [sold, setSold] = useState("");
   const [soldDate, setSoldDate] = useState(todayISO());
+  const navigate = useNavigate();
   const m = db.menuItems.find((x) => x.id === id);
   if (!m) {
     return (
@@ -56,7 +58,14 @@ function MenuItemView() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageTitle back={{ to: "/menu", label: "Menu Overview / Summary Map" }} title="Individual Menu Item View" subtitle="Track production, review batches and record losses at the right stage." />
+      <PageTitle back={{ to: "/menu", label: "Menu Overview / Summary Map" }} title="Individual Menu Item View" subtitle="Track production, review batches and record losses at the right stage.">
+        <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-destructive px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10" onClick={() => {
+          if (!window.confirm(`Delete ${m.name}? Its batches, sales and waste history will also be removed.`)) return;
+          deleteMenuItem(m.id);
+          toast.success("Menu item deleted");
+          navigate({ to: "/menu" });
+        }}><Trash2 className="h-4 w-4" /> Delete menu item</button>
+      </PageTitle>
       <h3 className="text-2xl font-bold text-primary">{m.name}</h3>
       <p className="mb-4 text-sm text-muted-foreground">{m.id} · {m.category} · {m.type} · Cost/unit {formatPeso(costPerUnit(m))} · Retail {formatPeso(m.retailPrice)}</p>
 
@@ -81,10 +90,15 @@ function MenuItemView() {
                     <p className="font-semibold text-primary">{b.id}</p>
                     <p className="text-muted-foreground">Made {shortDate(b.producedAt)} · {b.quantity} {m.batchUnit} produced</p>
                   </div>
-                  <div className="text-right">
+                  <div className="flex items-center gap-3"><div className="text-right">
                     <p className="text-muted-foreground">Expiry {shortDate(b.expiryDate)}</p>
                     <p className={`text-xs font-bold ${d <= 0 ? "text-destructive" : "text-warning"}`}>{d <= 0 ? "Expires today" : d === 1 ? "Expires tomorrow" : `${d} days left`}</p>
                   </div>
+                  <button type="button" aria-label="Delete batch" className="text-muted-foreground hover:text-destructive" onClick={() => {
+                    if (!window.confirm(`Delete batch ${b.id}?`)) return;
+                    remove("batches", b.id);
+                    toast.success("Batch deleted");
+                  }}><Trash2 className="h-4 w-4" /></button></div>
                 </li>
               );
             })}

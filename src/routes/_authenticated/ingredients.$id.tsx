@@ -1,6 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { deleteIngredient } from "@/lib/deletes";
 import { useEffect, useState } from "react";
-import { Bell, X, Lightbulb } from "lucide-react";
+import { Bell, X, Lightbulb, Trash2 } from "lucide-react";
 import { Pie, PieChart, ResponsiveContainer, Cell, Tooltip } from "recharts";
 import { useDB } from "@/lib/store";
 import { avgRepurchaseDays, ingredientUsageShare, ingredientWaste, lastPurchase, nextLot, purchaseRecommendation, stockOf, stockValueOf } from "@/lib/calc";
@@ -27,6 +29,7 @@ function IngredientView() {
   const { id } = Route.useParams();
   const db = useDB();
   const [popup, setPopup] = useState(false);
+  const navigate = useNavigate();
   const ing = db.ingredients.find((i) => i.id === id);
   const rec = ing ? purchaseRecommendation(db, ing.id) : null;
   useEffect(() => {
@@ -53,7 +56,14 @@ function IngredientView() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageTitle back={{ to: "/ingredients", label: "Ingredient Inventory List" }} title="Individual Ingredient View" subtitle="Track stock, plan the next purchase and record ingredient losses." />
+      <PageTitle back={{ to: "/ingredients", label: "Ingredient Inventory List" }} title="Individual Ingredient View" subtitle="Track stock, plan the next purchase and record ingredient losses.">
+        <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-destructive px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10" onClick={() => {
+          if (!window.confirm(`Delete ${ing.name}? Its purchases and ingredient waste history will also be removed.`)) return;
+          deleteIngredient(ing.id);
+          toast.success("Ingredient deleted");
+          navigate({ to: "/ingredients" });
+        }}><Trash2 className="h-4 w-4" /> Delete ingredient</button>
+      </PageTitle>
       <h3 className="text-2xl font-bold text-primary">{ing.name}</h3>
       <p className="mb-4 text-sm text-muted-foreground">{ing.id} · {ing.category} · {ing.storage}</p>
 

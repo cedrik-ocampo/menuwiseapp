@@ -52,7 +52,7 @@ function Login() {
     if (!navigator.onLine) return setMsg({ tone: "error", text: "You're offline. Connect once to sign in on this device." });
     setBusy(true);
     if (mode === "signup") {
-      const { data, error } = await supabase.auth.signUp({ email: r.data.email, password: r.data.password, options: { emailRedirectTo: window.location.origin, data: { cafe_name: "The Dawn Cafe" } } });
+      const { data, error } = await supabase.auth.signUp({ email: r.data.email, password: r.data.password, options: { emailRedirectTo: window.location.origin, data: { cafe_name: "My Café" } } });
       setBusy(false);
       if (error) return setMsg({ tone: "error", text: error.message });
       if (data.session) return navigate({ to: "/" });
