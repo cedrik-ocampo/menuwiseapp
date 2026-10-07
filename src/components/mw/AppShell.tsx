@@ -1,6 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff } from "lucide-react";
-import type { ReactNode } from "react";
+import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import logo from "@/assets/mw-logo.png.asset.json";
 import { useDB, resetStore } from "@/lib/store";
 import { shortDate, todayISO } from "@/lib/format";
@@ -115,6 +116,42 @@ function SignOutButton({ className }: { className?: string }) {
   );
 }
 
+function CafeName({ initial }: { initial: string }) {
+  const [name, setName] = useState(initial);
+  const [draft, setDraft] = useState(initial);
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    const local = localStorage.getItem("menuwise:cafe_name");
+    if (local) { setName(local); setDraft(local); }
+  }, []);
+  async function save() {
+    const v = draft.trim();
+    if (!v) { toast.error("Café name can't be empty"); return; }
+    if (v.length > 60) { toast.error("Keep the name under 60 characters"); return; }
+    setName(v);
+    setEditing(false);
+    localStorage.setItem("menuwise:cafe_name", v);
+    const { error } = await supabase.auth.updateUser({ data: { cafe_name: v } });
+    if (error) toast.message("Saved on this device. It will update online when you're connected.");
+    else toast.success("Café name updated");
+  }
+  if (editing) {
+    return (
+      <form className="mt-1 flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+        <input autoFocus value={draft} maxLength={60} onChange={(e) => setDraft(e.target.value)} aria-label="Café name" className="min-w-0 rounded-md bg-background px-2 py-1 text-sm text-foreground" />
+        <button type="submit" aria-label="Save café name" className="opacity-90 hover:opacity-100"><Check className="h-4 w-4" /></button>
+        <button type="button" aria-label="Cancel" className="opacity-90 hover:opacity-100" onClick={() => { setDraft(name); setEditing(false); }}><X className="h-4 w-4" /></button>
+      </form>
+    );
+  }
+  return (
+    <button type="button" onClick={() => setEditing(true)} className="group flex max-w-full items-center gap-1 text-sm italic opacity-90 hover:opacity-100" title="Change café name">
+      <span className="truncate">{name}</span>
+      <Pencil className="h-3 w-3 shrink-0 opacity-70 group-hover:opacity-100" />
+    </button>
+  );
+}
+
 export function AppHeader({ cafeName }: { cafeName: string }) {
   const db = useDB();
   return (
@@ -122,7 +159,7 @@ export function AppHeader({ cafeName }: { cafeName: string }) {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-6 md:px-8">
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold">Today is {shortDate(todayISO())}.</h1>
-          <p className="truncate text-sm italic opacity-90">{cafeName}</p>
+          <CafeName initial={cafeName} />
         </div>
         <div className="flex shrink-0 items-center gap-3">
           {!db.online && (

@@ -101,6 +101,10 @@ export function put<K extends CollectionName>(collection: K, item: Collections[K
   void persist().then(() => sync());
 }
 
+export function getView(): DBView {
+  return view;
+}
+
 export function remove(collection: CollectionName, id: string) {
   const r = state.tables[collection][id];
   if (!r) return;

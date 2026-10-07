@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { Check, Calculator } from "lucide-react";
+import { Check, Calculator, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useDB, put } from "@/lib/store";
+import { useDB, put, remove } from "@/lib/store";
 import { costPerUnit } from "@/lib/calc";
 import { ALLOCATIONS, STAGES, WASTE_TYPES, type Allocation, type Stage, type WasteLog, type WasteType } from "@/lib/types";
 import { formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
@@ -226,11 +226,11 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
   if (!logs.length) return <p className="py-4 text-center text-sm text-muted-foreground">{empty}</p>;
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
-      <div className="grid grid-cols-2 bg-secondary px-4 py-2 text-xs font-bold uppercase text-primary">
-        <span>Date / Waste type</span><span className="text-right">Quantity / Value</span>
+      <div className="grid grid-cols-[1fr_1fr_2rem] bg-secondary px-4 py-2 text-xs font-bold uppercase text-primary">
+        <span>Date / Waste type</span><span className="text-right">Quantity / Value</span><span />
       </div>
       {logs.map((w) => (
-        <div key={w.id} className="grid grid-cols-2 border-t border-border px-4 py-3 text-sm">
+        <div key={w.id} className="grid grid-cols-[1fr_1fr_2rem] items-center border-t border-border px-4 py-3 text-sm">
           <div>
             <p className="font-semibold text-primary">{shortDate(w.at)}</p>
             <p className="text-muted-foreground">{w.wasteType}</p>
@@ -239,6 +239,18 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
             <p className="text-muted-foreground">{fmtQty(w.quantity)} {w.unit}</p>
             <p className="font-bold text-primary">{formatPeso(w.value)}</p>
           </div>
+          <button
+            type="button"
+            aria-label="Delete waste entry"
+            className="justify-self-end text-muted-foreground hover:text-destructive"
+            onClick={() => {
+              if (!window.confirm("Delete this waste entry?")) return;
+              remove("wasteLogs", w.id);
+              toast.success("Waste entry deleted");
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       ))}
     </div>

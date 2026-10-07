@@ -25,7 +25,7 @@ function Layout() {
   useEffect(() => {
     void initStore(user.id);
   }, [user.id]);
-  const cafe = (user.user_metadata?.cafe_name as string) || "The Dawn Cafe";
+  const cafe = (user.user_metadata?.cafe_name as string) || "My Café";
   return (
     <div className="flex min-h-screen w-full bg-background">
       <NavBar />
