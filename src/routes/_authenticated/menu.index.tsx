@@ -7,6 +7,7 @@ import { formatPeso } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Panel, Segmented, btnPrimary, btnSecondary } from "@/components/mw/ui";
 import { MenuMapChart } from "@/components/mw/MenuMapChart";
+import { MenuInventory } from "@/components/mw/MenuInventory";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/menu/")({
@@ -30,7 +31,7 @@ const DESC: Record<string, string> = {
 
 function MenuMap() {
   const db = useDB();
-  const [view, setView] = useState<"Bubble chart" | "Table">("Bubble chart");
+  const [view, setView] = useState<"Bubble chart" | "Table" | "Inventory">("Inventory");
   const [withWip, setWithWip] = useState(false);
   const map = useMemo(() => menuMap(db, withWip), [db, withWip]);
 
@@ -45,7 +46,7 @@ function MenuMap() {
 
       <Panel className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="w-64"><Segmented value={view} options={["Bubble chart", "Table"] as const} onChange={setView} /></div>
+          <div className="w-64"><Segmented value={view} options={["Inventory", "Bubble chart", "Table"] as const} onChange={setView} /></div>
           <label className="flex items-center gap-2 text-sm text-primary">
             <Switch checked={withWip} onCheckedChange={setWithWip} />
             Include attributed prep/WIP waste
@@ -55,7 +56,9 @@ function MenuMap() {
           Primary metric: direct finished-product waste per menu item{withWip ? " + attributed prep/WIP waste" : ""}. Unallocated ingredient waste is not included.
         </p>
 
-        {view === "Bubble chart" ? (
+        {view === "Inventory" ? (
+          <MenuInventory db={db} rows={map.rows} />
+        ) : view === "Bubble chart" ? (
           <>
             <MenuMapChart map={map} height={420} />
             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground md:grid-cols-4">
