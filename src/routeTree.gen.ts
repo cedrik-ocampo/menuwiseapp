@@ -15,6 +15,9 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedLogProductionRouteImport } from './routes/_authenticated/log-production'
 import { Route as AuthenticatedLogWasteRouteImport } from './routes/_authenticated/log-waste'
+import { Route as AuthenticatedIngredientsIndexRouteImport } from './routes/_authenticated/ingredients.index'
+import { Route as AuthenticatedIngredientsIdRouteImport } from './routes/_authenticated/ingredients.$id'
+import { Route as AuthenticatedIngredientsNewRouteImport } from './routes/_authenticated/ingredients.new'
 import { Route as AuthenticatedMenuIndexRouteImport } from './routes/_authenticated/menu.index'
 import { Route as AuthenticatedMenuIdRouteImport } from './routes/_authenticated/menu.$id'
 
@@ -48,6 +51,24 @@ const AuthenticatedLogWasteRoute = AuthenticatedLogWasteRouteImport.update({
   path: '/log-waste',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIngredientsIndexRoute =
+  AuthenticatedIngredientsIndexRouteImport.update({
+    id: '/ingredients/',
+    path: '/ingredients/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIngredientsIdRoute =
+  AuthenticatedIngredientsIdRouteImport.update({
+    id: '/ingredients/$id',
+    path: '/ingredients/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIngredientsNewRoute =
+  AuthenticatedIngredientsNewRouteImport.update({
+    id: '/ingredients/new',
+    path: '/ingredients/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMenuIndexRoute = AuthenticatedMenuIndexRouteImport.update({
   id: '/menu/',
   path: '/menu/',
@@ -65,7 +86,10 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
+  '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
+  '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/ingredients/': typeof AuthenticatedIngredientsIndexRoute
   '/menu/': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRoutesByTo {
@@ -74,7 +98,10 @@ export interface FileRoutesByTo {
   '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
   '/': typeof AuthenticatedIndexRoute
+  '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
+  '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/ingredients': typeof AuthenticatedIngredientsIndexRoute
   '/menu': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRoutesById {
@@ -85,7 +112,10 @@ export interface FileRoutesById {
   '/_authenticated/log-production': typeof AuthenticatedLogProductionRoute
   '/_authenticated/log-waste': typeof AuthenticatedLogWasteRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
+  '/_authenticated/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/_authenticated/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/_authenticated/ingredients/': typeof AuthenticatedIngredientsIndexRoute
   '/_authenticated/menu/': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRouteTypes {
@@ -96,7 +126,10 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/log-production'
     | '/log-waste'
+    | '/ingredients/$id'
+    | '/ingredients/new'
     | '/menu/$id'
+    | '/ingredients/'
     | '/menu/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,7 +138,10 @@ export interface FileRouteTypes {
     | '/log-production'
     | '/log-waste'
     | '/'
+    | '/ingredients/$id'
+    | '/ingredients/new'
     | '/menu/$id'
+    | '/ingredients'
     | '/menu'
   id:
     | '__root__'
@@ -115,7 +151,10 @@ export interface FileRouteTypes {
     | '/_authenticated/log-production'
     | '/_authenticated/log-waste'
     | '/_authenticated/'
+    | '/_authenticated/ingredients/$id'
+    | '/_authenticated/ingredients/new'
     | '/_authenticated/menu/$id'
+    | '/_authenticated/ingredients/'
     | '/_authenticated/menu/'
   fileRoutesById: FileRoutesById
 }
@@ -169,6 +208,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLogWasteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ingredients/': {
+      id: '/_authenticated/ingredients/'
+      path: '/ingredients'
+      fullPath: '/ingredients/'
+      preLoaderRoute: typeof AuthenticatedIngredientsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ingredients/$id': {
+      id: '/_authenticated/ingredients/$id'
+      path: '/ingredients/$id'
+      fullPath: '/ingredients/$id'
+      preLoaderRoute: typeof AuthenticatedIngredientsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ingredients/new': {
+      id: '/_authenticated/ingredients/new'
+      path: '/ingredients/new'
+      fullPath: '/ingredients/new'
+      preLoaderRoute: typeof AuthenticatedIngredientsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/menu/': {
       id: '/_authenticated/menu/'
       path: '/menu'
@@ -190,7 +250,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLogProductionRoute: typeof AuthenticatedLogProductionRoute
   AuthenticatedLogWasteRoute: typeof AuthenticatedLogWasteRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedIngredientsIdRoute: typeof AuthenticatedIngredientsIdRoute
+  AuthenticatedIngredientsNewRoute: typeof AuthenticatedIngredientsNewRoute
   AuthenticatedMenuIdRoute: typeof AuthenticatedMenuIdRoute
+  AuthenticatedIngredientsIndexRoute: typeof AuthenticatedIngredientsIndexRoute
   AuthenticatedMenuIndexRoute: typeof AuthenticatedMenuIndexRoute
 }
 
@@ -198,7 +261,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLogProductionRoute: AuthenticatedLogProductionRoute,
   AuthenticatedLogWasteRoute: AuthenticatedLogWasteRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedIngredientsIdRoute: AuthenticatedIngredientsIdRoute,
+  AuthenticatedIngredientsNewRoute: AuthenticatedIngredientsNewRoute,
   AuthenticatedMenuIdRoute: AuthenticatedMenuIdRoute,
+  AuthenticatedIngredientsIndexRoute: AuthenticatedIngredientsIndexRoute,
   AuthenticatedMenuIndexRoute: AuthenticatedMenuIndexRoute,
 }
 
