@@ -7,7 +7,8 @@ import { expiringWithin, lastUsed, nextLot, stockOf } from "@/lib/calc";
 import { daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import { useThreshold, thresholdLabel } from "@/lib/settings";
 import { PageTitle } from "@/components/mw/AppShell";
-import { Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
+import { Panel, SectionTitle, Segmented, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
+import { IngredientInventory } from "@/components/mw/IngredientInventory";
 
 export const Route = createFileRoute("/_authenticated/ingredients/")({
   head: () => ({
@@ -28,6 +29,7 @@ function Inventory() {
   const db = useDB();
   const [sort, setSort] = useState<SortKey>("expiry");
   const [asc, setAsc] = useState(true);
+  const [view, setView] = useState<"Grid" | "List">("Grid");
   const [threshold] = useThreshold();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -114,8 +116,11 @@ function Inventory() {
             </Link>
           </div>
 
-          <SectionTitle right={<span className="text-sm text-muted-foreground">{rows.length} items</span>}>Ingredients</SectionTitle>
-          <p className="-mt-2 text-sm text-muted-foreground">Select a row to view details.</p>
+          <SectionTitle right={<Segmented value={view} options={["Grid", "List"]} onChange={(v) => setView(v as "Grid" | "List")} />}>Ingredients</SectionTitle>
+          <p className="-mt-2 text-sm text-muted-foreground">{view === "Grid" ? "Tap a card to view, modify or delete." : "Select a row to view details."}</p>
+          {view === "Grid" ? (
+            <IngredientInventory db={db} rows={rows} threshold={threshold} />
+          ) : (
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
             <div className="bg-secondary px-4 py-3 text-xs font-bold uppercase text-primary">Ingredient / Stock</div>
             {rows.map(({ i, lot, stock, lastPurchase, lastUsed: lu }) => {
