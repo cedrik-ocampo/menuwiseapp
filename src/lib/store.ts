@@ -136,19 +136,8 @@ export async function sync(): Promise<void> {
     }
     state.lastPull = maxTs;
 
-    // First run: seed demo data if there is nothing anywhere
+    // No demo data: start with a clean slate
     if (!state.seeded) {
-      const hasAny = COLLECTIONS.some((c) => Object.keys(state.tables[c]).length > 0);
-      if (!hasAny) {
-        const seed = buildSeed();
-        const now = new Date().toISOString();
-        for (const c of COLLECTIONS) {
-          for (const item of seed[c] as { id: string }[]) {
-            state.tables[c][item.id] = { data: item as never, updated_at: now };
-            state.pending.push(`${c}|${item.id}`);
-          }
-        }
-      }
       state.seeded = true;
       emit();
     }
