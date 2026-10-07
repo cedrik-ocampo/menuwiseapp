@@ -6,6 +6,7 @@ import { put, type DBView } from "@/lib/store";
 import { deleteMenuItem } from "@/lib/deletes";
 import { costPerUnit, margin, wasteColor, type Quadrant } from "@/lib/calc";
 import { formatPeso } from "@/lib/format";
+import { fileToDataUrl } from "@/lib/image";
 import { ITEM_TYPES, type ItemType, type MenuItem } from "@/lib/types";
 import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 
@@ -72,9 +73,13 @@ export function MenuInventory({ db, rows }: { db: DBView; rows: InvRow[] }) {
                     Hidden
                   </span>
                 )}
-                <span className="mt-5 flex h-14 w-14 items-center justify-center rounded-lg border border-border bg-secondary text-xl font-bold text-primary">
-                  {r.item.name.slice(0, 2).toUpperCase()}
-                </span>
+                {r.item.image ? (
+                  <img src={r.item.image} alt="" className="mt-5 h-14 w-14 rounded-lg border border-border object-cover" />
+                ) : (
+                  <span className="mt-5 flex h-14 w-14 items-center justify-center rounded-lg border border-border bg-secondary text-xl font-bold text-primary">
+                    {r.item.name.slice(0, 2).toUpperCase()}
+                  </span>
+                )}
                 <span className="line-clamp-2 text-sm font-bold text-primary">{r.item.name}</span>
                 <span className="text-xs text-muted-foreground">{r.item.category}</span>
                 <span className="text-xs font-semibold text-primary">{formatPeso(r.item.retailPrice)}</span>
@@ -97,11 +102,14 @@ export function MenuInventory({ db, rows }: { db: DBView; rows: InvRow[] }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: RARITY[live.quadrant].ring }}>
-                  {RARITY[live.quadrant].label} · {live.item.category}
-                </p>
-                <h3 className="text-xl font-bold text-primary">{live.item.name}</h3>
+              <div className="flex items-center gap-3">
+                {live.item.image && <img src={live.item.image} alt="" className="h-14 w-14 rounded-lg border border-border object-cover" />}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: RARITY[live.quadrant].ring }}>
+                    {RARITY[live.quadrant].label} · {live.item.category}
+                  </p>
+                  <h3 className="text-xl font-bold text-primary">{live.item.name}</h3>
+                </div>
               </div>
               <button type="button" aria-label="Close" className="text-muted-foreground hover:text-primary" onClick={() => setSelected(null)}>
                 <X className="h-5 w-5" />
@@ -182,6 +190,7 @@ function EditForm({ item, onDone, onDeleted }: { item: MenuItem; onDone: () => v
   const [batchUnit, setBatchUnit] = useState(item.batchUnit);
   const [available, setAvailable] = useState(item.available);
   const [description, setDescription] = useState(item.description);
+  const [image, setImage] = useState(item.image ?? "");
 
   function save() {
     const price = parseFloat(retail);
@@ -198,6 +207,7 @@ function EditForm({ item, onDone, onDeleted }: { item: MenuItem; onDone: () => v
       batchUnit: batchUnit.trim(),
       available,
       description: description.trim(),
+      image: image || undefined,
     });
     toast.success("Menu item updated");
     onDone();
@@ -219,6 +229,16 @@ function EditForm({ item, onDone, onDeleted }: { item: MenuItem; onDone: () => v
         <Field label="Batch unit"><input className={inputCls} value={batchUnit} onChange={(e) => setBatchUnit(e.target.value)} /></Field>
       </div>
       <Field label="Description"><textarea className={`${inputCls} h-20 py-2`} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+      <Field label="Image">
+        <div className="flex items-center gap-3">
+          {image && <img src={image} alt="" className="h-12 w-12 rounded-lg border border-border object-cover" />}
+          <input type="file" accept="image/*" className={`${inputCls} py-2`} onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try { setImage(await fileToDataUrl(file)); } catch { toast.error("Couldn't read that image"); }
+          }} />
+        </div>
+      </Field>
       <label className="flex items-center gap-2 text-sm font-semibold text-primary">
         <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} className="h-4 w-4" />
         Available on the menu
