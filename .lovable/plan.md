@@ -77,6 +77,10 @@ Email and password.
 ### 5. Menu Map
 - Menu items are sorted into Stars, Plowhorses, Puzzles and Dogs. Color runs from red (high waste) to green (low waste).
 - Shown as a bubble chart, with a table view you can switch to. The table orders each group from highest to lowest waste.
+  - Across, labeled "Popularity": how many sell.
+  - Up and down, labeled "Profitability": margin per unit.
+  - Bubble size: waste value.
+  - Bubble color: red (high waste) to green (low waste).
 - **Waste measure**
   - Uses direct finished-product waste by default.
   - A toggle adds prep/WIP waste that is linked to each item.
@@ -138,7 +142,7 @@ Email and password.
 
 ### 8. Ingredient Inventory List
 - Sort by expiry (the default, soonest first), purchase date, last used, or name.
-- Counters for ingredients in stock and ingredients expiring in 3 days.
+- Counters for ingredients in stock and ingredients expiring within the Ongoing Insights window (default 7 days), matching the Dashboard.
 - **Ingredient history:** a section listing recent purchases, uses and waste across all ingredients, newest first.
 - Buttons for Manual Input, Excel import and Google Sheets import.
 - Clicking a row opens that ingredient's page.
@@ -162,15 +166,16 @@ Email and password.
 - **Purchasing**
   - Last purchase, for example "Last purchased 5 days ago (9/29/26)".
   - Average time between purchases.
-  - A "Recommended next purchase" pop-up.
+  - A "Recommended next purchase" pop-up. It appears when, at the current rate of use, the stock will run out before your next usual order date. That date is the last purchase date plus the average time between purchases.
 - **Menu usage:** how many menu items use this ingredient, and a pie chart of each item's share.
-- **Waste history:** ingredient waste only, newest first, with a button to log more. For example: "10/2/26, Spoilage, 350 ml, P75.00".
+- **Waste history:** ingredient waste only, newest first. For example: "10/2/26, Spoilage, 350 ml, P75.00". A waste log form sits right on the page and uses the same fields as Log Waste, with the stage set to Ingredient.
 
 ## Out of scope (locked)
 Plate waste, POS integration, report exports, waste-alert pop-ups, the paper's formulas and auto-recommendations, barcode scanning, and conflict-review screens.
 
 ## Data and offline
 - Lovable Cloud handles sign-in and keeps an online copy of everything.
+- **Offline sign-in:** the first sign-in needs internet. After that, you stay signed in on that device, so the app still opens without a connection. Your password itself is never saved on the device. Signing out on a device means you need internet to sign back in there.
 - The app works offline. Entries are saved on the device and sync once you're back online. If one record is changed in two places, the latest change wins.
 - It can be installed on a phone like an app. Offline mode is switched off inside the Lovable preview, so test it on the published site.
 - Comes with sample data for The Dawn Cafe so every page has something to show.
