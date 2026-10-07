@@ -6,7 +6,6 @@ import { useSyncExternalStore } from "react";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
 import { COLLECTIONS, type CollectionName, type Collections } from "./types";
-import { buildSeed } from "./seed";
 
 interface Rec<T = unknown> {
   data: T;
@@ -136,19 +135,8 @@ export async function sync(): Promise<void> {
     }
     state.lastPull = maxTs;
 
-    // First run: seed demo data if there is nothing anywhere
+    // No demo data: start with a clean slate
     if (!state.seeded) {
-      const hasAny = COLLECTIONS.some((c) => Object.keys(state.tables[c]).length > 0);
-      if (!hasAny) {
-        const seed = buildSeed();
-        const now = new Date().toISOString();
-        for (const c of COLLECTIONS) {
-          for (const item of seed[c] as { id: string }[]) {
-            state.tables[c][item.id] = { data: item as never, updated_at: now };
-            state.pending.push(`${c}|${item.id}`);
-          }
-        }
-      }
       state.seeded = true;
       emit();
     }
