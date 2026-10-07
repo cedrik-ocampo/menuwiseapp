@@ -185,10 +185,10 @@ function EditForm({ item, onDone, onDeleted }: { item: MenuItem; onDone: () => v
 
   function save() {
     const price = parseFloat(retail);
-    if (!name.trim()) return toast.error("Name is required");
-    if (!category.trim()) return toast.error("Category is required");
-    if (!Number.isFinite(price) || price < 0) return toast.error("Retail price must be 0 or more");
-    if (!batchUnit.trim()) return toast.error("Batch unit is required");
+    if (!name.trim()) { toast.error("Name is required"); return; }
+    if (!category.trim()) { toast.error("Category is required"); return; }
+    if (!Number.isFinite(price) || price < 0) { toast.error("Retail price must be 0 or more"); return; }
+    if (!batchUnit.trim()) { toast.error("Batch unit is required"); return; }
     put("menuItems", {
       ...item,
       name: name.trim(),
