@@ -1,7 +1,7 @@
-/** Currency is always plain "P", e.g. P75.00 */
+/** Currency is Philippine pesos, e.g. ₱75.00 */
 export function formatPeso(n: number | undefined | null): string {
   const v = Number.isFinite(n as number) ? (n as number) : 0;
-  return `P${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function todayISO(): string {

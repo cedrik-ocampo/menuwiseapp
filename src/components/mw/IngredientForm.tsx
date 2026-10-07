@@ -74,7 +74,7 @@ export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: In
           <Field label="Purchase date" error={errors.purchaseDate}><input type="date" className={inputCls} value={f.purchaseDate} onChange={set("purchaseDate")} /></Field>
           <Field label="Expiry date" error={errors.expiryDate}><input type="date" className={inputCls} value={f.expiryDate} onChange={set("expiryDate")} /></Field>
           <Field label={`Quantity purchased (${f.unit})`} error={errors.quantity}><input inputMode="decimal" className={inputCls} value={f.quantity} onChange={set("quantity")} placeholder="0" /></Field>
-          <Field label={`Unit cost (per ${f.unit})`} error={errors.unitCost}><input inputMode="decimal" className={inputCls} value={f.unitCost} onChange={set("unitCost")} placeholder="P0.00" /></Field>
+          <Field label={`Unit cost (per ${f.unit})`} error={errors.unitCost}><input inputMode="decimal" className={inputCls} value={f.unitCost} onChange={set("unitCost")} placeholder="₱0.00" /></Field>
         </div>
         <div className="rounded-xl bg-info-soft p-4">
           <p className="text-xs font-semibold text-primary">Current stock value · calculated</p>
