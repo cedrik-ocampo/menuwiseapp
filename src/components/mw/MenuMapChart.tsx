@@ -16,7 +16,7 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
           <XAxis type="number" dataKey="x" name="Popularity" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}>
             <Label value="Popularity (avg. weekly sales) →" position="bottom" offset={10} style={{ fontSize: 12, fill: "var(--primary)", fontWeight: 600 }} />
           </XAxis>
-          <YAxis type="number" dataKey="y" name="Profitability" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => `P${v}`}>
+          <YAxis type="number" dataKey="y" name="Profitability" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => `₱${v}`}>
             <Label value="Profitability (margin/unit) →" angle={-90} position="insideLeft" style={{ fontSize: 12, fill: "var(--primary)", fontWeight: 600, textAnchor: "middle" }} />
           </YAxis>
           <ZAxis type="number" dataKey="z" range={[80, 1400]} name="Waste value" />
