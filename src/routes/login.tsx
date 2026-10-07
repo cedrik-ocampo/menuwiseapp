@@ -82,7 +82,7 @@ function Login() {
             <span className="text-sm font-semibold text-primary">Email address</span>
             <span className="flex h-12 items-center gap-3 rounded-xl border border-input bg-card px-4">
               <Mail className="h-5 w-5 text-muted-foreground" />
-              <input type="email" autoComplete="email" className="w-full bg-transparent outline-none" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="manager@thedawncafe.com" />
+              <input type="email" autoComplete="email" className="w-full bg-transparent outline-none" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             </span>
           </label>
           {mode !== "forgot" && (
