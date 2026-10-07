@@ -1,0 +1,168 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useRef, useState } from "react";
+import { Plus, Upload, Sheet as SheetIcon, ChevronRight, ArrowDownUp } from "lucide-react";
+import { toast } from "sonner";
+import { useDB, put } from "@/lib/store";
+import { expiringWithin, lastUsed, nextLot, stockOf } from "@/lib/calc";
+import { daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
+import { useThreshold, thresholdLabel } from "@/lib/settings";
+import { PageTitle } from "@/components/mw/AppShell";
+import { Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
+
+export const Route = createFileRoute("/_authenticated/ingredients/")({
+  head: () => ({
+    meta: [
+      { title: "Ingredient Inventory — MenuWise" },
+      { name: "description", content: "Keep stock visible and use the soonest-expiring ingredients first." },
+      { property: "og:title", content: "Ingredient Inventory — MenuWise" },
+      { property: "og:description", content: "Keep stock visible and use the soonest-expiring ingredients first." },
+    ],
+  }),
+  component: Inventory,
+});
+
+type SortKey = "expiry" | "purchase" | "lastUsed" | "alpha";
+const SORT_LABEL: Record<SortKey, string> = { expiry: "Expiry", purchase: "Purchase date", lastUsed: "Last used", alpha: "Alphabetic" };
+
+function Inventory() {
+  const db = useDB();
+  const [sort, setSort] = useState<SortKey>("expiry");
+  const [asc, setAsc] = useState(true);
+  const [threshold] = useThreshold();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const rows = useMemo(() => {
+    const r = db.ingredients.map((i) => {
+      const lot = nextLot(db, i.id);
+      const lastP = db.purchases.filter((p) => p.ingredientId === i.id).map((p) => p.purchaseDate).sort().pop();
+      return { i, lot, stock: stockOf(db, i.id), lastPurchase: lastP, lastUsed: lastUsed(db, i.id) };
+    });
+    const key = (x: (typeof r)[number]) =>
+      sort === "expiry" ? x.lot?.expiryDate ?? "9999" : sort === "purchase" ? x.lastPurchase ?? "" : sort === "lastUsed" ? x.lastUsed ?? "" : x.i.name.toLowerCase();
+    return r.sort((a, b) => (asc ? 1 : -1) * key(a).localeCompare(key(b)));
+  }, [db, sort, asc]);
+
+  const history = useMemo(() => {
+    const name = (id: string) => db.ingredients.find((i) => i.id === id)?.name ?? id;
+    const unit = (id: string) => db.ingredients.find((i) => i.id === id)?.unit ?? "";
+    return [
+      ...db.purchases.map((p) => ({ date: p.purchaseDate, kind: "Purchased", text: `${name(p.ingredientId)} · ${fmtQty(p.quantity)} ${unit(p.ingredientId)}`, id: p.ingredientId, value: p.quantity * p.unitCost })),
+      ...db.usages.map((u) => ({ date: u.date, kind: "Used", text: `${name(u.ingredientId)} · ${fmtQty(u.quantity)} ${unit(u.ingredientId)}`, id: u.ingredientId, value: undefined })),
+      ...db.wasteLogs.filter((w) => w.stage === "Ingredient" && w.ingredientId).map((w) => ({ date: w.at.slice(0, 10), kind: `Waste · ${w.wasteType}`, text: `${name(w.ingredientId!)} · ${fmtQty(w.quantity)} ${w.unit}`, id: w.ingredientId!, value: w.value })),
+    ]
+      .filter((h) => h.date <= todayISO())
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 12);
+  }, [db]);
+
+  const expiring = expiringWithin(db, threshold).length;
+
+  async function importFile(file: File) {
+    // CSV import (Excel / Google Sheets → File › Download › CSV). Columns: id,name,unit,quantity,unitCost,purchaseDate,expiryDate
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const head = lines[0].toLowerCase().split(",").map((h) => h.trim());
+    const idx = (k: string) => head.indexOf(k.toLowerCase());
+    let n = 0;
+    for (const line of lines.slice(1)) {
+      const c = line.split(",").map((x) => x.trim());
+      const id = c[idx("id")], name = c[idx("name")], unit = c[idx("unit")];
+      const quantity = parseFloat(c[idx("quantity")]), unitCost = parseFloat(c[idx("unitCost")]);
+      const purchaseDate = c[idx("purchaseDate")], expiryDate = c[idx("expiryDate")];
+      if (!id || !name || !unit || !(quantity > 0) || !(unitCost >= 0) || !purchaseDate || !expiryDate) continue;
+      if (!db.ingredients.some((i) => i.id === id)) put("ingredients", { id, name, unit, unitCost, category: "Other", storage: "Pantry" });
+      put("purchases", { id: `${id}-P${Date.now().toString(36)}${n}`, ingredientId: id, purchaseDate, expiryDate, quantity, remaining: quantity, unitCost });
+      n++;
+    }
+    toast[n ? "success" : "error"](n ? `Imported ${n} rows` : "No valid rows. Columns: id,name,unit,quantity,unitCost,purchaseDate,expiryDate");
+  }
+
+  return (
+    <div>
+      <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Ingredient Inventory List" subtitle="Keep stock visible. Use the soonest-expiring ingredients first." />
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="space-y-4">
+          <Link to="/ingredients/new" className={`${btnPrimary} h-12 w-full`}><Plus className="h-4 w-4" /> Manual Input</Link>
+          <div>
+            <p className="mb-2 text-sm font-semibold text-muted-foreground">Import your ingredient inventory</p>
+            <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])} />
+            <div className="grid grid-cols-2 gap-3">
+              <button className={`${btnSecondary} h-12`} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> Excel</button>
+              <button className={`${btnSecondary} h-12`} onClick={() => fileRef.current?.click()}><SheetIcon className="h-4 w-4" /> Google Sheets</button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Save your sheet as CSV first. Columns: id, name, unit, quantity, unitCost, purchaseDate, expiryDate.</p>
+          </div>
+
+          <Panel>
+            <p className="mb-2 text-sm font-semibold text-accent">Sort Ingredients by</p>
+            <div className="flex gap-2">
+              <select className={inputCls} value={sort} onChange={(e) => { setSort(e.target.value as SortKey); setAsc(e.target.value !== "lastUsed" && e.target.value !== "purchase" ? true : false); }}>
+                {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => <option key={k} value={k}>{SORT_LABEL[k]}</option>)}
+              </select>
+              <button className={`${btnPrimary} shrink-0`} onClick={() => setAsc(!asc)} aria-label="Toggle sort direction">
+                {sort === "expiry" ? (asc ? "Soonest" : "Latest") : asc ? "Asc" : "Desc"} <ArrowDownUp className="h-4 w-4" />
+              </button>
+            </div>
+          </Panel>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-3 rounded-full border border-border bg-card px-4 py-2">
+              <span className="text-3xl font-bold text-primary">{db.ingredients.length}</span><span className="text-sm text-muted-foreground">Ingredients in stock</span>
+            </div>
+            <Link to="/" className="flex items-center gap-3 rounded-full border border-warning-border bg-warning-soft px-4 py-2">
+              <span className="text-3xl font-bold text-warning">{expiring}</span><span className="text-sm text-warning">Expire within {thresholdLabel(threshold)}</span>
+            </Link>
+          </div>
+
+          <SectionTitle right={<span className="text-sm text-muted-foreground">{rows.length} items</span>}>Ingredients</SectionTitle>
+          <p className="-mt-2 text-sm text-muted-foreground">Select a row to view details.</p>
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="bg-secondary px-4 py-3 text-xs font-bold uppercase text-primary">Ingredient / Stock</div>
+            {rows.map(({ i, lot, stock, lastPurchase, lastUsed: lu }) => {
+              const d = lot ? daysFromToday(lot.expiryDate) : null;
+              const tone = d === null ? "text-muted-foreground" : d <= 0 ? "text-destructive" : d <= threshold ? "text-warning" : "text-muted-foreground";
+              return (
+                <Link key={i.id} to="/ingredients/$id" params={{ id: i.id }} className="block border-t border-border px-4 py-4 hover:bg-muted">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-primary">{i.name}</p>
+                      <p className="text-sm text-muted-foreground">{i.id} · {fmtQty(stock)} {i.unit} on hand</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-accent" />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    <span className={`font-semibold ${tone}`}>● Expiry {shortDate(lot?.expiryDate)}</span>
+                    <span className="text-muted-foreground">{formatPeso(i.unitCost)} / {i.unit}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">Purchased {shortDate(lastPurchase)} · Last used {shortDate(lu)}</p>
+                  {d !== null && d <= threshold && <p className={`mt-1 text-xs font-bold ${tone}`}>{d <= 0 ? "Expires today" : d === 1 ? "1 day left" : `${d} days left`}</p>}
+                </Link>
+              );
+            })}
+          </div>
+          <p className="text-center text-xs text-muted-foreground">All {rows.length} ingredients shown · Updated {shortDate(todayISO())}</p>
+        </div>
+
+        <aside>
+          <Panel>
+            <SectionTitle>Ingredient history</SectionTitle>
+            <p className="-mt-2 mb-3 text-xs text-muted-foreground">Recent purchases, uses and waste · newest first</p>
+            <ul className="divide-y divide-border">
+              {history.map((h, k) => (
+                <li key={k}>
+                  <Link to="/ingredients/$id" params={{ id: h.id }} className="flex justify-between gap-2 py-2 text-sm">
+                    <span className="min-w-0">
+                      <span className="block text-xs text-muted-foreground">{shortDate(h.date)} · {h.kind}</span>
+                      <span className="block truncate text-primary">{h.text}</span>
+                    </span>
+                    {h.value !== undefined && <span className="shrink-0 font-semibold text-primary">{formatPeso(h.value)}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </aside>
+      </div>
+    </div>
+  );
+}

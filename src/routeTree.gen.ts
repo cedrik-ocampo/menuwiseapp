@@ -13,7 +13,10 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedLogProductionRouteImport } from './routes/_authenticated/log-production'
 import { Route as AuthenticatedLogWasteRouteImport } from './routes/_authenticated/log-waste'
+import { Route as AuthenticatedMenuIndexRouteImport } from './routes/_authenticated/menu.index'
+import { Route as AuthenticatedMenuIdRouteImport } from './routes/_authenticated/menu.$id'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -34,9 +37,25 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLogProductionRoute =
+  AuthenticatedLogProductionRouteImport.update({
+    id: '/log-production',
+    path: '/log-production',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedLogWasteRoute = AuthenticatedLogWasteRouteImport.update({
   id: '/log-waste',
   path: '/log-waste',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMenuIndexRoute = AuthenticatedMenuIndexRouteImport.update({
+  id: '/menu/',
+  path: '/menu/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMenuIdRoute = AuthenticatedMenuIdRouteImport.update({
+  id: '/menu/$id',
+  path: '/menu/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -44,34 +63,60 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
+  '/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/menu/': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
   '/': typeof AuthenticatedIndexRoute
+  '/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/menu': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/log-production': typeof AuthenticatedLogProductionRoute
   '/_authenticated/log-waste': typeof AuthenticatedLogWasteRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/menu/$id': typeof AuthenticatedMenuIdRoute
+  '/_authenticated/menu/': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/reset-password' | '/log-waste'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/reset-password'
+    | '/log-production'
+    | '/log-waste'
+    | '/menu/$id'
+    | '/menu/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/reset-password' | '/log-waste' | '/'
+  to:
+    | '/login'
+    | '/reset-password'
+    | '/log-production'
+    | '/log-waste'
+    | '/'
+    | '/menu/$id'
+    | '/menu'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
     | '/reset-password'
+    | '/_authenticated/log-production'
     | '/_authenticated/log-waste'
     | '/_authenticated/'
+    | '/_authenticated/menu/$id'
+    | '/_authenticated/menu/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -110,6 +155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/log-production': {
+      id: '/_authenticated/log-production'
+      path: '/log-production'
+      fullPath: '/log-production'
+      preLoaderRoute: typeof AuthenticatedLogProductionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/log-waste': {
       id: '/_authenticated/log-waste'
       path: '/log-waste'
@@ -117,17 +169,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLogWasteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/menu/': {
+      id: '/_authenticated/menu/'
+      path: '/menu'
+      fullPath: '/menu/'
+      preLoaderRoute: typeof AuthenticatedMenuIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/menu/$id': {
+      id: '/_authenticated/menu/$id'
+      path: '/menu/$id'
+      fullPath: '/menu/$id'
+      preLoaderRoute: typeof AuthenticatedMenuIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedLogProductionRoute: typeof AuthenticatedLogProductionRoute
   AuthenticatedLogWasteRoute: typeof AuthenticatedLogWasteRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedMenuIdRoute: typeof AuthenticatedMenuIdRoute
+  AuthenticatedMenuIndexRoute: typeof AuthenticatedMenuIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedLogProductionRoute: AuthenticatedLogProductionRoute,
   AuthenticatedLogWasteRoute: AuthenticatedLogWasteRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedMenuIdRoute: AuthenticatedMenuIdRoute,
+  AuthenticatedMenuIndexRoute: AuthenticatedMenuIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
