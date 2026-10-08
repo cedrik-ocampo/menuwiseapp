@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight } from "lucide-react";
+import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check } from "lucide-react";
+import { InsightActions } from "@/components/mw/InsightActions";
 import { useDB } from "@/lib/store";
 import { expiringWithin, menuMap, totalWaste, QUADRANTS, wasteColor } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
@@ -37,6 +38,13 @@ function Dashboard() {
       : totalWaste(db, addDays(t, -13), addDays(t, -7));
   const pct = prev.total > 0 ? ((cur.total - prev.total) / prev.total) * 100 : null;
   const expiring = expiringWithin(db, threshold);
+  const nowIso = new Date().toISOString();
+  const resp = new Map(db.insightResponses.map((r) => [r.id, r]));
+  const visible = expiring.filter(({ lot }) => {
+    const r = resp.get(`exp:${lot.id}`);
+    return !r || (r.status === "snoozed" && (r.until ?? "") <= nowIso);
+  });
+  const actioned = db.insightResponses.filter((r) => r.status === "accepted").sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
   const map = useMemo(() => menuMap(db, false), [db]);
 
   return (
@@ -83,57 +91,49 @@ function Dashboard() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Ongoing Insights */}
-        <div
-          role="link"
-          tabIndex={0}
-          onClick={() => navigate({ to: "/ingredients" })}
-          onKeyDown={(e) => e.key === "Enter" && navigate({ to: "/ingredients" })}
-          className="cursor-pointer rounded-2xl border border-border bg-card p-5 transition-colors hover:border-accent"
-        >
+        <div className="rounded-2xl border border-border bg-card p-5">
           <SectionTitle
             right={
-              <select
-                className={`${inputCls} h-9 w-auto`}
-                value={threshold}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => setThreshold(Number(e.target.value))}
-                aria-label="Expiry threshold"
-              >
+              <select className={`${inputCls} h-9 w-auto`} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} aria-label="Expiry threshold">
                 {THRESHOLD_OPTIONS.map((o) => <option key={o.days} value={o.days}>Within {o.label}</option>)}
               </select>
             }
           >
-            Ongoing Insights
+            <Link to="/ingredients" className="inline-flex items-center gap-1 hover:underline">Ongoing Insights <ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>
           </SectionTitle>
-          {expiring.length === 0 ? (
-            <p className="py-4 text-sm text-muted-foreground">{db.ingredients.length === 0 ? "No ongoing insights." : `No ingredients expiring in ${thresholdLabel(threshold)}.`}</p>
+          {visible.length === 0 ? (
+            <p className="py-4 text-sm text-muted-foreground">{db.ingredients.length === 0 || expiring.length === 0 && db.ingredients.length === 0 ? "No ongoing insights." : expiring.length === 0 ? `No ingredients expiring in ${thresholdLabel(threshold)}.` : "No ongoing insights."}</p>
           ) : (
             <ul className="space-y-2">
-              {expiring.map(({ ingredient, lot }) => {
+              {visible.map(({ ingredient, lot }) => {
                 const d = daysFromToday(lot.expiryDate);
                 const red = d <= 1;
+                const key = `exp:${lot.id}`;
+                const label = `${ingredient.name} · expiry ${shortDate(lot.expiryDate)}`;
                 return (
-                  <li key={ingredient.id}>
-                    <Link
-                      to="/ingredients/$id"
-                      params={{ id: ingredient.id }}
-                      onClick={(e) => e.stopPropagation()}
-                      className={`flex items-center justify-between rounded-xl border p-3 ${red ? "border-destructive/30 bg-destructive/5" : "border-warning-border bg-warning-soft"}`}
-                    >
+                  <li key={lot.id} className={`rounded-xl border ${red ? "border-destructive/30 bg-destructive/5" : "border-warning-border bg-warning-soft"}`}>
+                    <Link to="/ingredients/$id" params={{ id: ingredient.id }} className="flex items-center justify-between p-3 pb-2">
                       <div className="min-w-0">
                         <p className="font-semibold text-primary">{ingredient.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {fmtQty(lot.remaining)} {ingredient.unit} · Expiry {shortDate(lot.expiryDate)}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{fmtQty(lot.remaining)} {ingredient.unit} · Expiry {shortDate(lot.expiryDate)}</p>
                       </div>
                       <span className={`shrink-0 text-xs font-bold ${red ? "text-destructive" : "text-warning"}`}>
                         {d <= 0 ? "Expires today" : d === 1 ? "1 day left" : `${d} days left`}
                       </span>
                     </Link>
+                    <InsightActions id={key} label={label} />
                   </li>
                 );
               })}
             </ul>
+          )}
+          {actioned.length > 0 && (
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Actioned insights ({actioned.length})</summary>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {actioned.map((r) => <li key={r.id}><Check className="mr-1 inline h-3 w-3 text-success" />{r.label} — accepted by {r.byName} on {shortDate(r.at)}</li>)}
+              </ul>
+            </details>
           )}
         </div>
 
@@ -177,9 +177,15 @@ function Dashboard() {
 
       {/* Quick Actions */}
       <div className="sticky bottom-20 z-40 md:bottom-4">
-        <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-3 shadow-lg">
-          <Link to="/log-waste" className={btnPrimary}><Trash2 className="h-4 w-4" /> Log Waste</Link>
-          <Link to="/log-production" search={{ item: undefined }} className={btnSecondary}><PackagePlus className="h-4 w-4" /> Log Production</Link>
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-3 shadow-lg">
+          <div className="grid grid-cols-2 gap-3">
+            <Link to="/log-waste" className={`${btnPrimary} h-12`}><Trash2 className="h-4 w-4" /> Log Waste</Link>
+            <Link to="/log-production" search={{ item: undefined }} className={`${btnPrimary} h-12`}><PackagePlus className="h-4 w-4" /> Log Production</Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Link to="/menu/new" className={`${btnSecondary} h-9 text-xs`}><Plus className="h-3.5 w-3.5" /> Add Menu Item</Link>
+            <Link to="/ingredients/new" className={`${btnSecondary} h-9 text-xs`}><Plus className="h-3.5 w-3.5" /> Add Ingredient</Link>
+          </div>
         </div>
       </div>
     </div>
