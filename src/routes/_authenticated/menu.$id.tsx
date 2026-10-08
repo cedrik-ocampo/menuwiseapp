@@ -29,6 +29,7 @@ export const Route = createFileRoute("/_authenticated/menu/$id")({
 function MenuItemView() {
   const { id } = Route.useParams();
   const db = useDB();
+  const [editBatch, setEditBatch] = useState<Batch | null>(null);
   const [sold, setSold] = useState("");
   const [soldDate, setSoldDate] = useState(todayISO());
   const navigate = useNavigate();
