@@ -10,6 +10,7 @@ import { daysFromToday, formatPeso, fmtQty, shortDate, timeOf, todayISO } from "
 import { PageTitle } from "@/components/mw/AppShell";
 import { Panel, SectionTitle } from "@/components/mw/ui";
 import { WasteList, WasteLogForm } from "@/components/mw/WasteLogForm";
+import { PurchaseEntries } from "@/components/mw/History";
 
 export const Route = createFileRoute("/_authenticated/ingredients/$id")({
   head: () => ({
@@ -128,6 +129,12 @@ function IngredientView() {
             </p>
           </button>
         )}
+      </Panel>
+
+      <Panel className="mt-4">
+        <SectionTitle>Ingredient entries</SectionTitle>
+        <p className="-mt-2 mb-2 text-sm text-muted-foreground">Each purchase added to stock. Tap the pencil to fix a mistake.</p>
+        <PurchaseEntries db={db} ingredientId={ing.id} />
       </Panel>
 
       <Panel className="mt-4">

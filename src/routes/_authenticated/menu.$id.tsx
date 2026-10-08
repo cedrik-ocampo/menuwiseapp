@@ -9,6 +9,10 @@ import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, timeOf, todayISO
 import { PageTitle } from "@/components/mw/AppShell";
 import { Callout, Field, Panel, SectionTitle, Stat, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 import { WasteList, WasteLogForm } from "@/components/mw/WasteLogForm";
+import { EditButton } from "@/components/mw/History";
+import { AuditCaption } from "@/components/mw/Audit";
+import { EditBatchDialog } from "@/components/mw/EditDialogs";
+import type { Batch } from "@/lib/types";
 
 export const Route = createFileRoute("/_authenticated/menu/$id")({
   head: () => ({
@@ -76,6 +80,7 @@ function MenuItemView() {
       </div>
 
       <Panel className="mt-6">
+        {editBatch && <EditBatchDialog batch={editBatch} unit={m.batchUnit} onClose={() => setEditBatch(null)} />}
         <SectionTitle>Batches & expiry dates</SectionTitle>
         <p className="-mt-2 mb-3 text-sm text-muted-foreground">{active.length} active batches · {fmtQty(active.reduce((a, b) => a + b.quantity, 0))} {m.batchUnit} made. Use the earliest-expiring batch first.</p>
         {active.length === 0 ? (
@@ -85,7 +90,7 @@ function MenuItemView() {
             {active.slice(0, 8).map((b) => {
               const d = daysFromToday(b.expiryDate);
               return (
-                <li key={b.id} className="flex items-center justify-between py-3 text-sm">
+                <li key={b.id} className="py-3 text-sm"><div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-primary">{b.id}</p>
                     <p className="text-muted-foreground">Made {shortDate(b.producedAt)} · {b.quantity} {m.batchUnit} produced</p>
@@ -98,7 +103,9 @@ function MenuItemView() {
                     if (!window.confirm(`Delete batch ${b.id}?`)) return;
                     remove("batches", b.id);
                     toast.success("Batch deleted");
-                  }}><Trash2 className="h-4 w-4" /></button></div>
+                  }}><Trash2 className="h-4 w-4" /></button>
+                  <EditButton label="Edit batch" onClick={() => setEditBatch(b)} /></div></div>
+                  <AuditCaption collection="batches" record={b} />
                 </li>
               );
             })}
