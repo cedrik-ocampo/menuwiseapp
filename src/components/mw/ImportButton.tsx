@@ -40,7 +40,7 @@ export function ImportButton<T>({
   async function onFile(f: File) {
     try {
       const rows = await readSheet(f);
-      if (!rows.length) return toast.error("That file has no rows");
+      if (!rows.length) { toast.error("That file has no rows"); return; }
       setPreview(parse(rows));
     } catch {
       toast.error("Couldn't read that file. Use Excel (.xlsx) or CSV.");

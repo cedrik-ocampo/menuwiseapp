@@ -38,9 +38,9 @@ export function EditWasteDialog({ log, onClose }: { log: WasteLog; onClose: () =
   const [unitCost, setUnitCost] = useState(String(log.unitCost));
   const q = parseFloat(quantity), c = parseFloat(unitCost);
   function save() {
-    if (!(q > 0)) return toast.error("Quantity must be more than 0");
-    if (!(c >= 0)) return toast.error("Enter a valid unit cost");
-    if (!unit.trim()) return toast.error("Unit is required");
+    if (!(q > 0)) { toast.error("Quantity must be more than 0"); return; }
+    if (!(c >= 0)) { toast.error("Enter a valid unit cost"); return; }
+    if (!unit.trim()) { toast.error("Unit is required"); return; }
     put("wasteLogs", { ...log, at: new Date(`${date}T${time}`).toISOString(), wasteType, quantity: q, unit: unit.trim(), unitCost: c, value: +(q * c).toFixed(2) });
     toast.success("Waste entry updated");
     onClose();
@@ -74,8 +74,8 @@ export function EditBatchDialog({ batch, unit, onClose }: { batch: Batch; unit?:
   const [note, setNote] = useState(batch.note ?? "");
   function save() {
     const q = parseFloat(quantity);
-    if (!(q > 0)) return toast.error("Quantity must be more than 0");
-    if (expiryDate < date) return toast.error("Expiry must be on or after the production date");
+    if (!(q > 0)) { toast.error("Quantity must be more than 0"); return; }
+    if (expiryDate < date) { toast.error("Expiry must be on or after the production date"); return; }
     put("batches", { ...batch, producedAt: new Date(`${date}T${time}`).toISOString(), quantity: q, expiryDate, note: note.trim() || undefined });
     toast.success("Production entry updated");
     onClose();
@@ -103,10 +103,10 @@ export function EditPurchaseDialog({ lot, unit, onClose }: { lot: Purchase; unit
   const [unitCost, setUnitCost] = useState(String(lot.unitCost));
   function save() {
     const q = parseFloat(quantity), r = parseFloat(remaining), c = parseFloat(unitCost);
-    if (!(q > 0)) return toast.error("Quantity must be more than 0");
-    if (!(r >= 0) || r > q) return toast.error("Remaining must be between 0 and the quantity bought");
-    if (!(c >= 0)) return toast.error("Enter a valid unit cost");
-    if (expiryDate < purchaseDate) return toast.error("Expiry must be on or after the purchase date");
+    if (!(q > 0)) { toast.error("Quantity must be more than 0"); return; }
+    if (!(r >= 0) || r > q) { toast.error("Remaining must be between 0 and the quantity bought"); return; }
+    if (!(c >= 0)) { toast.error("Enter a valid unit cost"); return; }
+    if (expiryDate < purchaseDate) { toast.error("Expiry must be on or after the purchase date"); return; }
     put("purchases", { ...lot, purchaseDate, expiryDate, quantity: q, remaining: r, unitCost: c });
     toast.success("Ingredient entry updated");
     onClose();
