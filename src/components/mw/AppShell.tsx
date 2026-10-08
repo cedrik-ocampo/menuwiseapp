@@ -1,9 +1,9 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X } from "lucide-react";
+import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X, Users } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import logo from "@/assets/mw-logo.png.asset.json";
-import { useDB, resetStore } from "@/lib/store";
+import { useDB, resetStore, currentWorkspace } from "@/lib/store";
 import { shortDate, todayISO } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -123,6 +123,14 @@ function CafeName({ initial }: { initial: string }) {
   useEffect(() => {
     const local = localStorage.getItem("menuwise:cafe_name");
     if (local) { setName(local); setDraft(local); }
+    // Shared café name from the team workspace
+    const t = setTimeout(async () => {
+      const ws = currentWorkspace();
+      if (!ws || !navigator.onLine) return;
+      const { data } = await supabase.from("workspaces").select("name").eq("id", ws).maybeSingle();
+      if (data?.name) { setName(data.name); setDraft(data.name); localStorage.setItem("menuwise:cafe_name", data.name); }
+    }, 1500);
+    return () => clearTimeout(t);
   }, []);
   async function save() {
     const v = draft.trim();
@@ -131,6 +139,8 @@ function CafeName({ initial }: { initial: string }) {
     setName(v);
     setEditing(false);
     localStorage.setItem("menuwise:cafe_name", v);
+    const ws = currentWorkspace();
+    if (ws) await supabase.from("workspaces").update({ name: v }).eq("id", ws);
     const { error } = await supabase.auth.updateUser({ data: { cafe_name: v } });
     if (error) toast.message("Saved on this device. It will update online when you're connected.");
     else toast.success("Café name updated");
@@ -167,6 +177,9 @@ export function AppHeader({ cafeName }: { cafeName: string }) {
               <WifiOff className="h-3 w-3" /> Offline
             </span>
           )}
+          <Link to="/team" aria-label="Team" title="Team" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs opacity-90 hover:opacity-100">
+            <Users className="h-5 w-5" /> <span className="hidden sm:inline">Team</span>
+          </Link>
           <SignOutButton className="flex items-center gap-1 text-xs opacity-80 hover:opacity-100 md:hidden" />
           <img src={logo.url} alt="" className="h-12 w-12 object-contain md:hidden" />
         </div>
