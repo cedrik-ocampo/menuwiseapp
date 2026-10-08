@@ -63,11 +63,11 @@ export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: In
       <Wrap className="space-y-4">
         <SectionTitle>Basic info</SectionTitle>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Ingredient ID" error={errors.id}><input className={inputCls} value={f.id} onChange={set("id")} /></Field>
-          <Field label="Ingredient name" error={errors.name}><input className={inputCls} value={f.name} onChange={set("name")} placeholder="Fresh milk" /></Field>
-          <Field label="Category" error={errors.category}><select className={inputCls} value={f.category} onChange={set("category")}><option value="">Choose…</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
+          <Field required label="Ingredient ID" error={errors.id}><input className={inputCls} value={f.id} onChange={set("id")} /></Field>
+          <Field required label="Ingredient name" error={errors.name}><input className={inputCls} value={f.name} onChange={set("name")} placeholder="Fresh milk" /></Field>
+          <Field required label="Category" error={errors.category}><select className={inputCls} value={f.category} onChange={set("category")}><option value="">Choose…</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
           <Field label="Storage · optional"><select className={inputCls} value={f.storage} onChange={set("storage")}><option value="">Not set</option>{STORAGE.map((c) => <option key={c}>{c}</option>)}</select></Field>
-          <Field label="Unit" error={errors.unit}><select className={inputCls} value={f.unit} onChange={set("unit")}>{UNITS.map((c) => <option key={c}>{c}</option>)}</select></Field>
+          <Field required label="Unit" error={errors.unit}><select className={inputCls} value={f.unit} onChange={set("unit")}>{UNITS.map((c) => <option key={c}>{c}</option>)}</select></Field>
           <Field label="Supplier · optional"><input className={inputCls} value={f.supplier} onChange={set("supplier")} /></Field>
           <Field label="Image · optional" hint="Shown on the inventory grid.">
             <div className="flex items-center gap-3">
@@ -84,10 +84,10 @@ export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: In
       <Wrap className="space-y-4">
         <SectionTitle>Purchase & stock</SectionTitle>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Purchase date" error={errors.purchaseDate}><input type="date" className={inputCls} value={f.purchaseDate} onChange={set("purchaseDate")} /></Field>
-          <Field label="Expiry date" error={errors.expiryDate}><input type="date" className={inputCls} value={f.expiryDate} onChange={set("expiryDate")} /></Field>
-          <Field label={`Quantity purchased (${f.unit})`} error={errors.quantity}><input inputMode="decimal" className={inputCls} value={f.quantity} onChange={set("quantity")} placeholder="0" /></Field>
-          <Field label={`Unit cost (per ${f.unit})`} error={errors.unitCost}><input inputMode="decimal" className={inputCls} value={f.unitCost} onChange={set("unitCost")} placeholder="₱0.00" /></Field>
+          <Field required label="Purchase date" error={errors.purchaseDate}><input type="date" className={inputCls} value={f.purchaseDate} onChange={set("purchaseDate")} /></Field>
+          <Field required label="Expiry date" error={errors.expiryDate}><input type="date" className={inputCls} value={f.expiryDate} onChange={set("expiryDate")} /></Field>
+          <Field required label={`Quantity purchased (${f.unit})`} error={errors.quantity}><input inputMode="decimal" className={inputCls} value={f.quantity} onChange={set("quantity")} placeholder="0" /></Field>
+          <Field required label={`Unit cost (per ${f.unit})`} error={errors.unitCost}><input inputMode="decimal" className={inputCls} value={f.unitCost} onChange={set("unitCost")} placeholder="₱0.00" /></Field>
         </div>
         <div className="rounded-xl bg-info-soft p-4">
           <p className="text-xs font-semibold text-primary">Current stock value · calculated</p>
