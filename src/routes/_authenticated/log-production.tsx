@@ -8,7 +8,7 @@ import { avgWeeklyProduction, producedThisWeek, weekStart } from "@/lib/calc";
 import { addDays, fmtQty, shortDate, todayISO, timeOf } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
-import { normDate, num as toNum, type Row } from "@/lib/import";
+import { normDate, num as toNum, type Row as SheetRow } from "@/lib/import";
 import type { Batch } from "@/lib/types";
 import { Field, Panel, SectionTitle, Stat, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 
@@ -78,7 +78,7 @@ function LogProduction() {
     setRows([{ ...mkRow(rows.length), batchId: `${rows[0].batchId.slice(0, -1)}${String.fromCharCode(65 + rows.length)}` }]);
   }
 
-  function parseProd(rows: Row[]): ParsedRow<Batch>[] {
+  function parseProd(rows: SheetRow[]): ParsedRow<Batch>[] {
     const used = new Set(db.batches.map((b) => b.id));
     return rows.map((r, k) => {
       const mid = r.menuitemid || r.menuitem || "";
