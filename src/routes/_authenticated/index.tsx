@@ -102,7 +102,7 @@ function Dashboard() {
             <Link to="/ingredients" className="inline-flex items-center gap-1 hover:underline">Ongoing Insights <ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>
           </SectionTitle>
           {visible.length === 0 ? (
-            <p className="py-4 text-sm text-muted-foreground">{db.ingredients.length === 0 || expiring.length === 0 && db.ingredients.length === 0 ? "No ongoing insights." : expiring.length === 0 ? `No ingredients expiring in ${thresholdLabel(threshold)}.` : "No ongoing insights."}</p>
+            <p className="py-4 text-sm text-muted-foreground">{db.ingredients.length > 0 && expiring.length === 0 ? `No ingredients expiring in ${thresholdLabel(threshold)}.` : "No ongoing insights."}</p>
           ) : (
             <ul className="space-y-2">
               {visible.map(({ ingredient, lot }) => {
