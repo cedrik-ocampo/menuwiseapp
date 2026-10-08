@@ -22,10 +22,11 @@ export const Route = createFileRoute("/_authenticated")({
 function Layout() {
   const { user } = Route.useRouteContext();
   const db = useDB();
-  useEffect(() => {
-    void initStore(user.id);
-  }, [user.id]);
   const cafe = (user.user_metadata?.cafe_name as string) || "My Café";
+  const display = (user.user_metadata?.full_name as string) || (user.email ?? "").split("@")[0] || "Staff";
+  useEffect(() => {
+    void initStore(user.id, display, cafe);
+  }, [user.id, display, cafe]);
   return (
     <div className="flex min-h-screen w-full bg-background">
       <NavBar />
