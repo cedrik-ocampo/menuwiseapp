@@ -10,6 +10,7 @@ import { daysFromToday, formatPeso, fmtQty, shortDate, timeOf, todayISO } from "
 import { PageTitle } from "@/components/mw/AppShell";
 import { Panel, SectionTitle } from "@/components/mw/ui";
 import { WasteList, WasteLogForm } from "@/components/mw/WasteLogForm";
+import { PurchaseEntries } from "@/components/mw/History";
 
 export const Route = createFileRoute("/_authenticated/ingredients/$id")({
   head: () => ({
@@ -65,7 +66,7 @@ function IngredientView() {
         }}><Trash2 className="h-4 w-4" /> Delete ingredient</button>
       </PageTitle>
       <h3 className="text-2xl font-bold text-primary">{ing.name}</h3>
-      <p className="mb-4 text-sm text-muted-foreground">{ing.id} · {ing.category} · {ing.storage}</p>
+      <p className="mb-4 text-sm text-muted-foreground">{[ing.id, ing.category, ing.storage].filter(Boolean).join(" · ")}</p>
 
       {popup && rec?.fire && (
         <div role="alertdialog" className="fixed inset-x-4 top-4 z-[60] mx-auto max-w-md rounded-2xl border border-info-border bg-card p-4 shadow-xl">
@@ -128,6 +129,12 @@ function IngredientView() {
             </p>
           </button>
         )}
+      </Panel>
+
+      <Panel className="mt-4">
+        <SectionTitle>Ingredient entries</SectionTitle>
+        <p className="-mt-2 mb-2 text-sm text-muted-foreground">Each purchase added to stock. Tap the pencil to fix a mistake.</p>
+        <PurchaseEntries db={db} ingredientId={ing.id} />
       </Panel>
 
       <Panel className="mt-4">

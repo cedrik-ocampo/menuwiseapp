@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { Check, Calculator, Trash2 } from "lucide-react";
+import { Check, Calculator, Trash2, Pencil } from "lucide-react";
+import { AuditCaption } from "./Audit";
+import { EditWasteDialog } from "./EditDialogs";
 import { toast } from "sonner";
 import { useDB, put, remove } from "@/lib/store";
 import { costPerUnit } from "@/lib/calc";
@@ -123,13 +125,13 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
         </Field>
       </div>
 
-      <Field label="Stage" hint="Ingredient → Ingredient ID · WIP → Batch ID · Finished Product → Menu Item ID + batch, if any.">
-        {fixedStage ? (
-          <div className="rounded-lg bg-secondary p-1"><div className="rounded-md bg-primary py-2 text-center text-xs font-semibold text-primary-foreground">{fixedStage}</div></div>
-        ) : (
+      {fixedStage ? (
+        <p className="text-sm font-semibold text-primary">Stage: <span className="font-normal">{fixedStage}</span></p>
+      ) : (
+        <Field label="Stage" hint="Ingredient → Ingredient ID · WIP → Batch ID · Finished Product → Menu Item ID + batch, if any.">
           <Segmented value={stage} options={STAGES} onChange={setStage} />
-        )}
-      </Field>
+        </Field>
+      )}
 
       {stage === "Ingredient" ? (
         <Field label="Ingredient ID" error={errors.link}>
@@ -223,14 +225,16 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
 }
 
 export function WasteList({ logs, empty = "No waste history yet." }: { logs: WasteLog[]; empty?: string }) {
+  const [editing, setEditing] = useState<WasteLog | null>(null);
   if (!logs.length) return <p className="py-4 text-center text-sm text-muted-foreground">{empty}</p>;
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
-      <div className="grid grid-cols-[1fr_1fr_2rem] bg-secondary px-4 py-2 text-xs font-bold uppercase text-primary">
+      {editing && <EditWasteDialog log={editing} onClose={() => setEditing(null)} />}
+      <div className="grid grid-cols-[1fr_1fr_4rem] bg-secondary px-4 py-2 text-xs font-bold uppercase text-primary">
         <span>Date / Waste type</span><span className="text-right">Quantity / Value</span><span />
       </div>
       {logs.map((w) => (
-        <div key={w.id} className="grid grid-cols-[1fr_1fr_2rem] items-center border-t border-border px-4 py-3 text-sm">
+        <div key={w.id} className="grid grid-cols-[1fr_1fr_4rem] items-center border-t border-border px-4 py-3 text-sm">
           <div>
             <p className="font-semibold text-primary">{shortDate(w.at)}</p>
             <p className="text-muted-foreground">{w.wasteType}</p>
@@ -239,10 +243,14 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
             <p className="text-muted-foreground">{fmtQty(w.quantity)} {w.unit}</p>
             <p className="font-bold text-primary">{formatPeso(w.value)}</p>
           </div>
+          <div className="flex justify-end gap-2">
+          <button type="button" aria-label="Edit waste entry" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(w)}>
+            <Pencil className="h-4 w-4" />
+          </button>
           <button
             type="button"
             aria-label="Delete waste entry"
-            className="justify-self-end text-muted-foreground hover:text-destructive"
+            className=" text-muted-foreground hover:text-destructive"
             onClick={() => {
               if (!window.confirm("Delete this waste entry?")) return;
               remove("wasteLogs", w.id);
@@ -251,6 +259,8 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
           >
             <Trash2 className="h-4 w-4" />
           </button>
+          </div>
+          <div className="col-span-3"><AuditCaption collection="wasteLogs" record={w} /></div>
         </div>
       ))}
     </div>

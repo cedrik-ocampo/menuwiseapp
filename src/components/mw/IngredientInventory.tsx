@@ -66,7 +66,7 @@ export function IngredientInventory({ db, rows, threshold }: { db: DBView; rows:
                   </span>
                 )}
                 <span className="line-clamp-2 text-sm font-bold text-primary">{r.i.name}</span>
-                <span className="flex items-center gap-1 text-xs text-muted-foreground"><Icon className="h-3 w-3" /> {r.i.category} · {r.i.storage}</span>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground"><Icon className="h-3 w-3" /> {[r.i.category, r.i.storage].filter(Boolean).join(" · ")}</span>
                 <span className="text-sm font-semibold text-primary">{fmtQty(r.stock)} {r.i.unit}</span>
                 <span className="text-xs text-muted-foreground">{formatPeso(r.i.unitCost)} / {r.i.unit}</span>
                 <span className="text-[11px] text-muted-foreground">Expiry {shortDate(r.lot?.expiryDate)}</span>
@@ -120,7 +120,7 @@ export function IngredientInventory({ db, rows, threshold }: { db: DBView; rows:
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  {live.i.storage} storage{live.i.supplier ? ` · Supplier: ${live.i.supplier}` : ""} · Purchased {shortDate(live.lastPurchase)} · Last used {shortDate(live.lastUsed)}
+                  {live.i.storage ? `${live.i.storage} storage` : "Storage not set"}{live.i.supplier ? ` · Supplier: ${live.i.supplier}` : ""} · Purchased {shortDate(live.lastPurchase)} · Last used {shortDate(live.lastUsed)}
                 </p>
                 {live.i.notes && <p className="mt-2 text-sm text-muted-foreground">{live.i.notes}</p>}
 

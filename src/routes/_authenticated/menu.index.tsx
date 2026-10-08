@@ -5,7 +5,8 @@ import { useDB } from "@/lib/store";
 import { menuMap, QUADRANTS, wasteColor } from "@/lib/calc";
 import { formatPeso } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
-import { Panel, Segmented, btnPrimary, btnSecondary } from "@/components/mw/ui";
+import { ProductionHistory } from "@/components/mw/History";
+import { Panel, SectionTitle, Segmented, btnPrimary, btnSecondary } from "@/components/mw/ui";
 import { MenuMapChart } from "@/components/mw/MenuMapChart";
 import { MenuInventory } from "@/components/mw/MenuInventory";
 import { Switch } from "@/components/ui/switch";
@@ -31,7 +32,7 @@ const DESC: Record<string, string> = {
 
 function MenuMap() {
   const db = useDB();
-  const [view, setView] = useState<"Bubble chart" | "Table" | "Inventory">("Inventory");
+  const [view, setView] = useState<"Bubble Chart" | "Table" | "Inventory">("Bubble Chart");
   const [withWip, setWithWip] = useState(false);
   const map = useMemo(() => menuMap(db, withWip), [db, withWip]);
 
@@ -44,9 +45,9 @@ function MenuMap() {
         </div>
       </PageTitle>
 
+      <div className="mb-3 w-full max-w-sm"><Segmented value={view} options={["Bubble Chart", "Table", "Inventory"] as const} onChange={setView} /></div>
       <Panel className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="w-64"><Segmented value={view} options={["Inventory", "Bubble chart", "Table"] as const} onChange={setView} /></div>
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <label className="flex items-center gap-2 text-sm text-primary">
             <Switch checked={withWip} onCheckedChange={setWithWip} />
             Include attributed prep/WIP waste
@@ -58,7 +59,7 @@ function MenuMap() {
 
         {view === "Inventory" ? (
           <MenuInventory db={db} rows={map.rows} />
-        ) : view === "Bubble chart" ? (
+        ) : view === "Bubble Chart" ? (
           <>
             <MenuMapChart map={map} height={420} />
             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground md:grid-cols-4">
@@ -101,6 +102,12 @@ function MenuMap() {
             })}
           </div>
         )}
+      </Panel>
+
+      <Panel className="mt-6">
+        <SectionTitle>Production History</SectionTitle>
+        <p className="-mt-2 mb-3 text-sm text-muted-foreground">Every batch logged, newest first — who added it and any edits.</p>
+        <ProductionHistory db={db} />
       </Panel>
     </div>
   );

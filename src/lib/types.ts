@@ -107,6 +107,42 @@ export interface WasteLog {
   retailValue?: number;
 }
 
+/** Who created / last edited a record. Stored inside every record's data. */
+export interface Audit {
+  createdBy?: string;
+  createdByName?: string;
+  createdAt?: string;
+  updatedBy?: string;
+  updatedByName?: string;
+  updatedAt?: string;
+}
+
+export interface FieldChange {
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+
+export interface ChangeLog {
+  id: string;
+  collection: string;
+  recordId: string;
+  action: "created" | "edited" | "deleted";
+  at: string;
+  by: string;
+  byName: string;
+  changes: FieldChange[];
+}
+
+export interface InsightResponse {
+  id: string; // insight key, e.g. "exp:<lotId>"
+  status: "accepted" | "rejected" | "snoozed";
+  until?: string; // ISO, for snoozed
+  at: string;
+  byName: string;
+  label: string;
+}
+
 export interface Collections {
   ingredients: Ingredient;
   purchases: Purchase;
@@ -115,6 +151,8 @@ export interface Collections {
   batches: Batch;
   sales: Sale;
   wasteLogs: WasteLog;
+  changeLogs: ChangeLog;
+  insightResponses: InsightResponse;
 }
 export type CollectionName = keyof Collections;
-export const COLLECTIONS: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs"];
+export const COLLECTIONS: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs", "changeLogs", "insightResponses"];

@@ -11,6 +11,35 @@ import { Field, Panel, Segmented, btnPrimary, btnSecondary, inputCls } from "@/c
 import { IngredientForm } from "@/components/mw/IngredientForm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
+import { normalizeCategory, num as toNum, type Row } from "@/lib/import";
+import type { DBView } from "@/lib/store";
+
+const MENU_COLS = "Menu_Item_ID, Menu_Item_Name, category, subcategory, type, retailPrice, unitCost, unit, shelfLifeDays";
+
+function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
+  const known = [...new Set([...Object.keys(CATS), ...db.menuItems.map((m) => m.category)])];
+  const seen = new Set<string>();
+  return rows.map((r, k) => {
+    const id = r.menuitemid || r.id, name = r.menuitemname || r.name;
+    const cat = normalizeCategory(r.category ?? "", known);
+    const price = toNum(r.retailprice), cost = toNum(r.unitcost || "0"), shelf = toNum(r.shelflifedays || "1");
+    const typeRaw = (r.type || "In-house").toLowerCase();
+    const type = ITEM_TYPES.find((t) => t.toLowerCase().replace(/[^a-z]/g, "") === typeRaw.replace(/[^a-z]/g, "")) ?? (typeRaw.includes("out") ? "Outsourced" : typeRaw.includes("order") ? "Made-to-order" : "In-house");
+    const base = { line: k + 2, label: `${id ?? ""} ${name ?? ""}`.trim() };
+    const err = !id ? "Missing Menu_Item_ID" : !name ? "Missing Menu_Item_Name" : !cat.value ? "Missing category" : !(price > 0) ? "retailPrice must be more than 0" : !(cost >= 0) ? "unitCost must be a number" : db.menuItems.some((m) => m.id.toLowerCase() === id.toLowerCase()) ? "This Menu_Item_ID already exists" : "";
+    if (err) return { ...base, error: err };
+    const subs = CATS[cat.value] ?? [];
+    const sub = r.subcategory ? normalizeCategory(r.subcategory.toLowerCase() === "viennoiserie" ? "Croissants & Danishes" : r.subcategory, subs).value : subs[0] ?? "";
+    const flag = !cat.known && !seen.has(cat.value) ? `New category: "${cat.value}"` : undefined;
+    if (!cat.known) { seen.add(cat.value); known.push(cat.value); }
+    const unit = r.unit || "pieces";
+    const b = blank(id);
+    const { tagsText: _t, recipe: _r, ...rest } = b;
+    return { ...base, flag, item: { ...rest, recipe: [], id, name, category: cat.value, subcategory: sub, type, retailPrice: price, unit, batchUnit: unit,
+      purchaseCost: type === "Outsourced" ? cost : 0, batchCost: type === "Outsourced" ? 0 : cost, yield: 1, shelfLifeDays: shelf || 1, defaultExpiryDays: shelf || 1 } };
+  });
+}
 
 export const Route = createFileRoute("/_authenticated/menu/new")({
   head: () => ({
@@ -24,8 +53,8 @@ export const Route = createFileRoute("/_authenticated/menu/new")({
   component: AddMenuItem,
 });
 
-const CATS: Record<string, string[]> = {
-  Pastry: ["Viennoiserie", "Bread", "Tart", "Cake", "Cookie"],
+export const CATS: Record<string, string[]> = {
+  Pastry: ["Croissants & Danishes", "Bread", "Tart", "Cake", "Cookie"],
   Drinks: ["Espresso", "Non-coffee", "Tea", "Cold drinks"],
 };
 const STEPS = ["Basic Info", "Type & Cost", "Recipe", "Production & Waste Defaults", "Review"];
@@ -34,7 +63,7 @@ type Draft = Omit<MenuItem, "recipe"> & { recipe: (RecipeLine & { key: number })
 
 function blank(nextId: string): Draft {
   return {
-    id: nextId, name: "", category: "Pastry", subcategory: "Viennoiserie", description: "", available: true, tags: [], tagsText: "",
+    id: nextId, name: "", category: "Pastry", subcategory: "Croissants & Danishes", description: "", available: true, tags: [], tagsText: "",
     type: "In-house", batchCost: 0, yield: 1, purchaseCost: 0, unit: "pieces", retailPrice: 0, supplier: "", shelfLifeDays: 2,
     expiryRule: "Expires after shelf life", defaultBatchSize: 12, batchUnit: "pieces", defaultExpiryDays: 2,
     defaultWasteStage: "Finished Product", defaultWasteType: "Unsold", allowQuickAdd: true, recipe: [],
@@ -152,7 +181,15 @@ function AddMenuItem() {
       <nav aria-label="Breadcrumb" className="mb-2 text-sm text-accent">
         <Link to="/menu" className="font-medium hover:underline">Menu Overview</Link> <span className="text-muted-foreground">&gt;</span> <span className="text-muted-foreground">Add New Menu Item</span>
       </nav>
-      <h2 className="text-2xl font-bold text-primary md:text-3xl">Add New Menu Item</h2>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-2xl font-bold text-primary md:text-3xl">Add New Menu Item</h2>
+        <ImportButton
+          what="menu items"
+          columns={MENU_COLS}
+          parse={(rows) => parseMenuRows(rows, db)}
+          commit={(items) => { items.forEach((m) => put("menuItems", m)); navigate({ to: "/menu" }); }}
+        />
+      </div>
       <ol className="my-5 flex flex-wrap gap-2">
         {STEPS.map((s, i) => (
           <li key={s}>
@@ -172,9 +209,9 @@ function AddMenuItem() {
         <div className="space-y-4">
           {step === 0 && (
             <Panel className="grid gap-4 sm:grid-cols-2">
-              <Field label="Menu Item ID *" hint="Auto-filled; you can type your own." error={errors.id}><input className={inputCls} value={d.id} onChange={(e) => set("id", e.target.value)} /></Field>
-              <Field label="Menu Item Name *" error={errors.name}><input className={inputCls} value={d.name} onChange={(e) => set("name", e.target.value)} placeholder="Custard Bun" /></Field>
-              <Field label="Category *" error={errors.category}>
+              <Field required label="Menu Item ID" hint="Auto-filled; you can type your own." error={errors.id}><input className={inputCls} value={d.id} onChange={(e) => set("id", e.target.value)} /></Field>
+              <Field required label="Menu Item Name" error={errors.name}><input className={inputCls} value={d.name} onChange={(e) => set("name", e.target.value)} placeholder="Custard Bun" /></Field>
+              <Field required label="Category" error={errors.category}>
                 <select className={inputCls} value={d.category} onChange={(e) => setD({ ...d, category: e.target.value, subcategory: CATS[e.target.value][0] })}>
                   {Object.keys(CATS).map((c) => <option key={c}>{c}</option>)}
                 </select>
@@ -195,7 +232,7 @@ function AddMenuItem() {
                   }} />
                 </div>
               </Field>
-              <Field label="Tags" hint="Separate with commas"><input className={inputCls} value={d.tagsText} onChange={(e) => set("tagsText", e.target.value)} placeholder="bestseller, breakfast" /></Field>
+              <Field label="Tags · optional" hint="Separate with commas"><input className={inputCls} value={d.tagsText} onChange={(e) => set("tagsText", e.target.value)} placeholder="bestseller, breakfast" /></Field>
               <label className="flex items-center gap-3 text-sm font-semibold text-primary"><Switch checked={d.available} onCheckedChange={(v) => set("available", v)} /> Available for Sale</label>
             </Panel>
           )}
@@ -205,24 +242,24 @@ function AddMenuItem() {
               <Segmented value={d.type} options={ITEM_TYPES} onChange={(v) => set("type", v)} />
               {outsourced ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Purchase Cost per Unit *" error={errors.purchaseCost}><input inputMode="decimal" className={inputCls} value={d.purchaseCost || ""} onChange={(e) => set("purchaseCost", num(e.target.value))} /></Field>
-                  <Field label="Unit *" error={errors.unit}><input className={inputCls} value={d.unit} onChange={(e) => set("unit", e.target.value)} /></Field>
-                  <Field label="Retail Price *" error={errors.retailPrice}><input inputMode="decimal" className={inputCls} value={d.retailPrice || ""} onChange={(e) => set("retailPrice", num(e.target.value))} /></Field>
+                  <Field required label="Purchase Cost per Unit" error={errors.purchaseCost}><input inputMode="decimal" className={inputCls} value={d.purchaseCost || ""} onChange={(e) => set("purchaseCost", num(e.target.value))} /></Field>
+                  <Field required label="Unit" error={errors.unit}><input className={inputCls} value={d.unit} onChange={(e) => set("unit", e.target.value)} /></Field>
+                  <Field required label="Retail Price" error={errors.retailPrice}><input inputMode="decimal" className={inputCls} value={d.retailPrice || ""} onChange={(e) => set("retailPrice", num(e.target.value))} /></Field>
                   <Field label="Supplier"><input className={inputCls} value={d.supplier} onChange={(e) => set("supplier", e.target.value)} /></Field>
-                  <Field label="Shelf Life (days) *" error={errors.shelfLifeDays}><input inputMode="numeric" className={inputCls} value={d.shelfLifeDays} onChange={(e) => set("shelfLifeDays", num(e.target.value))} /></Field>
+                  <Field required label="Shelf Life (days)" error={errors.shelfLifeDays}><input inputMode="numeric" className={inputCls} value={d.shelfLifeDays} onChange={(e) => set("shelfLifeDays", num(e.target.value))} /></Field>
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Batch Cost" hint={d.recipe.length && !batchTouched ? "Taken from the recipe total. Type to override." : "Total cost to make one batch."} error={errors.batchCost}>
                     <input inputMode="decimal" className={inputCls} value={effective.batchCost || ""} onChange={(e) => { setBatchTouched(true); set("batchCost", num(e.target.value)); }} />
                   </Field>
-                  <Field label="Yield *" hint="Units per batch" error={errors.yield}><input inputMode="numeric" className={inputCls} value={d.yield || ""} onChange={(e) => set("yield", num(e.target.value))} /></Field>
+                  <Field required label="Yield" hint="Units per batch" error={errors.yield}><input inputMode="numeric" className={inputCls} value={d.yield || ""} onChange={(e) => set("yield", num(e.target.value))} /></Field>
                   <Field label="Cost per Unit · computed"><input className={inputCls} disabled value={formatPeso(cpu)} /></Field>
                   <Field label="Standard Recipe Cost · computed"><input className={inputCls} disabled value={formatPeso(recipeTotal)} /></Field>
-                  <Field label="Retail Price *" error={errors.retailPrice}><input inputMode="decimal" className={inputCls} value={d.retailPrice || ""} onChange={(e) => set("retailPrice", num(e.target.value))} /></Field>
+                  <Field required label="Retail Price" error={errors.retailPrice}><input inputMode="decimal" className={inputCls} value={d.retailPrice || ""} onChange={(e) => set("retailPrice", num(e.target.value))} /></Field>
                   <Field label="Margin · computed"><input className={inputCls} disabled value={formatPeso(margin(effective))} /></Field>
                   <Field label="Food Cost % · computed"><input className={inputCls} disabled value={`${foodCostPct(effective).toFixed(1)}%`} /></Field>
-                  <Field label="Shelf Life (days) *" error={errors.shelfLifeDays}><input inputMode="numeric" className={inputCls} value={d.shelfLifeDays} onChange={(e) => set("shelfLifeDays", num(e.target.value))} /></Field>
+                  <Field required label="Shelf Life (days)" error={errors.shelfLifeDays}><input inputMode="numeric" className={inputCls} value={d.shelfLifeDays} onChange={(e) => set("shelfLifeDays", num(e.target.value))} /></Field>
                   <div className="sm:col-span-2">
                     <Field label="Default Expiry Rule">
                       <select className={inputCls} value={d.expiryRule} onChange={(e) => set("expiryRule", e.target.value)}>
@@ -299,8 +336,8 @@ function AddMenuItem() {
 
           {step === 3 && (
             <Panel className="grid gap-4 sm:grid-cols-2">
-              <Field label="Default Batch Size *" error={errors.defaultBatchSize}><input inputMode="numeric" className={inputCls} value={d.defaultBatchSize || ""} onChange={(e) => set("defaultBatchSize", num(e.target.value))} /></Field>
-              <Field label="Batch Unit *" error={errors.batchUnit}><input className={inputCls} value={d.batchUnit} onChange={(e) => set("batchUnit", e.target.value)} /></Field>
+              <Field required label="Default Batch Size" error={errors.defaultBatchSize}><input inputMode="numeric" className={inputCls} value={d.defaultBatchSize || ""} onChange={(e) => set("defaultBatchSize", num(e.target.value))} /></Field>
+              <Field required label="Batch Unit" error={errors.batchUnit}><input className={inputCls} value={d.batchUnit} onChange={(e) => set("batchUnit", e.target.value)} /></Field>
               <Field label="Default Expiry After Production (days)"><input inputMode="numeric" className={inputCls} value={d.defaultExpiryDays} onChange={(e) => set("defaultExpiryDays", num(e.target.value))} /></Field>
               <Field label="Default Waste Stage">
                 <select className={inputCls} value={d.defaultWasteStage} onChange={(e) => set("defaultWasteStage", e.target.value as never)}>{STAGES.filter((s) => s !== "Ingredient").map((s) => <option key={s}>{s}</option>)}</select>
