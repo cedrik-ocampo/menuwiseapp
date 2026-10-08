@@ -1,13 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
-import { Plus, Upload, Sheet as SheetIcon, ChevronRight, ArrowDownUp } from "lucide-react";
-import { toast } from "sonner";
+import { useMemo, useState } from "react";
+import { Plus, ChevronRight, ArrowDownUp } from "lucide-react";
+import type { Ingredient, Purchase } from "@/lib/types";
+import { normDate, normalizeCategory, num, type Row } from "@/lib/import";
+import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
+import { INGREDIENT_CATEGORIES } from "@/components/mw/IngredientForm";
 import { useDB, put } from "@/lib/store";
 import { expiringWithin, lastUsed, nextLot, stockOf } from "@/lib/calc";
 import { daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import { useThreshold, thresholdLabel } from "@/lib/settings";
 import { PageTitle } from "@/components/mw/AppShell";
-import { Panel, SectionTitle, Segmented, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
+import { Panel, SectionTitle, Segmented, btnPrimary, inputCls } from "@/components/mw/ui";
 import { IngredientInventory } from "@/components/mw/IngredientInventory";
 
 export const Route = createFileRoute("/_authenticated/ingredients/")({
@@ -22,6 +25,8 @@ export const Route = createFileRoute("/_authenticated/ingredients/")({
   component: Inventory,
 });
 
+const COLS = "Ingredient_ID, Ingredient_Name, category, unit, quantity, unitCost, purchaseDate, expiryDate";
+
 type SortKey = "expiry" | "purchase" | "lastUsed" | "alpha";
 const SORT_LABEL: Record<SortKey, string> = { expiry: "Expiry", purchase: "Purchase date", lastUsed: "Last used", alpha: "Alphabetic" };
 
@@ -31,7 +36,6 @@ function Inventory() {
   const [asc, setAsc] = useState(true);
   const [view, setView] = useState<"Grid" | "List">("Grid");
   const [threshold] = useThreshold();
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const rows = useMemo(() => {
     const r = db.ingredients.map((i) => {
@@ -59,24 +63,34 @@ function Inventory() {
 
   const expiring = expiringWithin(db, threshold).length;
 
-  async function importFile(file: File) {
-    // CSV import (Excel / Google Sheets → File › Download › CSV). Columns: id,name,unit,quantity,unitCost,purchaseDate,expiryDate
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const head = lines[0].toLowerCase().split(",").map((h) => h.trim());
-    const idx = (k: string) => head.indexOf(k.toLowerCase());
-    let n = 0;
-    for (const line of lines.slice(1)) {
-      const c = line.split(",").map((x) => x.trim());
-      const id = c[idx("id")], name = c[idx("name")], unit = c[idx("unit")];
-      const quantity = parseFloat(c[idx("quantity")]), unitCost = parseFloat(c[idx("unitCost")]);
-      const purchaseDate = c[idx("purchaseDate")], expiryDate = c[idx("expiryDate")];
-      if (!id || !name || !unit || !(quantity > 0) || !(unitCost >= 0) || !purchaseDate || !expiryDate) continue;
-      if (!db.ingredients.some((i) => i.id === id)) put("ingredients", { id, name, unit, unitCost, category: "Other", storage: "Pantry" });
-      put("purchases", { id: `${id}-P${Date.now().toString(36)}${n}`, ingredientId: id, purchaseDate, expiryDate, quantity, remaining: quantity, unitCost });
-      n++;
-    }
-    toast[n ? "success" : "error"](n ? `Imported ${n} rows` : "No valid rows. Columns: id,name,unit,quantity,unitCost,purchaseDate,expiryDate");
+  const knownCats = useMemo(() => [...new Set([...INGREDIENT_CATEGORIES, ...db.ingredients.map((i) => i.category).filter(Boolean)])], [db.ingredients]);
+
+  function parseRows(rows: Row[]): ParsedRow<{ ing: Ingredient; purchase: Purchase }>[] {
+    const seen = new Set<string>();
+    return rows.map((r, k) => {
+      const id = r.ingredientid || r.id, name = r.ingredientname || r.name, unit = r.unit;
+      const quantity = num(r.quantity), unitCost = num(r.unitcost);
+      const purchaseDate = normDate(r.purchasedate), expiryDate = normDate(r.expirydate);
+      const cat = normalizeCategory(r.category ?? "", knownCats);
+      const base = { line: k + 2, label: `${id ?? ""} ${name ?? ""}`.trim() };
+      const err =
+        !id ? "Missing Ingredient_ID" : !name ? "Missing Ingredient_Name" : !cat.value ? "Missing category" : !unit ? "Missing unit"
+        : !(quantity > 0) ? "Quantity must be more than 0" : !(unitCost >= 0) ? "unitCost must be a number"
+        : !purchaseDate ? "Invalid purchaseDate" : !expiryDate ? "Invalid expiryDate" : expiryDate < purchaseDate ? "Expiry is before purchase date" : "";
+      if (err) return { ...base, error: err };
+      const existing = db.ingredients.find((i) => i.id.toLowerCase() === id.toLowerCase());
+      const iid = existing?.id ?? id;
+      const flag = !cat.known && !seen.has(cat.value) ? `New category: "${cat.value}"` : undefined;
+      if (!cat.known) { seen.add(cat.value); knownCats.push(cat.value); }
+      return {
+        ...base,
+        flag,
+        item: {
+          ing: existing ?? { id: iid, name, unit, unitCost, category: cat.value, storage: "" },
+          purchase: { id: `${iid}-P${Date.now().toString(36)}${k}`, ingredientId: iid, purchaseDate, expiryDate, quantity, remaining: quantity, unitCost },
+        },
+      };
+    });
   }
 
   return (
@@ -87,12 +101,14 @@ function Inventory() {
           <Link to="/ingredients/new" className={`${btnPrimary} h-12 w-full`}><Plus className="h-4 w-4" /> Manual Input</Link>
           <div>
             <p className="mb-2 text-sm font-semibold text-muted-foreground">Import your ingredient inventory</p>
-            <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])} />
-            <div className="grid grid-cols-2 gap-3">
-              <button className={`${btnSecondary} h-12`} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> Excel</button>
-              <button className={`${btnSecondary} h-12`} onClick={() => fileRef.current?.click()}><SheetIcon className="h-4 w-4" /> Google Sheets</button>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">Save your sheet as CSV first. Columns: id, name, unit, quantity, unitCost, purchaseDate, expiryDate.</p>
+            <ImportButton
+              what="ingredients"
+              columns={COLS}
+              className="h-12 w-full"
+              parse={parseRows}
+              commit={(items) => items.forEach(({ ing, purchase }) => { if (!db.ingredients.some((i) => i.id === ing.id)) put("ingredients", ing); put("purchases", purchase); })}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">Required Columns: {COLS}.</p>
           </div>
 
           <Panel>

@@ -9,14 +9,15 @@ import { fileToDataUrl } from "@/lib/image";
 import { Field, Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "./ui";
 
 const UNITS = ["L", "ml", "kg", "g", "pc", "pack", "box"];
-const CATEGORIES = ["Dairy", "Produce", "Dry goods", "Beverage", "Packaging", "Other"];
+export const INGREDIENT_CATEGORIES = ["Dairy", "Produce", "Dry goods", "Beverage", "Packaging", "Other"];
+const CATEGORIES = INGREDIENT_CATEGORIES;
 const STORAGE = ["Refrigerated", "Frozen", "Pantry"];
 
 export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: Ingredient) => void; onCancel: () => void; compact?: boolean }) {
   const db = useDB();
   const nextId = `ING-${String(db.ingredients.length + 1).padStart(3, "0")}`;
   const [f, setF] = useState({
-    id: nextId, name: "", category: "Dairy", storage: "Refrigerated", unit: "kg", supplier: "",
+    id: nextId, name: "", category: "", storage: "", unit: "kg", supplier: "",
     purchaseDate: todayISO(), expiryDate: addDays(todayISO(), 7), quantity: "", unitCost: "", notes: "", image: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -27,6 +28,7 @@ export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: In
       id: z.string().trim().min(1, "Ingredient ID is required").max(20)
         .refine((v) => !db.ingredients.some((i) => i.id.toLowerCase() === v.toLowerCase()), "This Ingredient ID is already used"),
       name: z.string().trim().min(1, "Name is required").max(80),
+      category: z.string().trim().min(1, "Choose a category"),
       unit: z.string().trim().min(1, "Unit is required"),
       quantity: z.number({ invalid_type_error: "Enter a quantity" }).positive("Quantity must be more than 0"),
       unitCost: z.number({ invalid_type_error: "Enter a unit cost" }).min(0, "Unit cost can't be negative"),
@@ -63,8 +65,8 @@ export function IngredientForm({ onSaved, onCancel, compact }: { onSaved: (i: In
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Ingredient ID" error={errors.id}><input className={inputCls} value={f.id} onChange={set("id")} /></Field>
           <Field label="Ingredient name" error={errors.name}><input className={inputCls} value={f.name} onChange={set("name")} placeholder="Fresh milk" /></Field>
-          <Field label="Category"><select className={inputCls} value={f.category} onChange={set("category")}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
-          <Field label="Storage"><select className={inputCls} value={f.storage} onChange={set("storage")}>{STORAGE.map((c) => <option key={c}>{c}</option>)}</select></Field>
+          <Field label="Category" error={errors.category}><select className={inputCls} value={f.category} onChange={set("category")}><option value="">Choose…</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
+          <Field label="Storage · optional"><select className={inputCls} value={f.storage} onChange={set("storage")}><option value="">Not set</option>{STORAGE.map((c) => <option key={c}>{c}</option>)}</select></Field>
           <Field label="Unit" error={errors.unit}><select className={inputCls} value={f.unit} onChange={set("unit")}>{UNITS.map((c) => <option key={c}>{c}</option>)}</select></Field>
           <Field label="Supplier · optional"><input className={inputCls} value={f.supplier} onChange={set("supplier")} /></Field>
           <Field label="Image · optional" hint="Shown on the inventory grid.">
