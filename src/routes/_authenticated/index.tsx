@@ -8,6 +8,8 @@ import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from 
 import { THRESHOLD_OPTIONS, thresholdLabel, useThreshold } from "@/lib/settings";
 import { Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 
+import { suggestionFor } from "@/lib/suggest";
+
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
@@ -115,6 +117,7 @@ function Dashboard() {
                     <Link to="/ingredients/$id" params={{ id: ingredient.id }} className="flex items-center justify-between p-3 pb-2">
                       <div className="min-w-0">
                         <p className="font-semibold text-primary">{ingredient.name}</p>
+                        <p className="text-xs font-medium text-accent">{suggestionFor(ingredient)}</p>
                         <p className="text-xs text-muted-foreground">{fmtQty(lot.remaining)} {ingredient.unit} · Expiry {shortDate(lot.expiryDate)}</p>
                       </div>
                       <span className={`shrink-0 text-xs font-bold ${red ? "text-destructive" : "text-warning"}`}>
@@ -183,8 +186,8 @@ function Dashboard() {
             <Link to="/log-production" search={{ item: undefined }} className={`${btnPrimary} h-12`}><PackagePlus className="h-4 w-4" /> Log Production</Link>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Link to="/menu/new" className={`${btnSecondary} h-9 text-xs`}><Plus className="h-3.5 w-3.5" /> Add Menu Item</Link>
-            <Link to="/ingredients/new" className={`${btnSecondary} h-9 text-xs`}><Plus className="h-3.5 w-3.5" /> Add Ingredient</Link>
+            <Link to="/menu/new" className={`${btnSecondary} h-11 rounded-xl border border-border text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}><Plus className="h-3.5 w-3.5" /> Add Menu Item</Link>
+            <Link to="/ingredients/new" className={`${btnSecondary} h-11 rounded-xl border border-border text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}><Plus className="h-3.5 w-3.5" /> Add Ingredient</Link>
           </div>
         </div>
       </div>

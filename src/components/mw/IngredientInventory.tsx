@@ -7,6 +7,7 @@ import { deleteIngredient } from "@/lib/deletes";
 import { daysFromToday, formatPeso, fmtQty, shortDate } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image";
 import type { Ingredient, Purchase } from "@/lib/types";
+import { AuditCaption } from "@/components/mw/Audit";
 import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 
 export interface IngRow {
@@ -123,6 +124,7 @@ export function IngredientInventory({ db, rows, threshold }: { db: DBView; rows:
                   {live.i.storage ? `${live.i.storage} storage` : "Storage not set"}{live.i.supplier ? ` · Supplier: ${live.i.supplier}` : ""} · Purchased {shortDate(live.lastPurchase)} · Last used {shortDate(live.lastUsed)}
                 </p>
                 {live.i.notes && <p className="mt-2 text-sm text-muted-foreground">{live.i.notes}</p>}
+                <AuditCaption collection="ingredients" record={live.i} />
 
                 <div className="mt-5 flex flex-col gap-2">
                   <button type="button" className={btnPrimary} onClick={() => setEditing(true)}>

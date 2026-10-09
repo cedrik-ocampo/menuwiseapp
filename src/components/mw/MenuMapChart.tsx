@@ -22,6 +22,11 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
           <ZAxis type="number" dataKey="z" range={[80, 1400]} name="Waste value" />
           <ReferenceLine x={map.avgPop} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
           <ReferenceLine y={map.avgProfit} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
+          {([["Puzzles", "insideTopLeft"], ["Stars", "insideTopRight"], ["Dogs", "insideBottomLeft"], ["Plowhorses", "insideBottomRight"]] as const).map(([q, pos]) => (
+            <ReferenceLine key={q} y={map.avgProfit} stroke="none" ifOverflow="extendDomain">
+              <Label value={q} position={pos} style={{ fontSize: 11, fill: "var(--muted-foreground)", fontWeight: 700, opacity: 0.6 }} />
+            </ReferenceLine>
+          ))}
           <Tooltip
             cursor={false}
             content={({ payload }) => {
@@ -48,11 +53,16 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
           </Scatter>
         </ScatterChart>
       </ResponsiveContainer>
-      <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        <span>Lower waste</span>
-        <span className="h-2 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${wasteColor(0)}, ${wasteColor(0.5)}, ${wasteColor(1)})` }} />
-        <span>Higher waste</span>
-        <span className="ml-3">· Bubble size = waste value</span>
+      <div className="mt-2 space-y-1 text-center text-xs text-muted-foreground">
+        <p className="flex flex-wrap items-center justify-center gap-2">
+          <span>Lower waste</span>
+          <span className="h-2 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${wasteColor(0)}, ${wasteColor(0.5)}, ${wasteColor(1)})` }} />
+          <span>Higher waste</span>
+          <span>· Bubble size = waste value</span>
+        </p>
+        <p>
+          Top right: <b className="text-primary">Stars</b> · Bottom right: <b className="text-primary">Plowhorses</b> · Top left: <b className="text-primary">Puzzles</b> · Bottom left: <b className="text-primary">Dogs</b>
+        </p>
       </div>
     </div>
   );
