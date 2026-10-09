@@ -14,4 +14,12 @@ describe("App routing", () => {
 
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
+
+  it("matches Sales as a protected top-level page", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    const matches = router.matchRoutes("/sales");
+
+    expect(matches.at(-1)?.routeId).toBe("/_authenticated/sales");
+  });
 });

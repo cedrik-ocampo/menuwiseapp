@@ -68,7 +68,7 @@ function MenuMap() {
         ) : (
           <div className="grid gap-3 md:grid-cols-4">
             {QUADRANTS.map((q) => {
-              const items = map.rows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
+              const items = map.plottedRows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
               return (
                 <div key={q} className="overflow-hidden rounded-xl border border-border">
                   <div className="bg-secondary px-3 py-2">
@@ -96,6 +96,24 @@ function MenuMap() {
                 </div>
               );
             })}
+            {map.rows.some((r) => r.popularity === 0) && (
+              <div className="overflow-hidden rounded-xl border border-border md:col-span-4">
+                <div className="bg-muted px-3 py-2">
+                  <p className="font-bold text-primary">Not yet classified</p>
+                  <p className="text-xs text-muted-foreground">No sales logged in the last 30 days</p>
+                </div>
+                <ul className="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {map.rows.filter((r) => r.popularity === 0).sort((a, b) => a.item.name.localeCompare(b.item.name)).map((r) => (
+                    <li key={r.item.id}>
+                      <Link to="/menu/$id" params={{ id: r.item.id }} className="flex items-center justify-between rounded-lg bg-card px-3 py-2 text-sm font-semibold hover:bg-muted">
+                        <span className="truncate text-primary">{r.item.name}</span>
+                        <span className="ml-2 shrink-0 text-xs text-muted-foreground">No sales</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </Panel>

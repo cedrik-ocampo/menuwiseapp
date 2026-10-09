@@ -164,7 +164,7 @@ function Dashboard() {
           <SectionTitle right={<ChevronRight className="h-5 w-5 text-muted-foreground" />}>Menu Distribution Overview</SectionTitle>
           <div className="grid grid-cols-2 gap-3">
             {QUADRANTS.map((q) => {
-              const items = map.rows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
+              const items = map.plottedRows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
               return (
                 <div key={q} className="rounded-xl bg-muted p-3">
                   <p className="text-xs font-bold uppercase text-primary">{q}</p>
