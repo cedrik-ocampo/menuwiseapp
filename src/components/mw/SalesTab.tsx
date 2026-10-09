@@ -7,7 +7,7 @@ import { put, remove, useDB, type DBView } from "@/lib/store";
 import { saleRevenue, saleUnitPrice, weekStart } from "@/lib/calc";
 import { addDays, formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
 import { normDate, num, type Row } from "@/lib/import";
-import type { Sale } from "@/lib/types";
+import type { Audit, Sale } from "@/lib/types";
 import { AuditCaption } from "./Audit";
 import { ImportButton, type ParsedRow } from "./ImportButton";
 import { SaleDialog } from "./SaleDialog";
@@ -74,7 +74,7 @@ export function SalesTab() {
       const d = addDays(t, i - 29);
       return { date: shortDate(d), revenue: db.sales.filter((s) => s.date === d).reduce((a, s) => a + rev(s), 0) };
     });
-    const list = [...db.sales].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+    const list = [...db.sales].sort((a, b) => b.date.localeCompare(a.date) || ((b as Audit).createdAt ?? "").localeCompare((a as Audit).createdAt ?? ""));
     return { today, week, top, chart, list };
   }, [db, t, ws]);
 
