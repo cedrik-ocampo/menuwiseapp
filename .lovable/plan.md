@@ -27,10 +27,18 @@ Sales becomes its own main page while preserving the existing sales entry, impor
 
 4. **Clarify the quadrant legend**
    - Make each underlined quadrant name hoverable and tappable.
-   - Show compact definitions for Stars, Plowhorses, Puzzles, and Dogs using the team’s requested wording.
+   - Use these exact compact tooltip definitions:
+     - **Stars (Top right):** “High popularity + High profitability. Sells above the median AND earns above the median margin. Keep producing and promote.”
+     - **Plowhorses (Bottom right):** “High popularity + Low profitability. Sells above the median BUT earns below the median margin. Consider raising price or trimming ingredient cost.”
+     - **Puzzles (Top left):** “Low popularity + High profitability. Earns above the median margin BUT sells below the median. Promote or reposition to increase sales.”
+     - **Dogs (Bottom left):** “Low popularity + Low profitability. Sells below the median AND earns below the median margin. Consider removing or reformulating.”
+   - Keep the caption below the chart exactly: “Popularity = average units sold per week over the last 30 days.”
 
 5. **Verify and clean up**
    - Verify Average Weekly Sales, menu-item Sales History, dashboard Sales KPIs, imports, manual entries, and offline queueing still use the same Sales collection.
+   - Explicitly verify Dashboard “Waste as % of Sales” retains green under 3%, amber from 3–5%, and red over 5%.
+   - Explicitly verify Sales log rows retain “Edited by {user} on {date}” after editing.
+   - Explicitly verify Manual Sale Entry auto-fills unit price from the selected menu item’s retail price.
    - Ensure there is one `/sales` page, no Sales sub-tab remains under Menu Map, and all six mobile tabs fit at 375px without overlap.
    - Run the relevant routing test and browser-check the central flows.
 
