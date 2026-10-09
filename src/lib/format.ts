@@ -1,7 +1,9 @@
-/** Currency is Philippine pesos, e.g. ₱75.00 */
+import { getPrefs } from "./prefs";
+
+/** Philippine pesos, e.g. ₱75.00 (symbol follows the currency preference). */
 export function formatPeso(n: number | undefined | null): string {
   const v = Number.isFinite(n as number) ? (n as number) : 0;
-  return `₱${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${getPrefs().currency}${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function todayISO(): string {
