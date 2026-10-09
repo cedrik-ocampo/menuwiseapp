@@ -205,7 +205,7 @@ function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRev
                       strokeDasharray={w.current ? "4 3" : undefined}
                       strokeWidth={w.current ? 2 : 0} />
                   ))}
-                  <LabelList dataKey="revenue" position="top" offset={6} formatter={(v: number) => compactPeso(Number(v))} style={{ fontSize: 9, fill: "var(--foreground)" }} />
+                  <LabelList dataKey="revenue" position="top" offset={6} formatter={(v: number) => compactPeso(Number(v))} style={{ fontSize: 9, fill: "var(--foreground)", stroke: "none" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
