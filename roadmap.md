@@ -3,4 +3,5 @@
 - [x] Move Sales to a sixth top-level tab with pending-sync status.
 - [x] Add Sales chart range controls and empty state.
 - [x] Correct Menu Map plotting, medians, one-item handling, and legend tooltips.
-- [x] Verify Sales integrations and 375px mobile navigation.
+- [x] Verify Sales integrations and 375px mobile navigation.- [x] Header user menu (Profile above Sign out), /profile page, demo-mode delete safeguard, /team → /profile.
+- [x] Replace Sales line chart with 8-week revenue bars; confirm Dashboard sales KPIs.
