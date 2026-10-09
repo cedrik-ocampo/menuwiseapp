@@ -9,7 +9,6 @@ import { ProductionHistory } from "@/components/mw/History";
 import { Panel, SectionTitle, Segmented, btnPrimary, btnSecondary } from "@/components/mw/ui";
 import { MenuMapChart } from "@/components/mw/MenuMapChart";
 import { MenuInventory } from "@/components/mw/MenuInventory";
-import { SalesTab } from "@/components/mw/SalesTab";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/menu/")({
@@ -33,7 +32,7 @@ const DESC: Record<string, string> = {
 
 function MenuMap() {
   const db = useDB();
-  const [view, setView] = useState<"Bubble Chart" | "Table" | "Sales" | "Inventory">("Bubble Chart");
+  const [view, setView] = useState<"Bubble Chart" | "Table" | "Inventory">("Bubble Chart");
   const [withWip, setWithWip] = useState(false);
   const map = useMemo(() => menuMap(db, withWip), [db, withWip]);
 
@@ -46,9 +45,9 @@ function MenuMap() {
         </div>
       </PageTitle>
 
-      <div className="mb-3 w-full max-w-md"><Segmented value={view} options={["Bubble Chart", "Table", "Sales", "Inventory"] as const} onChange={setView} /></div>
+      <div className="mb-3 w-full max-w-md"><Segmented value={view} options={["Bubble Chart", "Table", "Inventory"] as const} onChange={setView} /></div>
       <Panel className="space-y-4">
-        {view !== "Sales" && (<>
+        <>
         <div className="flex flex-wrap items-center justify-end gap-3">
           <label className="flex items-center gap-2 text-sm text-primary">
             <Switch checked={withWip} onCheckedChange={setWithWip} />
@@ -58,11 +57,9 @@ function MenuMap() {
         <p className="text-xs text-muted-foreground">
           Primary metric: direct finished-product waste per menu item{withWip ? " + attributed prep/WIP waste" : ""}. Unallocated ingredient waste is not included.
         </p>
-        </>)}
+        </>
 
-        {view === "Sales" ? (
-          <SalesTab />
-        ) : view === "Inventory" ? (
+        {view === "Inventory" ? (
           <MenuInventory db={db} rows={map.rows} />
         ) : view === "Bubble Chart" ? (
           <>

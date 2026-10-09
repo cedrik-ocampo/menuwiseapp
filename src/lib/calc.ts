@@ -134,25 +134,35 @@ export const sumValue = (ws: WasteLog[]) => ws.reduce((a, w) => a + w.value, 0);
 export type Quadrant = "Stars" | "Plowhorses" | "Puzzles" | "Dogs";
 export const QUADRANTS: Quadrant[] = ["Stars", "Plowhorses", "Puzzles", "Dogs"];
 
+function median(values: number[]) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
 export function menuMap(db: DBView, includeAttributed: boolean) {
-  const rows = db.menuItems.map((m) => {
+  const baseRows = db.menuItems.map((m) => {
     const popularity = avgWeeklySales(db, m.id);
     const profit = margin(m);
     const waste = sumValue(directWaste(db, m.id)) + (includeAttributed ? sumValue(attributedWaste(db, m.id)) : 0);
     return { item: m, popularity, profit, waste };
   });
-  const avgPop = rows.reduce((a, r) => a + r.popularity, 0) / Math.max(1, rows.length);
-  const avgProfit = rows.reduce((a, r) => a + r.profit, 0) / Math.max(1, rows.length);
-  const maxWaste = Math.max(1, ...rows.map((r) => r.waste));
+  const plottedBaseRows = baseRows.filter((r) => r.popularity > 0);
+  const medianPop = median(plottedBaseRows.map((r) => r.popularity));
+  const medianProfit = median(plottedBaseRows.map((r) => r.profit));
+  const maxWaste = Math.max(1, ...baseRows.map((r) => r.waste));
+  const classify = (r: (typeof baseRows)[number]) =>
+    (r.popularity >= medianPop
+      ? r.profit >= medianProfit ? "Stars" : "Plowhorses"
+      : r.profit >= medianProfit ? "Puzzles" : "Dogs") as Quadrant;
+  const rows = baseRows.map((r) => ({ ...r, intensity: r.waste / maxWaste, quadrant: classify(r) }));
   return {
-    avgPop,
-    avgProfit,
+    medianPop,
+    medianProfit,
     maxWaste,
-    rows: rows.map((r) => ({
-      ...r,
-      intensity: r.waste / maxWaste,
-      quadrant: (r.popularity >= avgPop ? (r.profit >= avgProfit ? "Stars" : "Plowhorses") : r.profit >= avgProfit ? "Puzzles" : "Dogs") as Quadrant,
-    })),
+    rows,
+    plottedRows: rows.filter((r) => r.popularity > 0),
   };
 }
 /** Red (high waste) → green (low waste). */
