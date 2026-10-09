@@ -163,8 +163,9 @@ function compactPeso(v: number) {
   const sym = formatPeso(0).replace(/[\d.,]/g, "");
   if (v >= 1e6) return `${sym}${(v / 1e6).toFixed(1).replace(/\.0$/, "")}M`;
   if (v >= 1e4) return `${sym}${(v / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
-  if (v >= 1000) return `${sym}${Math.round(v).toLocaleString("en-US")}`;
-  return formatPeso(v);
+  if (v >= 1000) return `${sym}${(v / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
+  if (v === 0) return formatPeso(0);
+  return `${sym}${Math.round(v)}`;
 }
 
 function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRevenue>; hasSales: boolean }) {
@@ -180,7 +181,7 @@ function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRev
         <p className="py-16 text-center text-sm text-muted-foreground">No sales yet. Log or import sales to see weekly revenue.</p>
       ) : (
         <>
-          <div className="mx-auto h-64 w-full max-w-4xl">
+          <div className="-mx-1 overflow-x-auto px-1"><div className="mx-auto h-64 w-full min-w-[440px] max-w-4xl">
             <ResponsiveContainer>
               <BarChart data={data} margin={{ top: 28, right: 8, bottom: 4, left: 4 }} barCategoryGap="20%" maxBarSize={56}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
@@ -208,7 +209,7 @@ function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRev
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </div></div>
           <p className="mt-2 text-xs text-muted-foreground">Oldest on the left. This Week (so far) is shown lighter with a dashed outline.</p>
           <p className="mt-1 text-sm text-muted-foreground">Average weekly revenue (last 4 weeks): <span className="font-semibold text-primary">{formatPeso(avg)}</span></p>
         </>
