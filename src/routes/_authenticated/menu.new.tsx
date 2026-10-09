@@ -11,6 +11,7 @@ import { Field, Panel, Segmented, btnPrimary, btnSecondary, inputCls } from "@/c
 import { IngredientForm } from "@/components/mw/IngredientForm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { ProductionTabs } from "@/components/mw/ProductionTabs";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
 import { normalizeCategory, num as toNum, type Row } from "@/lib/import";
 import type { DBView } from "@/lib/store";
@@ -181,6 +182,7 @@ function AddMenuItem() {
       <nav aria-label="Breadcrumb" className="mb-2 text-sm text-accent">
         <Link to="/menu" className="font-medium hover:underline">Menu Overview</Link> <span className="text-muted-foreground">&gt;</span> <span className="text-muted-foreground">Add New Menu Item</span>
       </nav>
+      <ProductionTabs active="add" />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-2xl font-bold text-primary md:text-3xl">Add New Menu Item</h2>
         <ImportButton
@@ -190,6 +192,7 @@ function AddMenuItem() {
           commit={(items) => { items.forEach((m) => put("menuItems", m)); navigate({ to: "/menu" }); }}
         />
       </div>
+      <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: {MENU_COLS}.</p>
       <ol className="my-5 flex flex-wrap gap-2">
         {STEPS.map((s, i) => (
           <li key={s}>

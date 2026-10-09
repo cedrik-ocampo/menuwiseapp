@@ -7,6 +7,7 @@ import { useDB, put } from "@/lib/store";
 import { avgWeeklyProduction, producedThisWeek, weekStart } from "@/lib/calc";
 import { addDays, fmtQty, shortDate, todayISO, timeOf } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
+import { ProductionTabs } from "@/components/mw/ProductionTabs";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
 import { normDate, num as toNum, type Row as SheetRow } from "@/lib/import";
 import type { Batch } from "@/lib/types";
@@ -96,12 +97,14 @@ function LogProduction() {
   return (
     <div className="mx-auto max-w-3xl">
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Log Production" subtitle="Track every batch, from bake to expiry." />
+      <ProductionTabs active="log" />
       <SectionTitle right={
         <div className="flex items-center gap-3">
           <Link to="/menu/new" className="text-sm font-semibold text-accent">+ Create new menu item</Link>
           <ImportButton what="production entries" columns={PROD_COLS} className="h-9 px-3" parse={parseProd} commit={(items) => items.forEach((b) => put("batches", b))} />
         </div>
       }>Production Log Form</SectionTitle>
+      <p className="-mt-2 mb-3 text-xs text-muted-foreground">Import · Required Columns: {PROD_COLS}.</p>
       <Panel className="space-y-4">
         <Field label="Menu item">
           <select className={inputCls} value={menuItemId} onChange={(e) => onItemChange(e.target.value)}>

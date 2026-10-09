@@ -109,7 +109,7 @@ function Inventory() {
               parse={parseRows}
               commit={(items) => items.forEach(({ ing, purchase }) => { if (!db.ingredients.some((i) => i.id === ing.id)) put("ingredients", ing); put("purchases", purchase); })}
             />
-            <p className="mt-1 text-xs text-muted-foreground">Required Columns: {COLS}.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: {COLS}.</p>
           </div>
 
           <Panel>
