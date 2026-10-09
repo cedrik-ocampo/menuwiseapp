@@ -11,6 +11,8 @@ import { Callout, Field, Panel, SectionTitle, Stat, btnPrimary, btnSecondary, in
 import { WasteList, WasteLogForm } from "@/components/mw/WasteLogForm";
 import { EditButton } from "@/components/mw/History";
 import { AuditCaption } from "@/components/mw/Audit";
+import { MenuSalesHistory } from "@/components/mw/SalesTab";
+import { SaleDialog } from "@/components/mw/SaleDialog";
 import { EditBatchDialog } from "@/components/mw/EditDialogs";
 import type { Batch } from "@/lib/types";
 
@@ -30,8 +32,7 @@ function MenuItemView() {
   const { id } = Route.useParams();
   const db = useDB();
   const [editBatch, setEditBatch] = useState<Batch | null>(null);
-  const [sold, setSold] = useState("");
-  const [soldDate, setSoldDate] = useState(todayISO());
+  const [saleOpen, setSaleOpen] = useState(false);
   const navigate = useNavigate();
   const m = db.menuItems.find((x) => x.id === id);
   if (!m) {
@@ -50,17 +51,6 @@ function MenuItemView() {
   const attributed = attributedWaste(db, m.id);
   const isDrink = m.category.toLowerCase().includes("drink");
 
-  function addSale() {
-    const q = parseFloat(sold);
-    if (!Number.isFinite(q) || q < 0) {
-      toast.error("Enter units sold (0 or more)");
-      return;
-    }
-    put("sales", { id: uid("S-"), menuItemId: m!.id, date: soldDate, quantity: q });
-    setSold("");
-    toast.success("Sales recorded");
-  }
-
   return (
     <div className="mx-auto max-w-4xl">
       <PageTitle back={{ to: "/menu", label: "Menu Overview / Summary Map" }} title="Individual Menu Item View" subtitle="Track production, review batches and record losses at the right stage.">
@@ -77,7 +67,7 @@ function MenuItemView() {
       <div className="grid gap-3 md:grid-cols-3">
         <Stat label="Amt. Produced for the Week" value={<>{fmtQty(producedThisWeek(db, m.id))} <span className="text-sm font-normal">{m.batchUnit}</span></>} sub={`${shortDate(ws)}–${shortDate(addDays(ws, 6))} · Week to date`} />
         <Stat label="Average Weekly Production" value={fmtQty(Math.round(avgWeeklyProduction(db, m.id)))} sub={`${m.batchUnit} / week · last 4 complete weeks`} />
-        <Stat label="Average Weekly Sales" value={fmtQty(Math.round(avgWeeklySales(db, m.id)))} sub={`${m.batchUnit} / week · last 4 complete weeks`} />
+        <Stat label="Average Weekly Sales" value={fmtQty(Math.round(avgWeeklySales(db, m.id)))} sub={`${m.batchUnit} / week · last 30 days`} />
       </div>
 
       <Panel className="mt-6">
@@ -115,15 +105,6 @@ function MenuItemView() {
         <Link to="/log-production" search={{ item: m.id }} className={`${btnPrimary} mt-4 w-full`}><Plus className="h-4 w-4" /> Quick Add Batch</Link>
       </Panel>
 
-      <Panel className="mt-6">
-        <SectionTitle>Record sales</SectionTitle>
-        <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-3">
-          <Field label="Date"><input type="date" className={inputCls} value={soldDate} onChange={(e) => setSoldDate(e.target.value)} /></Field>
-          <Field label={`Units sold (${m.batchUnit})`}><input inputMode="decimal" className={inputCls} value={sold} onChange={(e) => setSold(e.target.value)} /></Field>
-          <button className={btnSecondary} onClick={addSale}>Add</button>
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">Used for Average Weekly Sales. Enter daily totals.</p>
-      </Panel>
 
       <div className="mt-8">
         <SectionTitle>Waste History & Logging</SectionTitle>
@@ -196,6 +177,11 @@ function MenuItemView() {
           </Panel>
         </div>
       </div>
+      <Panel className="mt-8">
+        <SectionTitle right={<button type="button" className={btnPrimary} onClick={() => setSaleOpen(true)}><Plus className="h-4 w-4" /> Add Sale</button>}>Sales History</SectionTitle>
+        <MenuSalesHistory menuItemId={m.id} />
+      </Panel>
+      {saleOpen && <SaleDialog menuItemId={m.id} onClose={() => setSaleOpen(false)} />}
     </div>
   );
 }

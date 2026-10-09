@@ -64,6 +64,7 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
         <p>
           Top right: <b className="text-primary">Stars</b> · Bottom right: <b className="text-primary">Plowhorses</b> · Top left: <b className="text-primary">Puzzles</b> · Bottom left: <b className="text-primary">Dogs</b>
         </p>
+        <p className="italic">Popularity = average units sold per week over the last 30 days.</p>
       </div>
     </div>
   );

@@ -101,9 +101,20 @@ export function avgWeeklyProduction(db: DBView, menuItemId: string) {
   const { from, to } = last4Weeks();
   return db.batches.filter((b) => b.menuItemId === menuItemId && b.producedAt.slice(0, 10) >= from && b.producedAt.slice(0, 10) < to).reduce((a, b) => a + b.quantity, 0) / 4;
 }
+/** Popularity: average units sold per week over the last 30 days (today included). */
 export function avgWeeklySales(db: DBView, menuItemId: string) {
-  const { from, to } = last4Weeks();
-  return db.sales.filter((s) => s.menuItemId === menuItemId && s.date >= from && s.date < to).reduce((a, s) => a + s.quantity, 0) / 4;
+  const t = todayISO(), from = addDays(t, -29);
+  return db.sales.filter((s) => s.menuItemId === menuItemId && s.date >= from && s.date <= t).reduce((a, s) => a + s.quantity, 0) / (30 / 7);
+}
+/** Revenue of a sale; old entries without a price use the item's current retail price. */
+export function saleRevenue(db: DBView, s: { menuItemId: string; quantity: number; unitPrice?: number }) {
+  return s.quantity * saleUnitPrice(db, s);
+}
+export function saleUnitPrice(db: DBView, s: { menuItemId: string; unitPrice?: number }) {
+  return s.unitPrice ?? db.menuItems.find((m) => m.id === s.menuItemId)?.retailPrice ?? 0;
+}
+export function totalSales(db: DBView, from: string, to: string) {
+  return db.sales.filter((s) => s.date >= from && s.date <= to).reduce((a, s) => a + saleRevenue(db, s), 0);
 }
 
 export function directWaste(db: DBView, menuItemId: string) {
