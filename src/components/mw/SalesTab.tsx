@@ -181,7 +181,7 @@ function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRev
         <p className="py-16 text-center text-sm text-muted-foreground">No sales yet. Log or import sales to see weekly revenue.</p>
       ) : (
         <>
-          <div className="-mx-1 overflow-x-auto px-1"><div className="mx-auto h-64 w-full min-w-[440px] max-w-4xl">
+          <div ref={(el) => { if (el) el.scrollLeft = el.scrollWidth; }} className="-mx-1 overflow-x-auto px-1"><div className="mx-auto h-64 w-full min-w-[440px] max-w-4xl">
             <ResponsiveContainer>
               <BarChart data={data} margin={{ top: 28, right: 8, bottom: 4, left: 4 }} barCategoryGap="20%" maxBarSize={56}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
