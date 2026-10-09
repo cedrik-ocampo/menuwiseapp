@@ -48,6 +48,7 @@ function MenuMap() {
 
       <div className="mb-3 w-full max-w-md"><Segmented value={view} options={["Bubble Chart", "Table", "Sales", "Inventory"] as const} onChange={setView} /></div>
       <Panel className="space-y-4">
+        {view !== "Sales" && (<>
         <div className="flex flex-wrap items-center justify-end gap-3">
           <label className="flex items-center gap-2 text-sm text-primary">
             <Switch checked={withWip} onCheckedChange={setWithWip} />
@@ -57,6 +58,7 @@ function MenuMap() {
         <p className="text-xs text-muted-foreground">
           Primary metric: direct finished-product waste per menu item{withWip ? " + attributed prep/WIP waste" : ""}. Unallocated ingredient waste is not included.
         </p>
+        </>)}
 
         {view === "Sales" ? (
           <SalesTab />
