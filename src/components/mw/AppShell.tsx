@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X, Users, BadgePhilippinePeso } from "lucide-react";
+import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X, Users, PhilippinePeso } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import logo from "@/assets/mw-logo.png.asset.json";
@@ -14,7 +14,7 @@ const TABS: { to: string; label: string; mobileLabel: string; icon: typeof Trash
   { to: "/log-waste", label: "Log Waste", mobileLabel: "Waste", icon: Trash2, pending: ["wasteLogs"] },
   { to: "/log-production", label: "Log Production", mobileLabel: "Production", icon: PackagePlus, pending: ["batches"] },
   { to: "/menu", label: "Menu Map", mobileLabel: "Menu", icon: LayoutGrid },
-  { to: "/sales", label: "Sales", mobileLabel: "Sales", icon: BadgePhilippinePeso, pending: ["sales"] },
+  { to: "/sales", label: "Sales", mobileLabel: "Sales", icon: PhilippinePeso, pending: ["sales"] },
   { to: "/ingredients", label: "Ingredients", mobileLabel: "Ingredients", icon: Package },
 ];
 
