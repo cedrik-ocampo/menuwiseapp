@@ -185,3 +185,16 @@ export function expiringWithin(db: DBView, days: number) {
     .filter((x): x is { ingredient: Ingredient; lot: NonNullable<typeof x.lot> } => !!x.lot && x.lot.expiryDate <= limit)
     .sort((a, b) => a.lot.expiryDate.localeCompare(b.lot.expiryDate));
 }
+
+export interface WeekBucket { key: string; label: string; start: string; end: string; revenue: number; current: boolean }
+/** Last 8 Monday–Sunday weeks, newest first. This Week runs Monday→today; future-dated sales are ignored. */
+export function weeklyRevenue(sales: { date: string }[], revenueOf: (s: any) => number, today = todayISO()): WeekBucket[] {
+  const ws = weekStart(today);
+  const labels = ["This Week", "Last Week", "2w", "3w", "4w", "5w", "6w", "7w"];
+  return labels.map((label, i) => {
+    const start = addDays(ws, -7 * i);
+    const end = i === 0 ? today : addDays(start, 6);
+    const revenue = sales.filter((s) => s.date >= start && s.date <= end).reduce((a, s) => a + revenueOf(s), 0);
+    return { key: start, label, start, end, revenue, current: i === 0 };
+  });
+}

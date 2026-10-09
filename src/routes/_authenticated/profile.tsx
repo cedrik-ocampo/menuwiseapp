@@ -121,7 +121,7 @@ function Profile() {
     const v = getView() as unknown as Record<string, unknown>;
     const rows: string[][] = [];
     for (const [c, list] of Object.entries(v)) if (Array.isArray(list)) for (const r of list as { id?: string }[]) rows.push([c, String(r.id ?? ""), JSON.stringify(r)]);
-    downloadCsv(`menuwise-export-${new Date().toISOString().slice(0, 10)}.csv`, ["collection", "id", "data"], rows);
+    downloadCsv(`menuwise-export-${new Date().toISOString().slice(0, 10)}.csv`, [["collection", "id", "data"], ...rows]);
   }
 
   async function clearCache() {

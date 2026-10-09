@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { put, remove, useDB, type DBView } from "@/lib/store";
-import { saleRevenue, saleUnitPrice, weekStart } from "@/lib/calc";
+import { saleRevenue, saleUnitPrice, weekStart, weeklyRevenue } from "@/lib/calc";
 import { addDays, formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
 import { normDate, num, type Row } from "@/lib/import";
 import type { Audit, Sale } from "@/lib/types";
@@ -14,15 +14,6 @@ import { SaleDialog } from "./SaleDialog";
 import { Panel, SectionTitle, Stat, btnPrimary } from "./ui";
 
 const SALES_COLS = "sale_date, menu_item_id, quantity (Optional: unit_price, notes)";
-const RANGE_OPTIONS = [
-  { label: "5 Days", days: 5, interval: 0 },
-  { label: "1 Week", days: 7, interval: 0 },
-  { label: "2 Weeks", days: 14, interval: 1 },
-  { label: "30 Days", days: 30, interval: 3 },
-  { label: "60 Days", days: 60, interval: 6 },
-] as const;
-type RangeDays = (typeof RANGE_OPTIONS)[number]["days"];
-
 function parseSales(rows: Row[], db: DBView): ParsedRow<Sale>[] {
   const t = todayISO(), oldest = addDays(t, -365);
   const existing = new Set(db.sales.map((s) => `${s.date}|${s.menuItemId}`));
@@ -67,11 +58,10 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Sale | null>(null);
-  const [rangeDays, setRangeDays] = useState<RangeDays>(30);
   const t = todayISO(), ws = weekStart();
   const nameOf = (id: string) => db.menuItems.find((m) => m.id === id)?.name ?? id;
 
-  const { today, week, top, chart, list, hasChartSales } = useMemo(() => {
+  const { today, week, top, weeks, list } = useMemo(() => {
     const rev = (s: Sale) => saleRevenue(db, s);
     const today = db.sales.filter((s) => s.date === t).reduce((a, s) => a + rev(s), 0);
     const weekSales = db.sales.filter((s) => s.date >= ws && s.date <= t);
@@ -79,16 +69,10 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
     const units = new Map<string, number>();
     weekSales.forEach((s) => units.set(s.menuItemId, (units.get(s.menuItemId) ?? 0) + s.quantity));
     const top = [...units.entries()].sort((a, b) => b[1] - a[1])[0];
-    const chartFrom = addDays(t, -(rangeDays - 1));
-    const chartSales = db.sales.filter((s) => s.date >= chartFrom && s.date <= t);
-    const chart = Array.from({ length: rangeDays }, (_, i) => {
-      const d = addDays(t, i - (rangeDays - 1));
-      return { date: shortDate(d), revenue: db.sales.filter((s) => s.date === d).reduce((a, s) => a + rev(s), 0) };
-    });
+    const weeks = weeklyRevenue(db.sales, rev, t);
     const list = [...db.sales].sort((a, b) => b.date.localeCompare(a.date) || ((b as Audit).createdAt ?? "").localeCompare((a as Audit).createdAt ?? ""));
-    return { today, week, top, chart, list, hasChartSales: chartSales.length > 0 };
-  }, [db, t, ws, rangeDays]);
-  const selectedRange = RANGE_OPTIONS.find((option) => option.days === rangeDays) ?? RANGE_OPTIONS[3];
+    return { today, week, top, weeks, list };
+  }, [db, t, ws]);
 
   return (
     <div className="space-y-5">
@@ -111,35 +95,7 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
         <Stat label="Top Seller" value={top ? nameOf(top[0]) : "—"} sub={top ? `${fmtQty(top[1])} units this week` : "No sales this week"} />
       </div>
 
-      <Panel>
-        <SectionTitle>Revenue · last {rangeDays} days</SectionTitle>
-        <div className="mb-4 grid grid-cols-5 rounded-lg bg-secondary p-1" aria-label="Sales chart period">
-          {RANGE_OPTIONS.map((option) => (
-            <button
-              key={option.days}
-              type="button"
-              aria-pressed={rangeDays === option.days}
-              onClick={() => setRangeDays(option.days)}
-              className={`min-w-0 rounded-md px-1 py-2 text-[10px] font-semibold sm:text-xs ${rangeDays === option.days ? "bg-primary text-primary-foreground" : "text-primary"}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        {!hasChartSales ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">No sales in this period.</p>
-        ) : <div className="h-56 w-full">
-          <ResponsiveContainer>
-            <LineChart data={chart} margin={{ top: 8, right: 12, bottom: 0, left: 8 }}>
-              <CartesianGrid stroke="var(--border)" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} interval={selectedRange.interval} />
-              <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={(v) => formatPeso(Number(v))} width={72} />
-              <Tooltip formatter={(v: number) => formatPeso(v)} contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-              <Line type="monotone" dataKey="revenue" name="Revenue" stroke="var(--primary)" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>}
-      </Panel>
+      <WeeklyRevenue weeks={weeks} hasSales={db.sales.length > 0} />
 
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <table className="w-full min-w-[720px] text-sm">
@@ -200,5 +156,53 @@ export function MenuSalesHistory({ menuItemId }: { menuItemId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRevenue>; hasSales: boolean }) {
+  const avg = weeks.slice(1, 5).reduce((a, w) => a + w.revenue, 0) / 4;
+  const max = Math.max(...weeks.map((w) => w.revenue));
+  // zero weeks get a thin flat bar so they're still visible
+  const data = weeks.map((w) => ({ ...w, shown: w.revenue > 0 ? w.revenue : Math.max(max, 1) * 0.015 }));
+  return (
+    <Panel>
+      <SectionTitle>Weekly Revenue · last 8 weeks</SectionTitle>
+      {!hasSales ? (
+        <p className="py-16 text-center text-sm text-muted-foreground">No sales yet. Log or import sales to see weekly revenue.</p>
+      ) : (
+        <>
+          <div className="h-64 w-full">
+            <ResponsiveContainer>
+              <BarChart data={data} margin={{ top: 24, right: 8, bottom: 0, left: 8 }}>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} interval={0} />
+                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={(v) => formatPeso(Number(v))} width={76} domain={[0, (m: number) => Math.max(m, 1)]} />
+                <Tooltip
+                  cursor={{ fill: "var(--secondary)" }}
+                  content={({ active, payload }) => {
+                    const w = active && payload?.[0]?.payload as (typeof data)[number] | undefined;
+                    if (!w) return null;
+                    return <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow">Week of {shortDate(w.start)}–{shortDate(w.end)}: <b>{formatPeso(w.revenue)}</b>{w.current && " (so far)"}</div>;
+                  }}
+                />
+                <Bar dataKey="shown" radius={[4, 4, 0, 0]}>
+                  {data.map((w) => (
+                    <Cell key={w.key}
+                      fill={w.revenue === 0 ? "var(--muted-foreground)" : "var(--primary)"}
+                      fillOpacity={w.revenue === 0 ? 0.35 : w.current ? 0.45 : 1}
+                      stroke={w.current ? "var(--primary)" : undefined}
+                      strokeDasharray={w.current ? "4 3" : undefined}
+                      strokeWidth={w.current ? 2 : 0} />
+                  ))}
+                  <LabelList dataKey="revenue" position="top" formatter={(v: number) => formatPeso(v)} style={{ fontSize: 9, fill: "var(--foreground)" }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">This Week (so far) is shown lighter with a dashed outline.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Average weekly revenue (last 4 weeks): <span className="font-semibold text-primary">{formatPeso(avg)}</span></p>
+        </>
+      )}
+    </Panel>
   );
 }
