@@ -159,11 +159,20 @@ export function MenuSalesHistory({ menuItemId }: { menuItemId: string }) {
   );
 }
 
+function compactPeso(v: number) {
+  const sym = formatPeso(0).replace(/[\d.,]/g, "");
+  if (v >= 1e6) return `${sym}${(v / 1e6).toFixed(1).replace(/\.0$/, "")}M`;
+  if (v >= 1e4) return `${sym}${(v / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
+  if (v >= 1000) return `${sym}${Math.round(v).toLocaleString("en-US")}`;
+  return formatPeso(v);
+}
+
 function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRevenue>; hasSales: boolean }) {
   const avg = weeks.slice(1, 5).reduce((a, w) => a + w.revenue, 0) / 4;
-  const max = Math.max(...weeks.map((w) => w.revenue));
-  // zero weeks get a thin flat bar so they're still visible
-  const data = weeks.map((w) => ({ ...w, shown: w.revenue > 0 ? w.revenue : Math.max(max, 1) * 0.015 }));
+  // oldest → newest, left to right
+  const data = [...weeks].reverse();
+  const max = Math.max(1, ...data.map((w) => w.revenue));
+  const labelOf = (key: string) => data.find((w) => w.key === key)?.label ?? "";
   return (
     <Panel>
       <SectionTitle>Weekly Revenue · last 8 weeks</SectionTitle>
@@ -171,21 +180,22 @@ function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRev
         <p className="py-16 text-center text-sm text-muted-foreground">No sales yet. Log or import sales to see weekly revenue.</p>
       ) : (
         <>
-          <div className="h-64 w-full">
+          <div className="mx-auto h-64 w-full max-w-4xl">
             <ResponsiveContainer>
-              <BarChart data={data} margin={{ top: 24, right: 8, bottom: 0, left: 8 }}>
+              <BarChart data={data} margin={{ top: 28, right: 8, bottom: 4, left: 4 }} barCategoryGap="20%" maxBarSize={56}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} interval={0} />
-                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={(v) => formatPeso(Number(v))} width={76} domain={[0, (m: number) => Math.max(m, 1)]} />
+                <XAxis dataKey="key" type="category" interval={0} tickFormatter={labelOf} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
+                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={(v) => compactPeso(Number(v))} width={56} domain={[0, Math.ceil(max * 1.15)]} allowDataOverflow />
                 <Tooltip
                   cursor={{ fill: "var(--secondary)" }}
                   content={({ active, payload }) => {
-                    const w = active && payload?.[0]?.payload as (typeof data)[number] | undefined;
+                    const w = active ? (payload?.[0]?.payload as (typeof data)[number] | undefined) : undefined;
                     if (!w) return null;
-                    return <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow">Week of {shortDate(w.start)}–{shortDate(w.end)}: <b>{formatPeso(w.revenue)}</b>{w.current && " (so far)"}</div>;
+                    const head = w.current ? `This Week (Mon–${new Date().toLocaleDateString("en-US", { weekday: "short" })})` : `Week of ${shortDate(w.start)}–${shortDate(w.end)}`;
+                    return <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow">{head}: <b>{formatPeso(w.revenue)}</b></div>;
                   }}
                 />
-                <Bar dataKey="shown" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="revenue" radius={[4, 4, 0, 0]} minPointSize={3} isAnimationActive={false}>
                   {data.map((w) => (
                     <Cell key={w.key}
                       fill={w.revenue === 0 ? "var(--muted-foreground)" : "var(--primary)"}
@@ -194,12 +204,12 @@ function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRev
                       strokeDasharray={w.current ? "4 3" : undefined}
                       strokeWidth={w.current ? 2 : 0} />
                   ))}
-                  <LabelList dataKey="revenue" position="top" formatter={(v: number) => formatPeso(v)} style={{ fontSize: 9, fill: "var(--foreground)" }} />
+                  <LabelList dataKey="revenue" position="top" offset={6} formatter={(v: number) => compactPeso(Number(v))} style={{ fontSize: 9, fill: "var(--foreground)" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">This Week (so far) is shown lighter with a dashed outline.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Oldest on the left. This Week (so far) is shown lighter with a dashed outline.</p>
           <p className="mt-1 text-sm text-muted-foreground">Average weekly revenue (last 4 weeks): <span className="font-semibold text-primary">{formatPeso(avg)}</span></p>
         </>
       )}

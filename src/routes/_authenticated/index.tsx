@@ -30,13 +30,14 @@ function WeekSelect({ value, onChange, label }: { value: number; onChange: (n: n
   );
 }
 
-function Trend({ pct, offset, prev, hidden }: { pct: number | null; offset: number; prev: number; hidden?: boolean }) {
+function Trend({ pct, offset, prev, hidden, upIsGood }: { pct: number | null; offset: number; prev: number; hidden?: boolean; upIsGood?: boolean }) {
   if (hidden) return null;
   const weekday = new Date().toLocaleDateString("en-US", { weekday: "long" });
   const vs = `vs ${weekName(offset + 1)}`;
   const tip = offset === 0 ? `Compares Monday–${weekday} of each period.` : undefined;
   if (pct === null) return <p title={tip} className="mt-1 text-sm font-semibold text-muted-foreground">— {vs} · No data for comparison period</p>;
-  const cls = pct > 0 ? "text-destructive" : pct < 0 ? "text-success" : "text-muted-foreground";
+  const up = upIsGood ? "text-success" : "text-destructive", down = upIsGood ? "text-destructive" : "text-success";
+  const cls = pct > 0 ? up : pct < 0 ? down : "text-muted-foreground";
   return (
     <p title={tip} className={`mt-1 flex items-center gap-1 text-sm font-semibold ${cls}`}>
       {pct > 0 ? <>▲ +{pct.toFixed(0)}%</> : pct < 0 ? <>▼ {Math.abs(pct).toFixed(0)}% decrease</> : "No change"} {vs} ({formatPeso(prev)})
@@ -99,7 +100,7 @@ function Dashboard() {
             <WeekSelect value={salesWeek} onChange={setSalesWeek} label="Sales period" />
           </div>
           <p className="mt-2 text-4xl font-bold text-primary">{formatPeso(salesTotal)}</p>
-          <Trend pct={sc.pct} offset={salesWeek} prev={sc.prev} hidden={db.sales.length === 0} />
+          <Trend pct={sc.pct} offset={salesWeek} prev={sc.prev} hidden={db.sales.length === 0} upIsGood />
           <p title={samePeriod ? undefined : "Set both cards to the same period to see this ratio."} className={`mt-2 text-sm font-semibold ${wastePct === null ? "text-muted-foreground" : wastePct < 3 ? "text-success" : wastePct <= 5 ? "text-warning" : "text-destructive"}`}>
             Waste as % of Sales: {wastePct === null ? "—" : `${wastePct.toFixed(1)}%`}
           </p>
