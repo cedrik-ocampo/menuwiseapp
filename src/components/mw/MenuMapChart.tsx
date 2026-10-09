@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis, Cell, Label } from "recharts";
 import { wasteColor, type menuMap } from "@/lib/calc";
 import { formatPeso } from "@/lib/format";
@@ -84,13 +84,21 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
 
 function QuadrantHelp({ name, text }: { name: string; text: string }) {
   const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keepOpen = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+  const scheduleClose = () => {
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  };
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <span onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <span onMouseEnter={keepOpen} onMouseLeave={scheduleClose}>
         <PopoverTrigger asChild>
           <button type="button" className="font-bold text-primary underline decoration-dotted underline-offset-2">{name}</button>
         </PopoverTrigger>
-        <PopoverContent className="w-[min(280px,calc(100vw-2rem))] p-3 text-left text-xs" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+        <PopoverContent className="w-[min(280px,calc(100vw-2rem))] p-3 text-left text-xs" onMouseEnter={keepOpen} onMouseLeave={scheduleClose}>
           <p className="font-bold text-primary">{name}</p>
           <p className="mt-1 text-muted-foreground">{text}</p>
         </PopoverContent>
