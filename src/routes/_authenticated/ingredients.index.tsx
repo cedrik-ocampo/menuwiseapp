@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Plus, ChevronRight, ArrowDownUp } from "lucide-react";
 import type { Ingredient, Purchase } from "@/lib/types";
 import { normDate, normalizeCategory, num, type Row } from "@/lib/import";
+import { AuditCaption } from "@/components/mw/Audit";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
 import { INGREDIENT_CATEGORIES } from "@/components/mw/IngredientForm";
 import { useDB, put } from "@/lib/store";
@@ -108,7 +109,7 @@ function Inventory() {
               parse={parseRows}
               commit={(items) => items.forEach(({ ing, purchase }) => { if (!db.ingredients.some((i) => i.id === ing.id)) put("ingredients", ing); put("purchases", purchase); })}
             />
-            <p className="mt-1 text-xs text-muted-foreground">Required Columns: {COLS}.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: {COLS}.</p>
           </div>
 
           <Panel>
@@ -156,6 +157,7 @@ function Inventory() {
                     <span className="text-muted-foreground">{formatPeso(i.unitCost)} / {i.unit}</span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">Purchased {shortDate(lastPurchase)} · Last used {shortDate(lu)}</p>
+                  <AuditCaption collection="ingredients" record={i} />
                   {d !== null && d <= threshold && <p className={`mt-1 text-xs font-bold ${tone}`}>{d <= 0 ? "Expires today" : d === 1 ? "1 day left" : `${d} days left`}</p>}
                 </Link>
               );

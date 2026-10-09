@@ -62,12 +62,6 @@ function MenuMap() {
         ) : view === "Bubble Chart" ? (
           <>
             <MenuMapChart map={map} height={420} />
-            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground md:grid-cols-4">
-              <span>↗ Top right: <b className="text-primary">Stars</b></span>
-              <span>↘ Bottom right: <b className="text-primary">Plowhorses</b></span>
-              <span>↖ Top left: <b className="text-primary">Puzzles</b></span>
-              <span>↙ Bottom left: <b className="text-primary">Dogs</b></span>
-            </div>
           </>
         ) : (
           <div className="grid gap-3 md:grid-cols-4">

@@ -9,7 +9,12 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
   const navigate = useNavigate();
   const data = map.rows.map((r) => ({ x: +r.popularity.toFixed(1), y: +r.profit.toFixed(2), z: Math.max(r.waste, 1), name: r.item.name, id: r.item.id, waste: r.waste, intensity: r.intensity, quadrant: r.quadrant }));
   return (
-    <div style={{ height }} className="w-full">
+    <div className="w-full">
+      <div style={{ height }} className="relative w-full">
+      <div className="pointer-events-none absolute inset-0 z-0 grid grid-cols-2 grid-rows-2 pb-14 pl-16 pr-6 pt-6 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/60">
+        <span>Puzzles</span><span className="text-right">Stars</span>
+        <span className="self-end">Dogs</span><span className="self-end text-right">Plowhorses</span>
+      </div>
       <ResponsiveContainer>
         <ScatterChart margin={{ top: 16, right: 16, bottom: 28, left: 8 }}>
           <CartesianGrid stroke="var(--border)" />
@@ -48,11 +53,17 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
           </Scatter>
         </ScatterChart>
       </ResponsiveContainer>
-      <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        <span>Lower waste</span>
-        <span className="h-2 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${wasteColor(0)}, ${wasteColor(0.5)}, ${wasteColor(1)})` }} />
-        <span>Higher waste</span>
-        <span className="ml-3">· Bubble size = waste value</span>
+      </div>
+      <div className="mt-2 space-y-1 text-center text-xs text-muted-foreground">
+        <p className="flex flex-wrap items-center justify-center gap-2">
+          <span>Lower waste</span>
+          <span className="h-2 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${wasteColor(0)}, ${wasteColor(0.5)}, ${wasteColor(1)})` }} />
+          <span>Higher waste</span>
+          <span>· Bubble size = waste value</span>
+        </p>
+        <p>
+          Top right: <b className="text-primary">Stars</b> · Bottom right: <b className="text-primary">Plowhorses</b> · Top left: <b className="text-primary">Puzzles</b> · Bottom left: <b className="text-primary">Dogs</b>
+        </p>
       </div>
     </div>
   );
