@@ -9,7 +9,6 @@ import { ProductionHistory } from "@/components/mw/History";
 import { Panel, SectionTitle, Segmented, btnPrimary, btnSecondary } from "@/components/mw/ui";
 import { MenuMapChart } from "@/components/mw/MenuMapChart";
 import { MenuInventory } from "@/components/mw/MenuInventory";
-import { SalesTab } from "@/components/mw/SalesTab";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/menu/")({
@@ -33,7 +32,7 @@ const DESC: Record<string, string> = {
 
 function MenuMap() {
   const db = useDB();
-  const [view, setView] = useState<"Bubble Chart" | "Table" | "Sales" | "Inventory">("Bubble Chart");
+  const [view, setView] = useState<"Bubble Chart" | "Table" | "Inventory">("Bubble Chart");
   const [withWip, setWithWip] = useState(false);
   const map = useMemo(() => menuMap(db, withWip), [db, withWip]);
 
@@ -46,9 +45,9 @@ function MenuMap() {
         </div>
       </PageTitle>
 
-      <div className="mb-3 w-full max-w-md"><Segmented value={view} options={["Bubble Chart", "Table", "Sales", "Inventory"] as const} onChange={setView} /></div>
+      <div className="mb-3 w-full max-w-md"><Segmented value={view} options={["Bubble Chart", "Table", "Inventory"] as const} onChange={setView} /></div>
       <Panel className="space-y-4">
-        {view !== "Sales" && (<>
+        <>
         <div className="flex flex-wrap items-center justify-end gap-3">
           <label className="flex items-center gap-2 text-sm text-primary">
             <Switch checked={withWip} onCheckedChange={setWithWip} />
@@ -58,11 +57,9 @@ function MenuMap() {
         <p className="text-xs text-muted-foreground">
           Primary metric: direct finished-product waste per menu item{withWip ? " + attributed prep/WIP waste" : ""}. Unallocated ingredient waste is not included.
         </p>
-        </>)}
+        </>
 
-        {view === "Sales" ? (
-          <SalesTab />
-        ) : view === "Inventory" ? (
+        {view === "Inventory" ? (
           <MenuInventory db={db} rows={map.rows} />
         ) : view === "Bubble Chart" ? (
           <>
@@ -71,7 +68,7 @@ function MenuMap() {
         ) : (
           <div className="grid gap-3 md:grid-cols-4">
             {QUADRANTS.map((q) => {
-              const items = map.rows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
+              const items = map.plottedRows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
               return (
                 <div key={q} className="overflow-hidden rounded-xl border border-border">
                   <div className="bg-secondary px-3 py-2">
@@ -99,6 +96,24 @@ function MenuMap() {
                 </div>
               );
             })}
+            {map.rows.some((r) => r.popularity === 0) && (
+              <div className="overflow-hidden rounded-xl border border-border md:col-span-4">
+                <div className="bg-muted px-3 py-2">
+                  <p className="font-bold text-primary">Not yet classified</p>
+                  <p className="text-xs text-muted-foreground">No sales logged in the last 30 days</p>
+                </div>
+                <ul className="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {map.rows.filter((r) => r.popularity === 0).sort((a, b) => a.item.name.localeCompare(b.item.name)).map((r) => (
+                    <li key={r.item.id}>
+                      <Link to="/menu/$id" params={{ id: r.item.id }} className="flex items-center justify-between rounded-lg bg-card px-3 py-2 text-sm font-semibold hover:bg-muted">
+                        <span className="truncate text-primary">{r.item.name}</span>
+                        <span className="ml-2 shrink-0 text-xs text-muted-foreground">No sales</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </Panel>

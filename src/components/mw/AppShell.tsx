@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X, Users } from "lucide-react";
+import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X, Users, PhilippinePeso } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import logo from "@/assets/mw-logo.png.asset.json";
@@ -9,12 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { CollectionName } from "@/lib/types";
 
-const TABS: { to: string; label: string; icon: typeof Trash2; pending?: CollectionName[] }[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/log-waste", label: "Log Waste", icon: Trash2, pending: ["wasteLogs"] },
-  { to: "/log-production", label: "Log Production", icon: PackagePlus, pending: ["batches", "sales"] },
-  { to: "/menu", label: "Menu Map", icon: LayoutGrid },
-  { to: "/ingredients", label: "Ingredients", icon: Package },
+const TABS: { to: string; label: string; mobileLabel: string; icon: typeof Trash2; pending?: CollectionName[] }[] = [
+  { to: "/", label: "Dashboard", mobileLabel: "Home", icon: LayoutDashboard },
+  { to: "/log-waste", label: "Log Waste", mobileLabel: "Waste", icon: Trash2, pending: ["wasteLogs"] },
+  { to: "/log-production", label: "Log Production", mobileLabel: "Production", icon: PackagePlus, pending: ["batches"] },
+  { to: "/menu", label: "Menu Map", mobileLabel: "Menu", icon: LayoutGrid },
+  { to: "/sales", label: "Sales", mobileLabel: "Sales", icon: PhilippinePeso, pending: ["sales"] },
+  { to: "/ingredients", label: "Ingredients", mobileLabel: "Ingredients", icon: Package },
 ];
 
 function useActive() {
@@ -34,7 +35,7 @@ export function NavBar() {
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card shadow-[0_-2px_8px_color-mix(in_oklab,var(--foreground)_6%,transparent)] md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <ul className="grid h-16 grid-cols-5">
+        <ul className="grid h-16 grid-cols-6">
           {TABS.map((t, i) => {
             const active = isActive(t.to);
             const pending = t.pending?.some((c) => db.pendingCollections.has(c)) && !db.online;
@@ -45,15 +46,15 @@ export function NavBar() {
                   role="tab"
                   aria-selected={active}
                   aria-current={active ? "page" : undefined}
-                  aria-label={`${t.label}, tab, ${i + 1} of 5`}
+                   aria-label={`${t.label}, tab, ${i + 1} of 6`}
                   className={`relative flex min-h-12 w-full flex-col items-center justify-center gap-1 py-1.5 transition-transform duration-100 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${active ? "font-semibold text-primary" : "font-medium text-nav-inactive"}`}
                 >
                   {active && <span className="absolute top-0 h-[3px] w-8 rounded-full bg-primary" />}
                   <span className="relative">
-                    <t.icon className="h-6 w-6" strokeWidth={active ? 2.2 : 1.8} />
+                     <t.icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.2 : 1.8} />
                     {pending && <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-warning" />}
                   </span>
-                  <span className="whitespace-nowrap text-[10px] leading-none">{t.label}</span>
+                   <span className="block max-w-full truncate px-0.5 text-[9px] leading-none">{t.mobileLabel}</span>
                 </Link>
               </li>
             );
@@ -78,7 +79,7 @@ export function NavBar() {
                 role="tab"
                 aria-selected={active}
                 aria-current={active ? "page" : undefined}
-                aria-label={`${t.label}, tab, ${i + 1} of 5`}
+                 aria-label={`${t.label}, tab, ${i + 1} of 6`}
                 className={`relative flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${active ? "bg-secondary font-semibold text-primary" : "font-medium text-nav-inactive hover:bg-muted"}`}
               >
                 {active && <span className="absolute left-0 h-6 w-[3px] rounded-full bg-primary" />}
