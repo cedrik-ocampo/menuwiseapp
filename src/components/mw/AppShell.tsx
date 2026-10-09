@@ -7,6 +7,7 @@ import { useDB, resetStore, currentWorkspace } from "@/lib/store";
 import { shortDate, todayISO } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { UserMenu } from "./UserMenu";
 import type { CollectionName } from "@/lib/types";
 
 const TABS: { to: string; label: string; mobileLabel: string; icon: typeof Trash2; pending?: CollectionName[] }[] = [
@@ -90,34 +91,12 @@ export function NavBar() {
             );
           })}
         </nav>
-        <div className="mt-auto px-5 pb-6">
-          <SignOutButton className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground" />
-        </div>
       </aside>
     </>
   );
 }
 
-function SignOutButton({ className }: { className?: string }) {
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-  return (
-    <button
-      className={className}
-      onClick={async () => {
-        await qc.cancelQueries();
-        qc.clear();
-        resetStore();
-        await supabase.auth.signOut();
-        navigate({ to: "/login", replace: true });
-      }}
-    >
-      <LogOut className="h-4 w-4" /> Sign out
-    </button>
-  );
-}
-
-function CafeName({ initial }: { initial: string }) {
+export function CafeName({ initial }: { initial: string }) {
   const [name, setName] = useState(initial);
   const [draft, setDraft] = useState(initial);
   const [editing, setEditing] = useState(false);
@@ -178,10 +157,7 @@ export function AppHeader({ cafeName }: { cafeName: string }) {
               <WifiOff className="h-3 w-3" /> Offline
             </span>
           )}
-          <Link to="/team" aria-label="Team" title="Team" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs opacity-90 hover:opacity-100">
-            <Users className="h-5 w-5" /> <span className="hidden sm:inline">Team</span>
-          </Link>
-          <SignOutButton className="flex items-center gap-1 text-xs opacity-80 hover:opacity-100 md:hidden" />
+          <UserMenu />
           <img src={logo.url} alt="" className="h-12 w-12 object-contain md:hidden" />
         </div>
       </div>

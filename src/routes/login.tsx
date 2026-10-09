@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { getPrefs } from "@/lib/prefs";
 import { z } from "zod";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 import logo from "@/assets/mw-logo.png.asset.json";
@@ -33,7 +34,7 @@ function Login() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => data.session && navigate({ to: "/" }));
+    supabase.auth.getSession().then(({ data }) => data.session && navigate({ to: getPrefs().landing }));
   }, [navigate]);
 
   async function submit(e: React.FormEvent) {
@@ -55,13 +56,13 @@ function Login() {
       const { data, error } = await supabase.auth.signUp({ email: r.data.email, password: r.data.password, options: { emailRedirectTo: window.location.origin, data: { cafe_name: "My Café" } } });
       setBusy(false);
       if (error) return setMsg({ tone: "error", text: error.message });
-      if (data.session) return navigate({ to: "/" });
+      if (data.session) return navigate({ to: getPrefs().landing });
       return setMsg({ tone: "ok", text: "Check your email to confirm your account, then log in." });
     }
     const { error } = await supabase.auth.signInWithPassword(r.data);
     setBusy(false);
     if (error) return setMsg({ tone: "error", text: error.message });
-    navigate({ to: "/" });
+    navigate({ to: getPrefs().landing });
   }
 
   return (
