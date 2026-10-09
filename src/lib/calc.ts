@@ -198,3 +198,21 @@ export function weeklyRevenue(sales: { date: string }[], revenueOf: (s: any) => 
     return { key: start, label, start, end, revenue, current: i === 0 };
   });
 }
+
+export const WEEK_OPTIONS = ["This Week", "Last Week", "2 Weeks Ago", "3 Weeks Ago", "4 Weeks Ago", "5 Weeks Ago", "6 Weeks Ago", "7 Weeks Ago"];
+export const weekName = (offset: number) => WEEK_OPTIONS[offset] ?? `${offset} Weeks Ago`;
+
+/** Selected week window and its comparison window. This Week is day-aligned (Mon→today vs same weekdays last week). */
+export function weekWindows(offset: number, today = todayISO()) {
+  const ws = weekStart(today);
+  const start = addDays(ws, -7 * offset);
+  const cur = { from: start, to: offset === 0 ? today : addDays(start, 6) };
+  const prev = { from: addDays(cur.from, -7), to: addDays(cur.to, -7) };
+  return { cur, prev };
+}
+
+export function compareWeeks(total: (from: string, to: string) => number, offset: number, today = todayISO()) {
+  const { cur, prev } = weekWindows(offset, today);
+  const c = total(cur.from, cur.to), p = total(prev.from, prev.to);
+  return { cur: c, prev: p, pct: p > 0 ? ((c - p) / p) * 100 : null, window: cur };
+}

@@ -18,3 +18,23 @@ describe("weeklyRevenue", () => {
     expect(w[2].revenue).toBe(0);
   });
 });
+
+import { compareWeeks, weekWindows } from "@/lib/calc";
+describe("week comparison", () => {
+  it("has 8 unique week keys", () => {
+    const w = weeklyRevenue([], () => 0, "2026-10-07");
+    expect(new Set(w.map((x) => x.key)).size).toBe(8);
+  });
+  it("aligns This Week by weekday", () => {
+    expect(weekWindows(0, "2026-10-07")).toEqual({ cur: { from: "2026-10-05", to: "2026-10-07" }, prev: { from: "2026-09-28", to: "2026-09-30" } });
+  });
+  it("compares full weeks otherwise, incl. 7 Weeks Ago vs 8", () => {
+    expect(weekWindows(7, "2026-10-07").prev).toEqual({ from: "2026-08-10", to: "2026-08-16" });
+  });
+  it("handles zero baselines", () => {
+    const sales = [{ date: "2026-09-29", r: 100 }];
+    const tot = (f: string, t: string) => sales.filter((s) => s.date >= f && s.date <= t).reduce((a, s) => a + s.r, 0);
+    expect(compareWeeks(tot, 0, "2026-10-07").pct).toBe(-100);
+    expect(compareWeeks(tot, 1, "2026-10-07").pct).toBeNull();
+  });
+});

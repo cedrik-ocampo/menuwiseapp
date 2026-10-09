@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check } from "lucide-react";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { useDB } from "@/lib/store";
-import { expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor } from "@/lib/calc";
+import { compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import { THRESHOLD_OPTIONS, thresholdLabel, useThreshold } from "@/lib/settings";
 import { Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
@@ -22,23 +22,40 @@ export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
 });
 
-type Period = "today" | "week";
+function WeekSelect({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
+  return (
+    <select className={`${inputCls} h-9 w-auto`} value={value} onChange={(e) => onChange(Number(e.target.value))} aria-label={label}>
+      {WEEK_OPTIONS.map((o, i) => <option key={o} value={i}>{o}</option>)}
+    </select>
+  );
+}
+
+function Trend({ pct, offset, prev, hidden }: { pct: number | null; offset: number; prev: number; hidden?: boolean }) {
+  if (hidden) return null;
+  const weekday = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const vs = `vs ${weekName(offset + 1)}`;
+  const tip = offset === 0 ? `Compares Monday–${weekday} of each period.` : undefined;
+  if (pct === null) return <p title={tip} className="mt-1 text-sm font-semibold text-muted-foreground">— {vs} · No data for comparison period</p>;
+  const cls = pct > 0 ? "text-destructive" : pct < 0 ? "text-success" : "text-muted-foreground";
+  return (
+    <p title={tip} className={`mt-1 flex items-center gap-1 text-sm font-semibold ${cls}`}>
+      {pct > 0 ? <>▲ +{pct.toFixed(0)}%</> : pct < 0 ? <>▼ {Math.abs(pct).toFixed(0)}% decrease</> : "No change"} {vs} ({formatPeso(prev)})
+    </p>
+  );
+}
 
 function Dashboard() {
   const db = useDB();
   const navigate = useNavigate();
-  const [period, setPeriod] = useState<Period>("today");
-  const [compare, setCompare] = useState<"yesterday" | "lastweek">("yesterday");
+  const [wasteWeek, setWasteWeek] = useState(0);
+  const [salesWeek, setSalesWeek] = useState(0);
   const [showStages, setShowStages] = useState(false);
   const [threshold, setThreshold] = useThreshold();
   const t = todayISO();
 
-  const cur = period === "today" ? totalWaste(db, t, t) : totalWaste(db, addDays(t, -6), t);
-  const prev =
-    period === "today"
-      ? compare === "yesterday" ? totalWaste(db, addDays(t, -1), addDays(t, -1)) : totalWaste(db, addDays(t, -7), addDays(t, -7))
-      : totalWaste(db, addDays(t, -13), addDays(t, -7));
-  const pct = prev.total > 0 ? ((cur.total - prev.total) / prev.total) * 100 : null;
+  const wc = compareWeeks((f, to) => totalWaste(db, f, to).total, wasteWeek, t);
+  const cur = totalWaste(db, wc.window.from, wc.window.to);
+  const sc = compareWeeks((f, to) => totalSales(db, f, to), salesWeek, t);
   const expiring = expiringWithin(db, threshold);
   const nowIso = new Date().toISOString();
   const resp = new Map(db.insightResponses.map((r) => [r.id, r]));
@@ -48,8 +65,9 @@ function Dashboard() {
   });
   const actioned = db.insightResponses.filter((r) => r.status === "accepted").sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
   const map = useMemo(() => menuMap(db, false), [db]);
-  const salesTotal = period === "today" ? totalSales(db, t, t) : totalSales(db, addDays(t, -6), t);
-  const wastePct = salesTotal > 0 ? (cur.total / salesTotal) * 100 : null;
+  const salesTotal = sc.cur;
+  const samePeriod = wasteWeek === salesWeek;
+  const wastePct = samePeriod && salesTotal > 0 ? (cur.total / salesTotal) * 100 : null;
 
   return (
     <div className="space-y-6">
@@ -57,28 +75,10 @@ function Dashboard() {
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-primary">Total Waste Value</p>
-          <div className="flex gap-2">
-            <select className={`${inputCls} h-9 w-auto`} value={period} onChange={(e) => setPeriod(e.target.value as Period)} aria-label="Period">
-              <option value="today">Today</option>
-              <option value="week">Last 7 days</option>
-            </select>
-            {period === "today" && (
-              <select className={`${inputCls} h-9 w-auto`} value={compare} onChange={(e) => setCompare(e.target.value as never)} aria-label="Compare with">
-                <option value="yesterday">vs yesterday</option>
-                <option value="lastweek">vs same day last week</option>
-              </select>
-            )}
-          </div>
+          <WeekSelect value={wasteWeek} onChange={setWasteWeek} label="Waste period" />
         </div>
         <p className="mt-2 text-4xl font-bold text-primary">{formatPeso(cur.total)}</p>
-        <p className={`mt-1 flex items-center gap-1 text-sm font-semibold ${pct === null ? "text-muted-foreground" : pct > 0 ? "text-destructive" : "text-success"}`}>
-          {pct === null ? "No waste recorded in the comparison period" : (
-            <>
-              {pct > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-              {pct > 0 ? "+" : ""}{pct.toFixed(0)}% from {period === "week" ? "the previous 7 days" : compare === "yesterday" ? "yesterday" : "last week"} ({formatPeso(prev.total)})
-            </>
-          )}
-        </p>
+        <Trend pct={wc.pct} offset={wasteWeek} prev={wc.prev} hidden={db.wasteLogs.length === 0} />
         <button className="mt-3 text-sm font-semibold text-accent" onClick={() => setShowStages(!showStages)}>
           {showStages ? "Hide" : "Show"} breakdown by stage
         </button>
@@ -94,10 +94,13 @@ function Dashboard() {
         )}
       </Panel>
         <Panel>
-          <p className="text-sm font-semibold text-primary">Total Sales Value</p>
-          <p className="mt-1 text-xs text-muted-foreground">{period === "today" ? "Today" : "Last 7 days"}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-primary">Total Sales Value</p>
+            <WeekSelect value={salesWeek} onChange={setSalesWeek} label="Sales period" />
+          </div>
           <p className="mt-2 text-4xl font-bold text-primary">{formatPeso(salesTotal)}</p>
-          <p className={`mt-2 text-sm font-semibold ${wastePct === null ? "text-muted-foreground" : wastePct < 3 ? "text-success" : wastePct <= 5 ? "text-warning" : "text-destructive"}`}>
+          <Trend pct={sc.pct} offset={salesWeek} prev={sc.prev} hidden={db.sales.length === 0} />
+          <p title={samePeriod ? undefined : "Set both cards to the same period to see this ratio."} className={`mt-2 text-sm font-semibold ${wastePct === null ? "text-muted-foreground" : wastePct < 3 ? "text-success" : wastePct <= 5 ? "text-warning" : "text-destructive"}`}>
             Waste as % of Sales: {wastePct === null ? "—" : `${wastePct.toFixed(1)}%`}
           </p>
           <p className="text-xs text-muted-foreground">Benchmark 2–5%. Green under 3%, amber 3–5%, red over 5%.</p>
