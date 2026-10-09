@@ -33,7 +33,7 @@ The cause isn't confirmed yet. The first step is to load the chart with test sal
 
 ## Technical details
 
-- `src/lib/calc.ts`: add `wasteWeekOverWeek(db, today)` returning `{ cur, prev, pct, state }`. `weeklyRevenue` keeps newest-first and the chart reverses it, or it is changed to oldest-first with the tests updated.
-- `src/routes/_authenticated/index.tsx`: remove the period/compare state and use the new helper. The sales total uses `weekStart() → today`.
+- `src/lib/calc.ts`: add `weekWindow(offset, today)` (the aligned window for offset 0) and `periodCompare(totalFn, offset)`, shared by both cards. `weeklyRevenue` keeps newest-first and the chart reverses it, or it is changed to oldest-first with the tests updated.
+- `src/routes/_authenticated/index.tsx`: independent `wasteWeek` and `salesWeek` state (0–7); the ratio only shows when they are equal.
 - `src/components/mw/SalesTab.tsx` `WeeklyRevenue`: reorder, `XAxis dataKey="key"` with a label tickFormatter, a compact peso formatter for labels, gaps and `maxBarSize`, domain `[0, max*1.15]`, and drop the fake "shown" height in favor of a minimum bar height.
 - Tests: 8 unique keys, oldest → newest order, the aligned comparison (partial week, zero last week, zero this week), and a gap check (gap ≥ 15% of width/8).
