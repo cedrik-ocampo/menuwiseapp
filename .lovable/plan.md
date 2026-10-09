@@ -6,7 +6,7 @@
 - The big number shows the selected week's total. The waste stage breakdown also uses that week.
 - Each week is compared with the week before it, labeled "vs Last Week", "vs 2 Weeks Ago", and so on. Weeks run Monday–Sunday.
   - This Week (Monday → today) is compared with the same weekdays of last week. The tooltip reads "Compares Monday–{weekday} of each period."
-  - Every other week is compared full week to full week.
+  - Every other week is compared full week to full week. "7 Weeks Ago" is compared with 8 weeks ago, which is calculated but not listed in the dropdown.
 - Change = (selected − compared) / compared × 100.
   - Higher: red ▲. Lower: green ▼. Equal: grey "No change".
   - If the compared week is ₱0 or has no data: "—" with "No data for comparison period".
