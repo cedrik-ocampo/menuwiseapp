@@ -14,6 +14,14 @@ import { SaleDialog } from "./SaleDialog";
 import { Panel, SectionTitle, Stat, btnPrimary } from "./ui";
 
 const SALES_COLS = "sale_date, menu_item_id, quantity (Optional: unit_price, notes)";
+const RANGE_OPTIONS = [
+  { label: "5 Days", days: 5, interval: 0 },
+  { label: "1 Week", days: 7, interval: 0 },
+  { label: "2 Weeks", days: 14, interval: 1 },
+  { label: "30 Days", days: 30, interval: 3 },
+  { label: "60 Days", days: 60, interval: 6 },
+] as const;
+type RangeDays = (typeof RANGE_OPTIONS)[number]["days"];
 
 function parseSales(rows: Row[], db: DBView): ParsedRow<Sale>[] {
   const t = todayISO(), oldest = addDays(t, -365);
@@ -54,15 +62,16 @@ function template(db: DBView) {
   };
 }
 
-export function SalesTab() {
+export function SalesTab({ compactHeader = false }: { compactHeader?: boolean }) {
   const db = useDB();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Sale | null>(null);
+  const [rangeDays, setRangeDays] = useState<RangeDays>(30);
   const t = todayISO(), ws = weekStart();
   const nameOf = (id: string) => db.menuItems.find((m) => m.id === id)?.name ?? id;
 
-  const { today, week, top, chart, list } = useMemo(() => {
+  const { today, week, top, chart, list, hasChartSales } = useMemo(() => {
     const rev = (s: Sale) => saleRevenue(db, s);
     const today = db.sales.filter((s) => s.date === t).reduce((a, s) => a + rev(s), 0);
     const weekSales = db.sales.filter((s) => s.date >= ws && s.date <= t);
@@ -70,20 +79,23 @@ export function SalesTab() {
     const units = new Map<string, number>();
     weekSales.forEach((s) => units.set(s.menuItemId, (units.get(s.menuItemId) ?? 0) + s.quantity));
     const top = [...units.entries()].sort((a, b) => b[1] - a[1])[0];
-    const chart = Array.from({ length: 30 }, (_, i) => {
-      const d = addDays(t, i - 29);
+    const chartFrom = addDays(t, -(rangeDays - 1));
+    const chartSales = db.sales.filter((s) => s.date >= chartFrom && s.date <= t);
+    const chart = Array.from({ length: rangeDays }, (_, i) => {
+      const d = addDays(t, i - (rangeDays - 1));
       return { date: shortDate(d), revenue: db.sales.filter((s) => s.date === d).reduce((a, s) => a + rev(s), 0) };
     });
     const list = [...db.sales].sort((a, b) => b.date.localeCompare(a.date) || ((b as Audit).createdAt ?? "").localeCompare((a as Audit).createdAt ?? ""));
-    return { today, week, top, chart, list };
-  }, [db, t, ws]);
+    return { today, week, top, chart, list, hasChartSales: chartSales.length > 0 };
+  }, [db, t, ws, rangeDays]);
+  const selectedRange = RANGE_OPTIONS.find((option) => option.days === rangeDays) ?? RANGE_OPTIONS[3];
 
   return (
     <div className="space-y-5">
       {(open || editing) && <SaleDialog sale={editing ?? undefined} onClose={() => { setOpen(false); setEditing(null); }} />}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-xl font-bold text-primary">Sales</h3>
+          {!compactHeader && <h3 className="text-xl font-bold text-primary">Sales</h3>}
           <p className="text-sm text-muted-foreground">Track daily sales per menu item. Feeds the popularity axis of the bubble chart.</p>
           <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: sale_date, menu_item_id, quantity. Optional: unit_price, notes.</p>
         </div>
@@ -100,18 +112,33 @@ export function SalesTab() {
       </div>
 
       <Panel>
-        <SectionTitle>Revenue · last 30 days</SectionTitle>
-        <div className="h-56 w-full">
+        <SectionTitle>Revenue · last {rangeDays} days</SectionTitle>
+        <div className="mb-4 grid grid-cols-5 rounded-lg bg-secondary p-1" aria-label="Sales chart period">
+          {RANGE_OPTIONS.map((option) => (
+            <button
+              key={option.days}
+              type="button"
+              aria-pressed={rangeDays === option.days}
+              onClick={() => setRangeDays(option.days)}
+              className={`min-w-0 rounded-md px-1 py-2 text-[10px] font-semibold sm:text-xs ${rangeDays === option.days ? "bg-primary text-primary-foreground" : "text-primary"}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {!hasChartSales ? (
+          <p className="py-16 text-center text-sm text-muted-foreground">No sales in this period.</p>
+        ) : <div className="h-56 w-full">
           <ResponsiveContainer>
             <LineChart data={chart} margin={{ top: 8, right: 12, bottom: 0, left: 8 }}>
               <CartesianGrid stroke="var(--border)" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} interval={4} />
-              <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={(v) => `₱${v}`} width={56} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} interval={selectedRange.interval} />
+              <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={(v) => formatPeso(Number(v))} width={72} />
               <Tooltip formatter={(v: number) => formatPeso(v)} contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
               <Line type="monotone" dataKey="revenue" name="Revenue" stroke="var(--primary)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </div>}
       </Panel>
 
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
