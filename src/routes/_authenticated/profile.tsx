@@ -84,11 +84,11 @@ function Profile() {
 
   async function saveName() {
     const v = name.trim();
-    if (!v) return toast.error("Name can't be empty");
+    if (!v) return void toast.error("Name can't be empty");
     if (!online()) return;
     const { error } = await supabase.auth.updateUser({ data: { full_name: v.slice(0, 60) } });
-    if (error) return toast.error(error.message);
-    if (ws) await supabase.from("workspace_members").update({ display_name: v }).eq("workspace_id", ws).eq("user_id", myId);
+    if (error) return void toast.error(error.message);
+    if (ws) await supabase.from("workspace_members").update({ display_name: v }).eq("workspace_id", ws).eq("user_id", myId!);
     toast.success("Name updated"); reloadMe(); void load();
   }
 
@@ -104,10 +104,10 @@ function Profile() {
 
   async function invite() {
     const r = z.string().trim().email("Enter a valid email").max(255).safeParse(inviteEmail);
-    if (!r.success) return toast.error(r.error.issues[0].message);
+    if (!r.success) return void toast.error(r.error.issues[0].message);
     if (!online()) return;
     const { error } = await supabase.from("workspace_invites").insert({ workspace_id: ws!, email: r.data.toLowerCase() });
-    if (error) return toast.error(error.code === "23505" ? "Already invited" : "Couldn't send the invite");
+    if (error) return void toast.error(error.code === "23505" ? "Already invited" : "Couldn't send the invite");
     toast.success(`${r.data} invited — ask them to sign up with this email`); setInviteEmail("");
   }
 
@@ -224,10 +224,10 @@ function EmailModal({ onClose }: { onClose: () => void }) {
       <form className="space-y-3" onSubmit={async (e) => {
         e.preventDefault();
         const r = z.string().trim().email().safeParse(v);
-        if (!r.success) return toast.error("Enter a valid email");
-        if (!navigator.onLine) return toast.error(OFFLINE);
+        if (!r.success) return void toast.error("Enter a valid email");
+        if (!navigator.onLine) return void toast.error(OFFLINE);
         const { error } = await supabase.auth.updateUser({ email: r.data });
-        if (error) return toast.error(error.message);
+        if (error) return void toast.error(error.message);
         toast.success("Check your new email to confirm the change"); onClose();
       }}>
         <input type="email" className={inputCls} value={v} onChange={(e) => setV(e.target.value)} placeholder="you@example.com" autoFocus />
@@ -243,11 +243,11 @@ function PasswordModal({ onClose }: { onClose: () => void }) {
     <Modal title="Change password" onClose={onClose}>
       <form className="space-y-3" onSubmit={async (e) => {
         e.preventDefault();
-        if (a.length < 8) return toast.error("Use at least 8 characters");
-        if (a !== b) return toast.error("Passwords don't match");
-        if (!navigator.onLine) return toast.error(OFFLINE);
+        if (a.length < 8) return void toast.error("Use at least 8 characters");
+        if (a !== b) return void toast.error("Passwords don't match");
+        if (!navigator.onLine) return void toast.error(OFFLINE);
         const { error } = await supabase.auth.updateUser({ password: a });
-        if (error) return toast.error(error.message);
+        if (error) return void toast.error(error.message);
         toast.success("Password changed"); onClose();
       }}>
         <Field label="New password"><input type="password" className={inputCls} value={a} onChange={(e) => setA(e.target.value)} autoFocus /></Field>
@@ -271,9 +271,9 @@ function DeleteModal({ sole, onClose, onDone }: { sole: boolean; onClose: () => 
         <button type="button" disabled={txt !== "DELETE" || busy || isDemoMode()}
           className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-50"
           onClick={async () => {
-            if (!navigator.onLine) return toast.error(OFFLINE);
+            if (!navigator.onLine) return void toast.error(OFFLINE);
             const ws = currentWorkspace();
-            if (!ws) return toast.error("Couldn't find your café");
+            if (!ws) return void toast.error("Couldn't find your café");
             setBusy(true);
             try {
               await deleteAccount({ data: { workspaceId: ws } });
