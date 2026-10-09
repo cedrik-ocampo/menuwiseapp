@@ -88,6 +88,9 @@ export interface Sale {
   menuItemId: string;
   date: string;
   quantity: number;
+  unitPrice?: number;
+  revenue?: number;
+  notes?: string;
 }
 
 export interface WasteLog {

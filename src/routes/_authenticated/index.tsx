@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check } from "lucide-react";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { useDB } from "@/lib/store";
-import { expiringWithin, menuMap, totalWaste, QUADRANTS, wasteColor } from "@/lib/calc";
+import { expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import { THRESHOLD_OPTIONS, thresholdLabel, useThreshold } from "@/lib/settings";
 import { Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
@@ -48,9 +48,12 @@ function Dashboard() {
   });
   const actioned = db.insightResponses.filter((r) => r.status === "accepted").sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
   const map = useMemo(() => menuMap(db, false), [db]);
+  const salesTotal = period === "today" ? totalSales(db, t, t) : totalSales(db, addDays(t, -6), t);
+  const wastePct = salesTotal > 0 ? (cur.total / salesTotal) * 100 : null;
 
   return (
     <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-primary">Total Waste Value</p>
@@ -90,6 +93,16 @@ function Dashboard() {
           </div>
         )}
       </Panel>
+        <Panel>
+          <p className="text-sm font-semibold text-primary">Total Sales Value</p>
+          <p className="mt-1 text-xs text-muted-foreground">{period === "today" ? "Today" : "Last 7 days"}</p>
+          <p className="mt-2 text-4xl font-bold text-primary">{formatPeso(salesTotal)}</p>
+          <p className={`mt-2 text-sm font-semibold ${wastePct === null ? "text-muted-foreground" : wastePct < 3 ? "text-success" : wastePct <= 5 ? "text-warning" : "text-destructive"}`}>
+            Waste as % of Sales: {wastePct === null ? "—" : `${wastePct.toFixed(1)}%`}
+          </p>
+          <p className="text-xs text-muted-foreground">Benchmark 2–5%. Green under 3%, amber 3–5%, red over 5%.</p>
+        </Panel>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Ongoing Insights */}
