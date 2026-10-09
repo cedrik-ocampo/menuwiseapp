@@ -10,6 +10,7 @@ export const THRESHOLD_OPTIONS = [
   { days: 6, label: "6 days" },
   { days: 7, label: "7 days" },
   { days: 14, label: "2 weeks" },
+  { days: 30, label: "30 days" },
 ];
 export const thresholdLabel = (d: number) => THRESHOLD_OPTIONS.find((o) => o.days === d)?.label ?? `${d} days`;
 

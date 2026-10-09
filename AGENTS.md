@@ -11,3 +11,5 @@
 - Data is scoped per café workspace: `records` is keyed by (workspace_id, collection, id) and RLS checks `is_workspace_member`; the client resolves its workspace via the `ensure_workspace` RPC (joins pending invites by email). Why: staff at one café share the same data.
 - Every write through `put`/`remove` stamps created/updated-by fields and appends a `changeLogs` record (synced like other collections). Why: edits must show who changed what and when, even offline.
 - Sales is a protected top-level `/sales` route while menu-item sales history remains reusable on detail pages. Why: Sales has its own primary workflow without duplicating its data model.
+- Account settings live on the protected `/profile` route reached only from the header user menu; device preferences (theme, landing page, currency) live in `src/lib/prefs.ts` localStorage. Why: per-device settings must work offline and stay out of main navigation.
+- Account deletion and leaving a workspace run in authenticated server functions that verify membership before using the admin client. Why: removing users and anonymizing shared records needs privileged access.
