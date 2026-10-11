@@ -13,3 +13,6 @@
 - Sales is a protected top-level `/sales` route while menu-item sales history remains reusable on detail pages. Why: Sales has its own primary workflow without duplicating its data model.
 - Account settings live on the protected `/profile` route reached only from the header user menu; device preferences (theme, landing page, currency) live in `src/lib/prefs.ts` localStorage. Why: per-device settings must work offline and stay out of main navigation.
 - Account deletion and leaving a workspace run in authenticated server functions that verify membership before using the admin client. Why: removing users and anonymizing shared records needs privileged access.
+- Owner-managed café invitations use authenticated server functions, while invitation email delivery depends on a configured app-email domain. Why: invitation access must be authorized server-side and email availability must not block the pending invite.
+- Signed-in sessions end after 30 minutes of inactivity without clearing IndexedDB. Why: shared café devices need re-authentication without discarding offline work.
+- Release notes and support live on protected `/whats-new` and `/help` routes linked from the account menu. Why: operational guidance stays accessible without crowding primary navigation.

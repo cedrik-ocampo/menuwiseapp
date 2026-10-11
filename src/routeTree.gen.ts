@@ -13,11 +13,13 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedHelpRouteImport } from './routes/_authenticated/help'
 import { Route as AuthenticatedLogProductionRouteImport } from './routes/_authenticated/log-production'
 import { Route as AuthenticatedLogWasteRouteImport } from './routes/_authenticated/log-waste'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
+import { Route as AuthenticatedWhatsNewRouteImport } from './routes/_authenticated/whats-new'
 import { Route as AuthenticatedIngredientsIndexRouteImport } from './routes/_authenticated/ingredients.index'
 import { Route as AuthenticatedIngredientsIdRouteImport } from './routes/_authenticated/ingredients.$id'
 import { Route as AuthenticatedIngredientsNewRouteImport } from './routes/_authenticated/ingredients.new'
@@ -44,6 +46,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHelpRoute = AuthenticatedHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedLogProductionRoute =
   AuthenticatedLogProductionRouteImport.update({
     id: '/log-production',
@@ -68,6 +75,11 @@ const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
 const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
   id: '/team',
   path: '/team',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWhatsNewRoute = AuthenticatedWhatsNewRouteImport.update({
+  id: '/whats-new',
+  path: '/whats-new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedIngredientsIndexRoute =
@@ -108,11 +120,13 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/help': typeof AuthenticatedHelpRoute
   '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
@@ -123,11 +137,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/help': typeof AuthenticatedHelpRoute
   '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/': typeof AuthenticatedIndexRoute
   '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
@@ -141,11 +157,13 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/help': typeof AuthenticatedHelpRoute
   '/_authenticated/log-production': typeof AuthenticatedLogProductionRoute
   '/_authenticated/log-waste': typeof AuthenticatedLogWasteRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
+  '/_authenticated/whats-new': typeof AuthenticatedWhatsNewRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/_authenticated/ingredients/new': typeof AuthenticatedIngredientsNewRoute
@@ -160,11 +178,13 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/reset-password'
+    | '/help'
     | '/log-production'
     | '/log-waste'
     | '/profile'
     | '/sales'
     | '/team'
+    | '/whats-new'
     | '/ingredients/$id'
     | '/ingredients/new'
     | '/menu/$id'
@@ -175,11 +195,13 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/reset-password'
+    | '/help'
     | '/log-production'
     | '/log-waste'
     | '/profile'
     | '/sales'
     | '/team'
+    | '/whats-new'
     | '/'
     | '/ingredients/$id'
     | '/ingredients/new'
@@ -192,11 +214,13 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/reset-password'
+    | '/_authenticated/help'
     | '/_authenticated/log-production'
     | '/_authenticated/log-waste'
     | '/_authenticated/profile'
     | '/_authenticated/sales'
     | '/_authenticated/team'
+    | '/_authenticated/whats-new'
     | '/_authenticated/'
     | '/_authenticated/ingredients/$id'
     | '/_authenticated/ingredients/new'
@@ -242,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/help': {
+      id: '/_authenticated/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof AuthenticatedHelpRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/log-production': {
       id: '/_authenticated/log-production'
       path: '/log-production'
@@ -275,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/team'
       fullPath: '/team'
       preLoaderRoute: typeof AuthenticatedTeamRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whats-new': {
+      id: '/_authenticated/whats-new'
+      path: '/whats-new'
+      fullPath: '/whats-new'
+      preLoaderRoute: typeof AuthenticatedWhatsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ingredients/': {
@@ -323,11 +361,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedHelpRoute: typeof AuthenticatedHelpRoute
   AuthenticatedLogProductionRoute: typeof AuthenticatedLogProductionRoute
   AuthenticatedLogWasteRoute: typeof AuthenticatedLogWasteRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
+  AuthenticatedWhatsNewRoute: typeof AuthenticatedWhatsNewRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedIngredientsIdRoute: typeof AuthenticatedIngredientsIdRoute
   AuthenticatedIngredientsNewRoute: typeof AuthenticatedIngredientsNewRoute
@@ -338,11 +378,13 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedHelpRoute: AuthenticatedHelpRoute,
   AuthenticatedLogProductionRoute: AuthenticatedLogProductionRoute,
   AuthenticatedLogWasteRoute: AuthenticatedLogWasteRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
+  AuthenticatedWhatsNewRoute: AuthenticatedWhatsNewRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedIngredientsIdRoute: AuthenticatedIngredientsIdRoute,
   AuthenticatedIngredientsNewRoute: AuthenticatedIngredientsNewRoute,

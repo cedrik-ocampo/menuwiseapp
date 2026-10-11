@@ -14,6 +14,8 @@ export const Route = createFileRoute("/login")({
       { name: "description", content: "Log in to MenuWise to see how your café is doing today." },
       { property: "og:title", content: "Log in — MenuWise" },
       { property: "og:description", content: "Less waste. More possibility. Smarter decisions for cafés & bakeries." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Login,
@@ -29,6 +31,7 @@ function Login() {
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [show, setShow] = useState(false);
   const [msg, setMsg] = useState<{ tone: "error" | "ok"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +53,7 @@ function Login() {
     }
     const r = schema.safeParse({ email, password });
     if (!r.success) return setMsg({ tone: "error", text: r.error.issues[0].message });
+    if (mode === "signup" && password !== confirmPassword) return setMsg({ tone: "error", text: "Passwords don't match" });
     if (!navigator.onLine) return setMsg({ tone: "error", text: "You're offline. Connect once to sign in on this device." });
     setBusy(true);
     if (mode === "signup") {
@@ -98,9 +102,18 @@ function Login() {
               </span>
             </label>
           )}
+          {mode === "signup" && (
+            <label className="block space-y-1.5">
+              <span className="text-sm font-semibold text-primary">Confirm password</span>
+              <span className="flex h-12 items-center gap-3 rounded-xl border border-input bg-card px-4">
+                <Lock className="h-5 w-5 text-muted-foreground" />
+                <input type={show ? "text" : "password"} autoComplete="new-password" className="w-full bg-transparent outline-none" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              </span>
+            </label>
+          )}
           {mode === "login" && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">You stay signed in on this device.</span>
+              <span className="text-muted-foreground">For safety, inactive sessions end after 30 minutes.</span>
               <button type="button" className="font-semibold text-accent" onClick={() => setMode("forgot")}>Forgot password?</button>
             </div>
           )}

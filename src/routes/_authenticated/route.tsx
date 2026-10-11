@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { initStore, useDB } from "@/lib/store";
 import { AppHeader, NavBar } from "@/components/mw/AppShell";
+import { SessionTimeout } from "@/components/mw/SessionTimeout";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -29,6 +30,7 @@ function Layout() {
   }, [user.id, display, cafe]);
   return (
     <div className="flex min-h-screen w-full bg-background">
+      <SessionTimeout />
       <NavBar />
       <div className="min-w-0 flex-1 pb-24 md:pb-10">
         <AppHeader cafeName={cafe} />

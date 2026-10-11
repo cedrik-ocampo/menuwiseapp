@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
-import { Crown, Download, RefreshCw, Trash2, UserPlus, LogOut, Camera } from "lucide-react";
+import { Crown, Download, RefreshCw, Trash2, UserPlus, LogOut, Camera, Mail, X } from "lucide-react";
 import { toast } from "sonner";
 import { clear as idbClear } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +15,7 @@ import { PageTitle, CafeName } from "@/components/mw/AppShell";
 import { Avatar, useMe, useSignOut } from "@/components/mw/UserMenu";
 import { Field, Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 import { leaveWorkspace, deleteAccount } from "@/lib/account.functions";
+import { cancelWorkspaceInvite, createWorkspaceInvite } from "@/lib/invitations.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -23,6 +25,8 @@ export const Route = createFileRoute("/_authenticated/profile")({
       { name: "description", content: "Manage your account, café workspace, preferences and data in MenuWise." },
       { property: "og:title", content: "Profile — MenuWise" },
       { property: "og:description", content: "Manage your account, café workspace, preferences and data in MenuWise." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Profile,
@@ -30,6 +34,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
 
 const OFFLINE = "You're offline. Reconnect to save this change.";
 interface Member { user_id: string; role: "owner" | "staff"; email: string | null; display_name: string | null }
+interface PendingInvite { id: string; email: string; invited_by: string; created_at: string }
 
 function Choice<T extends string | number>({ label, value, options, onChange }: { label: string; value: T; options: { v: T; l: string }[]; onChange: (v: T) => void }) {
   return (
@@ -67,15 +72,22 @@ function Profile() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
+  const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [modal, setModal] = useState<null | "email" | "password" | "delete">(null);
   const demo = isDemoMode();
+  const createInvite = useServerFn(createWorkspaceInvite);
+  const cancelInvite = useServerFn(cancelWorkspaceInvite);
   useEffect(() => setName(me.name), [me.name]);
 
   const load = useCallback(async () => {
     if (!ws || !navigator.onLine) return;
-    const { data } = await supabase.from("workspace_members").select("user_id,role,email,display_name").eq("workspace_id", ws).order("joined_at");
+    const [{ data }, { data: pending }] = await Promise.all([
+      supabase.from("workspace_members").select("user_id,role,email,display_name").eq("workspace_id", ws).order("joined_at"),
+      supabase.from("workspace_invites").select("id,email,invited_by,created_at").eq("workspace_id", ws).order("created_at", { ascending: false }),
+    ]);
     if (data) setMembers(data as Member[]);
+    if (pending) setInvites(pending as PendingInvite[]);
   }, [ws]);
   useEffect(() => { void load(); }, [load]);
   const sole = members.length <= 1;
@@ -88,7 +100,7 @@ function Profile() {
     if (!online()) return;
     const { error } = await supabase.auth.updateUser({ data: { full_name: v.slice(0, 60) } });
     if (error) return void toast.error(error.message);
-    if (ws) await supabase.from("workspace_members").update({ display_name: v }).eq("workspace_id", ws).eq("user_id", myId!);
+    if (ws && myId) await supabase.from("workspace_members").update({ display_name: v }).eq("workspace_id", ws).eq("user_id", myId);
     toast.success("Name updated"); reloadMe(); void load();
   }
 
@@ -106,9 +118,20 @@ function Profile() {
     const r = z.string().trim().email("Enter a valid email").max(255).safeParse(inviteEmail);
     if (!r.success) return void toast.error(r.error.issues[0].message);
     if (!online()) return;
-    const { error } = await supabase.from("workspace_invites").insert({ workspace_id: ws!, email: r.data.toLowerCase() });
-    if (error) return void toast.error(error.code === "23505" ? "Already invited" : "Couldn't send the invite");
-    toast.success(`${r.data} invited — ask them to sign up with this email`); setInviteEmail("");
+    if (!ws) return void toast.error("Couldn't find your café");
+    try {
+      const result = await createInvite({ data: { workspaceId: ws, email: r.data } });
+      setInviteEmail("");
+      await load();
+      if (result.emailSent) toast.success(`Invitation emailed to ${r.data}`);
+      else toast.success(`Invitation saved for ${r.data}. Email delivery needs a configured app-email domain.`);
+    } catch (error) { toast.error((error as Error).message); }
+  }
+
+  async function cancel(id: string) {
+    if (!ws || !window.confirm("Cancel this pending invitation?")) return;
+    try { await cancelInvite({ data: { workspaceId: ws, inviteId: id } }); await load(); toast.success("Invitation cancelled"); }
+    catch (error) { toast.error((error as Error).message); }
   }
 
   async function leave() {
@@ -155,7 +178,7 @@ function Profile() {
       </Panel>
 
       <Panel className="space-y-4">
-        <SectionTitle>Workspace</SectionTitle>
+        <SectionTitle>Business Profile</SectionTitle>
         <div><p className="mb-1 text-sm font-semibold text-primary">Café name</p><div className="text-primary"><CafeName initial={localStorage.getItem("menuwise:cafe_name") ?? "My Café"} /></div></div>
         <div>
           <p className="mb-1 text-sm font-semibold text-primary">Members</p>
@@ -179,6 +202,27 @@ function Profile() {
             <button type="submit" className={btnPrimary}><UserPlus className="h-4 w-4" /> Invite</button>
           </form>
         )}
+        {isOwner && invites.length > 0 && (
+          <div>
+            <p className="mb-1 text-sm font-semibold text-primary">Pending invitations</p>
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {invites.map((invite) => (
+                <li key={invite.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-primary">{invite.email}</p>
+                    <p className="text-xs text-muted-foreground">Invited {new Date(invite.created_at).toLocaleDateString()} · Waiting for signup</p>
+                  </div>
+                  <button type="button" aria-label={`Cancel invitation for ${invite.email}`} className="text-muted-foreground hover:text-destructive" onClick={() => void cancel(invite.id)}><X className="h-4 w-4" /></button>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">Invitation message: “You have been invited to join MenuWise Analytics for {localStorage.getItem("menuwise:cafe_name") ?? "My Café"}.”</p>
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+          <a href="mailto:menuwise.contact@gmail.com?subject=MenuWise%20Support" className={btnSecondary}><Mail className="h-4 w-4" /> Contact MenuWise</a>
+          <Link to="/help" className={btnSecondary}>Help & Contact</Link>
+        </div>
         {!sole && <button type="button" className={btnSecondary} onClick={() => void leave()}><LogOut className="h-4 w-4" /> Leave workspace</button>}
       </Panel>
 
@@ -238,19 +282,21 @@ function EmailModal({ onClose }: { onClose: () => void }) {
 }
 
 function PasswordModal({ onClose }: { onClose: () => void }) {
-  const [a, setA] = useState(""), [b, setB] = useState("");
+  const [current, setCurrent] = useState(""), [a, setA] = useState(""), [b, setB] = useState("");
   return (
     <Modal title="Change password" onClose={onClose}>
       <form className="space-y-3" onSubmit={async (e) => {
         e.preventDefault();
+        if (!current) return void toast.error("Enter your current password");
         if (a.length < 8) return void toast.error("Use at least 8 characters");
         if (a !== b) return void toast.error("Passwords don't match");
         if (!navigator.onLine) return void toast.error(OFFLINE);
-        const { error } = await supabase.auth.updateUser({ password: a });
+        const { error } = await supabase.auth.updateUser({ password: a, current_password: current });
         if (error) return void toast.error(error.message);
         toast.success("Password changed"); onClose();
       }}>
-        <Field label="New password"><input type="password" className={inputCls} value={a} onChange={(e) => setA(e.target.value)} autoFocus /></Field>
+        <Field label="Current password"><input type="password" autoComplete="current-password" className={inputCls} value={current} onChange={(e) => setCurrent(e.target.value)} autoFocus /></Field>
+        <Field label="New password"><input type="password" autoComplete="new-password" className={inputCls} value={a} onChange={(e) => setA(e.target.value)} /></Field>
         <Field label="Confirm new password"><input type="password" className={inputCls} value={b} onChange={(e) => setB(e.target.value)} /></Field>
         <button type="submit" className={btnPrimary}>Change password</button>
       </form>

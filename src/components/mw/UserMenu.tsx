@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, User } from "lucide-react";
+import { CircleHelp, History, LogOut, User } from "lucide-react";
 import { clear as idbClear } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
 import { resetStore } from "@/lib/store";
@@ -50,14 +50,14 @@ export function Avatar({ me, size = 36 }: { me: Me; size?: number }) {
 export function useSignOut() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  return async (opts?: { clearCache?: boolean }) => {
+  return useCallback(async (opts?: { clearCache?: boolean }) => {
     await qc.cancelQueries();
     qc.clear();
     resetStore();
     if (opts?.clearCache) await idbClear();
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true });
-  };
+  }, [navigate, qc]);
 }
 
 export function UserMenu() {
@@ -89,6 +89,13 @@ export function UserMenu() {
         <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => navigate({ to: "/profile" })}>
           <User className="h-4 w-4" /> Profile
         </DropdownMenuItem>
+        <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => navigate({ to: "/whats-new" })}>
+          <History className="h-4 w-4" /> What’s New
+        </DropdownMenuItem>
+        <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => navigate({ to: "/help" })}>
+          <CircleHelp className="h-4 w-4" /> Help & Contact
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => void signOut()}>
           <LogOut className="h-4 w-4" /> Sign out
         </DropdownMenuItem>
