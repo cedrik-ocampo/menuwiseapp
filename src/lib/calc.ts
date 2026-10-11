@@ -222,3 +222,33 @@ export function compareWeeks(total: (from: string, to: string) => number, offset
   const c = total(cur.from, cur.to), p = total(prev.from, prev.to);
   return { cur: c, prev: p, pct: p > 0 ? ((c - p) / p) * 100 : null, window: cur };
 }
+
+export interface TrendPoint { key: string; label: string; start: string; end: string; revenue: number; rolling: number; current: boolean }
+/**
+ * Progressive weekly revenue line: starts at the first week with (non-future) sales,
+ * grows one point per week, capped at the latest 6 weeks, oldest → newest.
+ * `rolling` = average of up to 4 weeks ending at (and including) that week.
+ */
+export function salesTrend(sales: { date: string }[], revenueOf: (s: any) => number, today = todayISO()): TrendPoint[] {
+  const past = sales.filter((s) => s.date <= today);
+  if (!past.length) return [];
+  const first = weekStart(past.map((s) => s.date).sort()[0]);
+  const ws = weekStart(today);
+  const span = Math.round(daysBetween(first, ws) / 7) + 1;
+  const count = Math.min(6, span);
+  const revOf = (start: string, end: string) => past.filter((s) => s.date >= start && s.date <= end).reduce((a, s) => a + revenueOf(s), 0);
+  const all: { start: string; end: string; revenue: number }[] = [];
+  for (let i = Math.min(span, count + 3) - 1; i >= 0; i--) {
+    const start = addDays(ws, -7 * i);
+    const end = i === 0 ? today : addDays(start, 6);
+    all.push({ start, end, revenue: start < first ? 0 : revOf(start, end) });
+  }
+  const pts = all.map((w, idx) => {
+    const win = all.slice(Math.max(0, idx - 3), idx + 1).filter((x) => x.start >= first);
+    return { ...w, rolling: win.reduce((a, x) => a + x.revenue, 0) / Math.max(1, win.length) };
+  });
+  return pts.slice(-count).map((p, i, arr) => {
+    const back = arr.length - 1 - i;
+    return { ...p, key: p.start, current: back === 0, label: back === 0 ? "This Week" : back === 1 ? "Last Week" : `${back}w ago` };
+  });
+}
