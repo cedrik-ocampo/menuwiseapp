@@ -76,16 +76,15 @@ export function ImportButton<T>({
           <button type="button" className={`${btnSecondary} ${className}`}><Upload className="h-4 w-4" /> Import</button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-60">
+          <DropdownMenuItem onSelect={() => dl()}><Download className="h-4 w-4" /> Download template (CSV)</DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuLabel>Import {what} from</DropdownMenuLabel>
           <p className="px-2 pb-1 text-[11px] text-muted-foreground">Required Columns: {columns}.</p>
           <DropdownMenuItem onSelect={() => pick(".xlsx,.xls")}><FileSpreadsheet className="h-4 w-4" /> Excel (.xlsx)</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => pick(".csv,text/csv")}><FileText className="h-4 w-4" /> CSV</DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => { toast.message("In Google Sheets choose File › Download › Microsoft Excel (.xlsx), then import that file."); pick(".xlsx,.xls,.csv"); }}>
             <SheetIcon className="h-4 w-4" /> Google Sheets
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => dl()}><Download className="h-4 w-4" /> Download template (CSV)</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

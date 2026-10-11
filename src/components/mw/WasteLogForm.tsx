@@ -18,6 +18,12 @@ const schema = z.object({
   unitCost: z.number({ invalid_type_error: "Enter a unit cost" }).min(0, "Unit cost can't be negative"),
 });
 
+export const STAGE_DESC: Record<Stage, string> = {
+  Ingredient: "Raw, individual ingredient. Example: spillage while preparing ingredients for a batch of pastries, burnt butter while browning it before adding to cookies, or spoilage of an ingredient before it is used.",
+  WIP: "Work in progress. The total ingredient cost for a product. Example: a batch of croissants accidentally burnt during prep.",
+  "Finished Product": "Spillage or spoilage after the item was ready for sale. Example: dropped on the floor or returned by a customer for finding a hair in it.",
+};
+
 interface Props {
   fixedStage?: Stage;
   ingredientId?: string;
@@ -128,7 +134,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
       {fixedStage ? (
         <p className="text-sm font-semibold text-primary">Stage: <span className="font-normal">{fixedStage}</span></p>
       ) : (
-        <Field label="Stage" hint="Ingredient → Ingredient ID · WIP → Batch ID · Finished Product → Menu Item ID + batch, if any.">
+        <Field label="Stage" hint={STAGE_DESC[stage]}>
           <Segmented value={stage} options={STAGES} onChange={setStage} />
         </Field>
       )}
