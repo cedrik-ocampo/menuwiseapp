@@ -7,16 +7,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 type Map = ReturnType<typeof menuMap>;
 
-export function MenuMapChart({ map, height = 360, interactive = true }: { map: Map; height?: number; interactive?: boolean }) {
+export function MenuMapChart({ map, interactive = true, onSelect }: { map: Map; height?: number; interactive?: boolean; onSelect?: (id: string) => void }) {
   const navigate = useNavigate();
-  const data = map.plottedRows.map((r) => ({ x: +r.popularity.toFixed(1), y: +r.profit.toFixed(2), z: Math.max(r.waste, 1), name: r.item.name, id: r.item.id, waste: r.waste, intensity: r.intensity, quadrant: r.quadrant }));
+  const data = map.plottedRows.map((r) => ({ x: r.popularity, y: +r.profit.toFixed(2), z: Math.max(r.waste, 1), name: r.item.name, id: r.item.id, waste: r.waste, intensity: r.intensity, quadrant: r.quadrant }));
   const hasQuadrants = data.length > 1;
   if (data.length === 0) {
     return <p className="py-24 text-center text-sm font-medium text-muted-foreground">No sales data yet. Log sales to see the menu map.</p>;
   }
   return (
-    <div className="w-full">
-      <div style={{ height }} className="relative w-full">
+    <div className="mx-auto w-full max-w-[640px]">
+      <div className="relative aspect-square w-full">
        {hasQuadrants && <div className="pointer-events-none absolute inset-0 z-0 grid grid-cols-2 grid-rows-2 pb-14 pl-16 pr-6 pt-6 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/60">
         <span>Puzzles</span><span className="text-right">Stars</span>
         <span className="self-end">Dogs</span><span className="self-end text-right">Plowhorses</span>
@@ -25,7 +25,7 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
         <ScatterChart margin={{ top: 16, right: 16, bottom: 28, left: 8 }}>
           <CartesianGrid stroke="var(--border)" />
           <XAxis type="number" dataKey="x" name="Popularity" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}>
-            <Label value="Popularity (avg. weekly sales) →" position="bottom" offset={10} style={{ fontSize: 12, fill: "var(--primary)", fontWeight: 600 }} />
+            <Label value="Popularity (total units sold, all time) →" position="bottom" offset={10} style={{ fontSize: 12, fill: "var(--primary)", fontWeight: 600 }} />
           </XAxis>
           <YAxis type="number" dataKey="y" name="Profitability" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => `₱${v}`}>
             <Label value="Profitability (margin/unit) →" angle={-90} position="insideLeft" style={{ fontSize: 12, fill: "var(--primary)", fontWeight: 600, textAnchor: "middle" }} />
@@ -42,7 +42,7 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
                 <div className="rounded-lg border border-border bg-card p-3 text-xs shadow">
                   <p className="font-bold text-primary">{p.name}</p>
                   <p className="text-muted-foreground">{p.quadrant}</p>
-                  <p>Popularity: {p.x}/wk · Margin: {formatPeso(p.y)}</p>
+                  <p>Units sold (all time): {p.x} · Margin: {formatPeso(p.y)}</p>
                   <p>Waste value: {formatPeso(p.waste)}</p>
                 </div>
               );
@@ -52,7 +52,9 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
             data={data}
              onClick={interactive ? (d: { id?: string; payload?: { id: string } }) => {
                const id = d.payload?.id ?? d.id;
-               if (id) navigate({ to: "/menu/$id", params: { id } });
+               if (!id) return;
+               if (onSelect) onSelect(id);
+               else navigate({ to: "/menu/$id", params: { id } });
              } : undefined}
             className={interactive ? "cursor-pointer" : ""}
           >
@@ -76,7 +78,7 @@ export function MenuMapChart({ map, height = 360, interactive = true }: { map: M
            <span>· Top left:</span><QuadrantHelp name="Puzzles" text="Low popularity + High profitability. Earns above the median margin BUT sells below the median. Promote or reposition to increase sales." />
            <span>· Bottom left:</span><QuadrantHelp name="Dogs" text="Low popularity + Low profitability. Sells below the median AND earns below the median margin. Consider removing or reformulating." />
          </p> : <p className="font-medium text-primary">Not enough data to classify quadrants yet.</p>}
-        <p className="italic">Popularity = average units sold per week over the last 30 days.</p>
+        <p className="italic">Popularity = total units sold per menu item, all time. Click a bubble to find it in Analysis.</p>
       </div>
     </div>
   );
