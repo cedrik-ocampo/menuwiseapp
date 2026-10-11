@@ -33,7 +33,7 @@ const PROD_COLS = "Menu_Item_ID, quantity, producedAt, expiryDate (Batch_ID opti
 function LogProduction() {
   const db = useDB();
   const { item } = Route.useSearch();
-  const [menuItemId, setMenuItemId] = useState(item ?? db.menuItems[0]?.id ?? "");
+  const [menuItemId, setMenuItemId] = useState(item ?? "");
   const [date, setDate] = useState(todayISO());
   const menu = db.menuItems.find((m) => m.id === menuItemId);
   const mkRow = (i = 0): Row => {
@@ -99,15 +99,14 @@ function LogProduction() {
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Log Production" subtitle="Track every batch, from bake to expiry." />
       <ProductionTabs active="log" />
       <SectionTitle right={
-        <div className="flex items-center gap-3">
-          <Link to="/menu/new" className="text-sm font-semibold text-accent">+ Create new menu item</Link>
-          <ImportButton what="production entries" columns={PROD_COLS} className="h-9 px-3" parse={parseProd} commit={(items) => items.forEach((b) => put("batches", b))} />
-        </div>
+        <ImportButton what="production entries" columns={PROD_COLS} className="h-9 px-3" parse={parseProd} commit={(items) => items.forEach((b) => put("batches", b))}
+          template={{ filename: "production-template.csv", header: ["Menu_Item_ID", "quantity", "producedAt", "expiryDate", "Batch_ID"], rows: [] }} />
       }>Production Log Form</SectionTitle>
       <p className="-mt-2 mb-3 text-xs text-muted-foreground">Import · Required Columns: {PROD_COLS}.</p>
       <Panel className="space-y-4">
-        <Field label="Menu item">
+        <Field label="Menu item" error={errors[0] === "Choose a menu item" ? "Choose a menu item" : undefined}>
           <select className={inputCls} value={menuItemId} onChange={(e) => onItemChange(e.target.value)}>
+            <option value="">Select a menu item</option>
             {db.menuItems.map((m) => <option key={m.id} value={m.id}>{m.id} · {m.name}</option>)}
           </select>
         </Field>
@@ -137,6 +136,7 @@ function LogProduction() {
       </Panel>
       {errors[0] === "Choose a menu item" && <p className="mt-2 text-sm text-destructive">Choose a menu item</p>}
       <button className={`${btnPrimary} mt-4 h-12 w-full`} onClick={save}><Check className="h-4 w-4" /> Save production log</button>
+      <p className="mt-3 text-center text-sm"><Link to="/menu/new" className="font-semibold text-accent">+ Create new menu item</Link></p>
       {last && (
         <p className="mt-3 flex gap-2 rounded-xl bg-success/10 p-3 text-sm text-success"><CheckCircle2 className="h-5 w-5 shrink-0" /> {last}</p>
       )}
