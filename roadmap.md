@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Phase 1: Business Profile, pending invitations, and account safety.
-- [ ] Phase 1: What’s New, Help/Contact, and Ongoing Insights guidance.
+- [x] Phase 1: Business Profile, pending invitations, and account safety (invite email awaits a configured app-email domain).
+- [x] Phase 1: What’s New, Help/Contact, and Ongoing Insights guidance.
 - [ ] Phase 2: Menu engineering, Production/Waste imports, and recipes.
 - [ ] Phase 3: Progressive six-week Sales line chart.
 - [ ] Phase 4: Read-only MenuWise admin café monitoring.
