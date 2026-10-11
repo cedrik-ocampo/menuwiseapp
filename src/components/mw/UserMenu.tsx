@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { CircleHelp, History, LogOut, User } from "lucide-react";
@@ -50,14 +50,14 @@ export function Avatar({ me, size = 36 }: { me: Me; size?: number }) {
 export function useSignOut() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  return async (opts?: { clearCache?: boolean }) => {
+  return useCallback(async (opts?: { clearCache?: boolean }) => {
     await qc.cancelQueries();
     qc.clear();
     resetStore();
     if (opts?.clearCache) await idbClear();
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true });
-  };
+  }, [navigate, qc]);
 }
 
 export function UserMenu() {

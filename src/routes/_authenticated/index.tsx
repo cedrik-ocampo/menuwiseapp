@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/")({
       { name: "description", content: "Today's waste value, expiring ingredients and menu performance at a glance." },
       { property: "og:title", content: "Dashboard — MenuWise" },
       { property: "og:description", content: "Today's waste value, expiring ingredients and menu performance at a glance." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Dashboard,

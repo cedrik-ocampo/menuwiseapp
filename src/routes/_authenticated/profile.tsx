@@ -25,6 +25,8 @@ export const Route = createFileRoute("/_authenticated/profile")({
       { name: "description", content: "Manage your account, café workspace, preferences and data in MenuWise." },
       { property: "og:title", content: "Profile — MenuWise" },
       { property: "og:description", content: "Manage your account, café workspace, preferences and data in MenuWise." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Profile,

@@ -14,6 +14,8 @@ export const Route = createFileRoute("/login")({
       { name: "description", content: "Log in to MenuWise to see how your café is doing today." },
       { property: "og:title", content: "Log in — MenuWise" },
       { property: "og:description", content: "Less waste. More possibility. Smarter decisions for cafés & bakeries." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Login,
