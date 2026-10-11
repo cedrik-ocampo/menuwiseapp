@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useDB, put, remove } from "@/lib/store";
-import { attributedWaste, avgWeeklyProduction, avgWeeklySales, costPerUnit, directWaste, producedThisWeek, sumValue, weekStart } from "@/lib/calc";
+import { attributedWaste, avgWeeklyProduction, totalUnitsSold, costPerUnit, directWaste, producedThisWeek, sumValue, weekStart } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, timeOf, todayISO, uid } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Callout, Field, Panel, SectionTitle, Stat, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
@@ -67,8 +67,43 @@ function MenuItemView() {
       <div className="grid gap-3 md:grid-cols-3">
         <Stat label="Amt. Produced for the Week" value={<>{fmtQty(producedThisWeek(db, m.id))} <span className="text-sm font-normal">{m.batchUnit}</span></>} sub={`${shortDate(ws)}–${shortDate(addDays(ws, 6))} · Week to date`} />
         <Stat label="Average Weekly Production" value={fmtQty(Math.round(avgWeeklyProduction(db, m.id)))} sub={`${m.batchUnit} / week · last 4 complete weeks`} />
-        <Stat label="Average Weekly Sales" value={fmtQty(Math.round(avgWeeklySales(db, m.id)))} sub={`${m.batchUnit} / week · last 30 days`} />
+        <Stat label="Total Units Sold" value={fmtQty(totalUnitsSold(db, m.id))} sub={`${m.batchUnit} · all time · Menu Map popularity`} />
       </div>
+
+      <Panel className="mt-6">
+        <SectionTitle>Recipe</SectionTitle>
+        {m.recipe.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{m.type === "Outsourced" ? "Outsourced item — no recipe tracked." : "No recipe ingredients recorded yet."}</p>
+        ) : (() => {
+          const lines = m.recipe.map((r) => {
+            const ing = db.ingredients.find((i) => i.id === r.ingredientId);
+            return { r, ing, cost: r.quantity * (ing?.unitCost ?? 0) };
+          });
+          const total = lines.reduce((a, l) => a + l.cost, 0) || 1;
+          return (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead className="text-xs uppercase text-muted-foreground">
+                  <tr><th className="py-2">Ingredient</th><th className="text-right">Quantity</th><th>Unit</th><th>Allocation</th><th className="text-right">Line cost</th><th className="text-right">Recipe share</th></tr>
+                </thead>
+                <tbody>
+                  {lines.map(({ r, ing, cost }) => (
+                    <tr key={r.ingredientId} className="border-t border-border">
+                      <td className="py-2">{ing ? <Link to="/ingredients/$id" params={{ id: ing.id }} className="font-semibold text-accent hover:underline">{ing.name}</Link> : <span className="text-muted-foreground">{r.ingredientId} (removed)</span>}</td>
+                      <td className="text-right">{fmtQty(r.quantity)}</td>
+                      <td className="pl-2">{r.unit}</td>
+                      <td>{r.allocation}</td>
+                      <td className="text-right">{formatPeso(cost)}</td>
+                      <td className="text-right">{((cost / total) * 100).toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot><tr className="border-t border-border font-bold text-primary"><td className="py-2" colSpan={4}>Recipe cost per batch (yield {m.yield})</td><td className="text-right">{formatPeso(lines.reduce((a, l) => a + l.cost, 0))}</td><td className="text-right">100%</td></tr></tfoot>
+              </table>
+            </div>
+          );
+        })()}
+      </Panel>
 
       <Panel className="mt-6">
         {editBatch && <EditBatchDialog batch={editBatch} unit={m.batchUnit} onClose={() => setEditBatch(null)} />}

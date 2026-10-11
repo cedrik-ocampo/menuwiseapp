@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { put, remove, useDB, type DBView } from "@/lib/store";
-import { saleRevenue, saleUnitPrice, weekStart, weeklyRevenue } from "@/lib/calc";
+import { saleRevenue, saleUnitPrice, salesTrend, weekStart, type TrendPoint } from "@/lib/calc";
 import { addDays, formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
 import { normDate, num, type Row } from "@/lib/import";
 import type { Audit, Sale } from "@/lib/types";
@@ -69,7 +69,7 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
     const units = new Map<string, number>();
     weekSales.forEach((s) => units.set(s.menuItemId, (units.get(s.menuItemId) ?? 0) + s.quantity));
     const top = [...units.entries()].sort((a, b) => b[1] - a[1])[0];
-    const weeks = weeklyRevenue(db.sales, rev, t);
+    const weeks = salesTrend(db.sales, rev, t);
     const list = [...db.sales].sort((a, b) => b.date.localeCompare(a.date) || ((b as Audit).createdAt ?? "").localeCompare((a as Audit).createdAt ?? ""));
     return { today, week, top, weeks, list };
   }, [db, t, ws]);
@@ -95,7 +95,7 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
         <Stat label="Top Seller" value={top ? nameOf(top[0]) : "—"} sub={top ? `${fmtQty(top[1])} units this week` : "No sales this week"} />
       </div>
 
-      <WeeklyRevenue weeks={weeks} hasSales={db.sales.length > 0} />
+      <WeeklyRevenue points={weeks} hasSales={db.sales.length > 0} />
 
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <table className="w-full min-w-[720px] text-sm">
@@ -168,50 +168,45 @@ function compactPeso(v: number) {
   return `${sym}${Math.round(v)}`;
 }
 
-function WeeklyRevenue({ weeks, hasSales }: { weeks: ReturnType<typeof weeklyRevenue>; hasSales: boolean }) {
-  const avg = weeks.slice(1, 5).reduce((a, w) => a + w.revenue, 0) / 4;
-  // oldest → newest, left to right
-  const data = [...weeks].reverse();
-  const max = Math.max(1, ...data.map((w) => w.revenue));
-  const labelOf = (key: string) => data.find((w) => w.key === key)?.label ?? "";
+function WeeklyRevenue({ points, hasSales }: { points: TrendPoint[]; hasSales: boolean }) {
+  const labelOf = (key: string) => points.find((w) => w.key === key)?.label ?? "";
   return (
     <Panel>
-      <SectionTitle>Weekly Revenue · last 8 weeks</SectionTitle>
-      {!hasSales ? (
+      <SectionTitle>Weekly Revenue Trend · up to 6 weeks</SectionTitle>
+      {!hasSales || points.length === 0 ? (
         <p className="py-16 text-center text-sm text-muted-foreground">No sales yet. Log or import sales to see weekly revenue.</p>
       ) : (
         <>
-          <div ref={(el) => { if (el) el.scrollLeft = el.scrollWidth; }} className="-mx-1 overflow-x-auto px-1"><div className="mx-auto h-64 w-full min-w-[440px] max-w-4xl">
+          <div className="-mx-1 overflow-x-auto px-1"><div className="mx-auto h-64 w-full min-w-[360px] max-w-4xl">
             <ResponsiveContainer>
-              <BarChart data={data} margin={{ top: 28, right: 8, bottom: 4, left: 4 }} barCategoryGap="20%" maxBarSize={56}>
+              <LineChart data={points} margin={{ top: 16, right: 24, bottom: 4, left: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="key" type="category" interval={0} tickFormatter={labelOf} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
-                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={(v) => compactPeso(Number(v))} width={56} domain={[0, Math.ceil(max * 1.15)]} allowDataOverflow />
+                <XAxis dataKey="key" type="category" interval={0} tickFormatter={labelOf} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} padding={{ left: 16, right: 16 }} />
+                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={(v) => compactPeso(Number(v))} width={56} domain={[0, "auto"]} />
                 <Tooltip
-                  cursor={{ fill: "var(--secondary)" }}
                   content={({ active, payload }) => {
-                    const w = active ? (payload?.[0]?.payload as (typeof data)[number] | undefined) : undefined;
+                    const w = active ? (payload?.[0]?.payload as TrendPoint | undefined) : undefined;
                     if (!w) return null;
                     const head = w.current ? `This Week (Mon–${new Date().toLocaleDateString("en-US", { weekday: "short" })})` : `Week of ${shortDate(w.start)}–${shortDate(w.end)}`;
-                    return <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow">{head}: <b>{formatPeso(w.revenue)}</b></div>;
+                    return (
+                      <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow">
+                        <p className="font-semibold text-primary">{head}</p>
+                        <p>Revenue: <b>{formatPeso(w.revenue)}</b></p>
+                        <p className="text-muted-foreground">Rolling average: {formatPeso(w.rolling)}</p>
+                      </div>
+                    );
                   }}
                 />
-                <Bar dataKey="revenue" radius={[4, 4, 0, 0]} minPointSize={3} isAnimationActive={false}>
-                  {data.map((w) => (
-                    <Cell key={w.key}
-                      fill={w.revenue === 0 ? "var(--muted-foreground)" : "var(--primary)"}
-                      fillOpacity={w.revenue === 0 ? 0.35 : w.current ? 0.45 : 1}
-                      stroke={w.current ? "var(--primary)" : undefined}
-                      strokeDasharray={w.current ? "4 3" : undefined}
-                      strokeWidth={w.current ? 2 : 0} />
-                  ))}
-                  <LabelList dataKey="revenue" position="top" offset={6} formatter={(v: number) => compactPeso(Number(v))} style={{ fontSize: 9, fill: "var(--foreground)", stroke: "none", fillOpacity: 1 }} />
-                </Bar>
-              </BarChart>
+                <Line type="monotone" dataKey="revenue" name="Weekly revenue" stroke="var(--primary)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--primary)" }} activeDot={{ r: 6 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="rolling" name="Rolling average" stroke="var(--accent)" strokeWidth={2} strokeDasharray="6 4" dot={false} isAnimationActive={false} />
+              </LineChart>
             </ResponsiveContainer>
           </div></div>
-          <p className="mt-2 text-xs text-muted-foreground">Oldest on the left. This Week (so far) is shown lighter with a dashed outline.</p>
-          <p className="mt-1 text-sm text-muted-foreground">Average weekly revenue (last 4 weeks): <span className="font-semibold text-primary">{formatPeso(avg)}</span></p>
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-5 bg-primary" /> Weekly revenue</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-5 border-t-2 border-dashed border-accent" /> Rolling average (up to 4 weeks, incl. that week)</span>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Oldest on the left. Starts at your first sales week and adds one point per week, up to 6. This Week is so far.</p>
         </>
       )}
     </Panel>

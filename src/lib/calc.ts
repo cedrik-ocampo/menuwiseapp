@@ -101,10 +101,15 @@ export function avgWeeklyProduction(db: DBView, menuItemId: string) {
   const { from, to } = last4Weeks();
   return db.batches.filter((b) => b.menuItemId === menuItemId && b.producedAt.slice(0, 10) >= from && b.producedAt.slice(0, 10) < to).reduce((a, b) => a + b.quantity, 0) / 4;
 }
-/** Popularity: average units sold per week over the last 30 days (today included). */
+/** Average units sold per week over the last 30 days (today included). */
 export function avgWeeklySales(db: DBView, menuItemId: string) {
   const t = todayISO(), from = addDays(t, -29);
   return db.sales.filter((s) => s.menuItemId === menuItemId && s.date >= from && s.date <= t).reduce((a, s) => a + s.quantity, 0) / (30 / 7);
+}
+/** Popularity: all-time total units sold (future-dated sales excluded). */
+export function totalUnitsSold(db: DBView, menuItemId: string) {
+  const t = todayISO();
+  return db.sales.filter((s) => s.menuItemId === menuItemId && s.date <= t).reduce((a, s) => a + s.quantity, 0);
 }
 /** Revenue of a sale; old entries without a price use the item's current retail price. */
 export function saleRevenue(db: DBView, s: { menuItemId: string; quantity: number; unitPrice?: number }) {
@@ -143,10 +148,11 @@ function median(values: number[]) {
 
 export function menuMap(db: DBView, includeAttributed: boolean) {
   const baseRows = db.menuItems.map((m) => {
-    const popularity = avgWeeklySales(db, m.id);
+    const popularity = totalUnitsSold(db, m.id);
     const profit = margin(m);
     const waste = sumValue(directWaste(db, m.id)) + (includeAttributed ? sumValue(attributedWaste(db, m.id)) : 0);
-    return { item: m, popularity, profit, waste };
+    const marginPct = m.retailPrice > 0 ? (profit / m.retailPrice) * 100 : 0;
+    return { item: m, popularity, profit, marginPct, waste };
   });
   const plottedBaseRows = baseRows.filter((r) => r.popularity > 0);
   const medianPop = median(plottedBaseRows.map((r) => r.popularity));
@@ -215,4 +221,34 @@ export function compareWeeks(total: (from: string, to: string) => number, offset
   const { cur, prev } = weekWindows(offset, today);
   const c = total(cur.from, cur.to), p = total(prev.from, prev.to);
   return { cur: c, prev: p, pct: p > 0 ? ((c - p) / p) * 100 : null, window: cur };
+}
+
+export interface TrendPoint { key: string; label: string; start: string; end: string; revenue: number; rolling: number; current: boolean }
+/**
+ * Progressive weekly revenue line: starts at the first week with (non-future) sales,
+ * grows one point per week, capped at the latest 6 weeks, oldest → newest.
+ * `rolling` = average of up to 4 weeks ending at (and including) that week.
+ */
+export function salesTrend(sales: { date: string }[], revenueOf: (s: any) => number, today = todayISO()): TrendPoint[] {
+  const past = sales.filter((s) => s.date <= today);
+  if (!past.length) return [];
+  const first = weekStart(past.map((s) => s.date).sort()[0]);
+  const ws = weekStart(today);
+  const span = Math.round(daysBetween(first, ws) / 7) + 1;
+  const count = Math.min(6, span);
+  const revOf = (start: string, end: string) => past.filter((s) => s.date >= start && s.date <= end).reduce((a, s) => a + revenueOf(s), 0);
+  const all: { start: string; end: string; revenue: number }[] = [];
+  for (let i = Math.min(span, count + 3) - 1; i >= 0; i--) {
+    const start = addDays(ws, -7 * i);
+    const end = i === 0 ? today : addDays(start, 6);
+    all.push({ start, end, revenue: start < first ? 0 : revOf(start, end) });
+  }
+  const pts = all.map((w, idx) => {
+    const win = all.slice(Math.max(0, idx - 3), idx + 1).filter((x) => x.start >= first);
+    return { ...w, rolling: win.reduce((a, x) => a + x.revenue, 0) / Math.max(1, win.length) };
+  });
+  return pts.slice(-count).map((p, i, arr) => {
+    const back = arr.length - 1 - i;
+    return { ...p, key: p.start, current: back === 0, label: back === 0 ? "This Week" : back === 1 ? "Last Week" : `${back}w ago` };
+  });
 }

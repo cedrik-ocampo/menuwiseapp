@@ -8,6 +8,13 @@
       "when": 1791473167709,
       "tag": "0000_workspaces",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791742946490,
+      "tag": "0001_admin_read_only_monitoring",
+      "breakpoints": true
     }
   ]
 }
