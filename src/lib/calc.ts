@@ -101,10 +101,15 @@ export function avgWeeklyProduction(db: DBView, menuItemId: string) {
   const { from, to } = last4Weeks();
   return db.batches.filter((b) => b.menuItemId === menuItemId && b.producedAt.slice(0, 10) >= from && b.producedAt.slice(0, 10) < to).reduce((a, b) => a + b.quantity, 0) / 4;
 }
-/** Popularity: average units sold per week over the last 30 days (today included). */
+/** Average units sold per week over the last 30 days (today included). */
 export function avgWeeklySales(db: DBView, menuItemId: string) {
   const t = todayISO(), from = addDays(t, -29);
   return db.sales.filter((s) => s.menuItemId === menuItemId && s.date >= from && s.date <= t).reduce((a, s) => a + s.quantity, 0) / (30 / 7);
+}
+/** Popularity: all-time total units sold (future-dated sales excluded). */
+export function totalUnitsSold(db: DBView, menuItemId: string) {
+  const t = todayISO();
+  return db.sales.filter((s) => s.menuItemId === menuItemId && s.date <= t).reduce((a, s) => a + s.quantity, 0);
 }
 /** Revenue of a sale; old entries without a price use the item's current retail price. */
 export function saleRevenue(db: DBView, s: { menuItemId: string; quantity: number; unitPrice?: number }) {
@@ -143,10 +148,11 @@ function median(values: number[]) {
 
 export function menuMap(db: DBView, includeAttributed: boolean) {
   const baseRows = db.menuItems.map((m) => {
-    const popularity = avgWeeklySales(db, m.id);
+    const popularity = totalUnitsSold(db, m.id);
     const profit = margin(m);
     const waste = sumValue(directWaste(db, m.id)) + (includeAttributed ? sumValue(attributedWaste(db, m.id)) : 0);
-    return { item: m, popularity, profit, waste };
+    const marginPct = m.retailPrice > 0 ? (profit / m.retailPrice) * 100 : 0;
+    return { item: m, popularity, profit, marginPct, waste };
   });
   const plottedBaseRows = baseRows.filter((r) => r.popularity > 0);
   const medianPop = median(plottedBaseRows.map((r) => r.popularity));
