@@ -3,7 +3,10 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Callout } from "@/components/mw/ui";
-import { WasteLogForm } from "@/components/mw/WasteLogForm";
+import { WasteList, WasteLogForm } from "@/components/mw/WasteLogForm";
+import { WasteImport } from "@/components/mw/WasteImport";
+import { useDB } from "@/lib/store";
+import { byNewest } from "@/lib/calc";
 
 export const Route = createFileRoute("/_authenticated/log-waste")({
   head: () => ({
@@ -12,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/log-waste")({
       { name: "description", content: "Record a loss once, at the stage where it happened." },
       { property: "og:title", content: "Log Waste — MenuWise" },
       { property: "og:description", content: "Record a loss once, at the stage where it happened." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LogWaste,
@@ -36,6 +41,7 @@ const MAPPING = [
 ];
 
 function LogWaste() {
+  const db = useDB();
   return (
     <div className="mx-auto max-w-3xl">
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Log Waste" subtitle="Record the loss once, at the right stage." />
@@ -44,8 +50,12 @@ function LogWaste() {
           Log waste at the point of the process where it actually occurs. Roll up to a menu item only when the waste is direct or clearly attributable.
         </Callout>
 
+        <div className="flex justify-end"><WasteImport /></div>
         <Section title="Waste Log Form" open>
           <WasteLogForm />
+        </Section>
+        <Section title="Recent waste logs">
+          <WasteList logs={[...db.wasteLogs].sort(byNewest).slice(0, 20)} />
         </Section>
 
         <Callout tone="warning" title="Avoid Double Counting">
