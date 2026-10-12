@@ -48,19 +48,19 @@ The spreadsheet keeps a short **Item Code** only because several ingredient rows
 
 Example:
 
-| Menu Item ID | Name | Type | Selling Price | Batch Yield | Ingredient Name | Amount | Unit |
+| Item Code | Name | Type | Selling Price | Batch Yield | Ingredient Name | Amount | Unit |
 |---|---|---|---:|---:|---|---:|---|
 | MI-001 | Chocolate Croissant | Batch-made item | 120 | 12 | Flour | 500 | g |
 | MI-001 | Chocolate Croissant | Batch-made item | 120 | 12 | Butter | 250 | g |
 | MI-001 | Chocolate Croissant | Batch-made item | 120 | 12 | Chocolate | 180 | g |
 
 Import behavior:
-- Group rows sharing the same Menu Item ID into one recipe.
+- Group rows sharing the same Item Code into one recipe.
 - Accept the spreadsheet heading **Item Code** instead of exposing the technical “Menu Item ID” wording.
 - Match recipe ingredients by name, case-insensitively, against Ingredient Inventory.
 - Require recipe rows for Individual and Batch-made items.
 - Allow one row with no recipe ingredient for Outsourced items, using batch purchase price and pieces per batch.
-- Reject unmatched or ambiguous ingredient names, invalid amounts/units, duplicate ingredient lines, inconsistent repeated item details, missing yields, and duplicate Menu Item IDs already in MenuWise.
+- Reject unmatched or ambiguous ingredient names, invalid amounts/units, duplicate ingredient lines, inconsistent repeated item details, missing yields, and Item Codes already in MenuWise.
 - Preview results by menu item, with clear row-specific errors before anything is saved.
 
 ## Existing screens and calculations
