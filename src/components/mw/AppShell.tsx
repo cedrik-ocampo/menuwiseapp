@@ -22,7 +22,12 @@ const TABS: { to: string; label: string; mobileLabel: string; icon: typeof Trash
 
 function useActive() {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  return (to: string) => (to === "/" ? path === "/" : path === to || path.startsWith(to + "/"));
+  return (to: string) => {
+    if (to === "/") return path === "/";
+    if (to === "/menu-items") return path === "/menu-items" || (path.startsWith("/menu/") && path !== "/menu/");
+    if (to === "/menu") return path === "/menu" || path === "/menu/";
+    return path === to || path.startsWith(to + "/");
+  };
 }
 
 export function NavBar() {
@@ -34,7 +39,7 @@ export function NavBar() {
       <nav
         aria-label="Main"
         role="tablist"
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card shadow-[0_-2px_8px_color-mix(in_oklab,var(--foreground)_6%,transparent)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 overflow-x-auto border-t border-border bg-card shadow-[0_-2px_8px_color-mix(in_oklab,var(--foreground)_6%,transparent)] md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className="flex h-16 min-w-max">

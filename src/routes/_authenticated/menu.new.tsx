@@ -229,7 +229,7 @@ function AddMenuItem() {
   return (
     <div>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm text-accent">
-        <Link to="/menu" className="font-medium hover:underline">Menu Overview</Link> <span className="text-muted-foreground">&gt;</span> <span className="text-muted-foreground">Add New Menu Item</span>
+        <Link to="/menu-items" search={{ item: undefined }} className="font-medium hover:underline">Menu Items</Link> <span className="text-muted-foreground">&gt;</span> <span className="text-muted-foreground">Add New Menu Item</span>
       </nav>
       <ProductionTabs active="add" />
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -238,7 +238,7 @@ function AddMenuItem() {
           what="menu items with recipes"
           columns={MENU_COLS}
           parse={(rows) => parseMenuRows(rows, db)}
-          commit={(items) => { items.forEach((item) => put("menuItems", item)); navigate({ to: "/menu" }); }}
+          commit={(items) => { items.forEach((item) => put("menuItems", item)); navigate({ to: "/menu-items", search: { item: undefined } }); }}
           template={{
             filename: "menu-items-with-recipes-template.csv",
             header: MENU_TEMPLATE_COLS,
