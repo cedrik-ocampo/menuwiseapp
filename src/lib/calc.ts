@@ -105,10 +105,10 @@ export function avgWeeklyProduction(db: DBView, menuItemId: string) {
   const { from, to } = last4Weeks();
   return db.batches.filter((b) => b.menuItemId === menuItemId && b.producedAt.slice(0, 10) >= from && b.producedAt.slice(0, 10) < to).reduce((a, b) => a + b.quantity, 0) / 4;
 }
-/** Average units sold per week over the last 30 days (today included). */
+/** Average units sold per week over the last 4 completed weeks (same window as production). */
 export function avgWeeklySales(db: DBView, menuItemId: string) {
-  const t = todayISO(), from = addDays(t, -29);
-  return db.sales.filter((s) => s.menuItemId === menuItemId && s.date >= from && s.date <= t).reduce((a, s) => a + s.quantity, 0) / (30 / 7);
+  const { from, to } = last4Weeks();
+  return db.sales.filter((s) => s.menuItemId === menuItemId && s.date >= from && s.date < to).reduce((a, s) => a + s.quantity, 0) / 4;
 }
 /** Popularity: all-time total units sold (future-dated sales excluded). */
 export function totalUnitsSold(db: DBView, menuItemId: string) {

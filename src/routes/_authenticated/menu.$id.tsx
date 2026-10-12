@@ -68,7 +68,7 @@ function MenuItemView() {
       <div className="grid gap-3 md:grid-cols-3">
         <Stat label="Amt. Produced for the Week" value={<>{fmtQty(producedThisWeek(db, m.id))} <span className="text-sm font-normal">{m.batchUnit}</span></>} sub={`${shortDate(ws)}–${shortDate(addDays(ws, 6))} · Week to date`} />
         <Stat label="Average Weekly Production" value={fmtQty(Math.round(avgWeeklyProduction(db, m.id)))} sub={`${m.batchUnit} / week · last 4 complete weeks`} />
-        <Stat label="Average Weekly Sales" value={fmtQty(Math.round(avgWeeklySales(db, m.id)))} sub={`${m.batchUnit} / week · last 30 days`} />
+        <Stat label="Average Weekly Sales" value={fmtQty(Math.round(avgWeeklySales(db, m.id)))} sub={`${m.batchUnit} / week · last 4 complete weeks`} />
       </div>
 
       <Panel className="mt-6">
