@@ -1,9 +1,11 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { initStore, useDB } from "@/lib/store";
 import { AppHeader, NavBar } from "@/components/mw/AppShell";
 import { SessionTimeout } from "@/components/mw/SessionTimeout";
+import { AdminHeader, AdminEditNotice } from "@/components/mw/AdminShell";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -21,6 +23,29 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function Layout() {
+  const admin = useIsAdmin();
+  if (admin.isLoading) return <p className="py-20 text-center text-muted-foreground">Loading…</p>;
+  return admin.data?.admin ? <AdminLayout /> : <CafeLayout />;
+}
+
+/** Admin account: Café Monitoring only — no café dashboard, sidebar or tabs. */
+function AdminLayout() {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const onAdmin = path === "/admin" || path.startsWith("/admin/");
+  useEffect(() => {
+    if (!onAdmin) navigate({ to: "/admin", replace: true });
+  }, [onAdmin, navigate]);
+  return (
+    <div className="min-h-screen w-full bg-background">
+      <SessionTimeout />
+      <AdminHeader />
+      <main className="mx-auto max-w-6xl px-5 py-6 md:px-8">{onAdmin ? <Outlet /> : null}</main>
+    </div>
+  );
+}
+
+function CafeLayout() {
   const { user } = Route.useRouteContext();
   const db = useDB();
   const cafe = (user.user_metadata?.cafe_name as string) || "My Café";
@@ -35,6 +60,7 @@ function Layout() {
       <div className="min-w-0 flex-1 pb-24 md:pb-10">
         <AppHeader cafeName={cafe} />
         <main className="mx-auto max-w-6xl px-5 py-6 md:px-8">
+          {db.ready && <AdminEditNotice />}
           {db.ready ? <Outlet /> : <p className="py-20 text-center text-muted-foreground">Loading your café data…</p>}
         </main>
       </div>
