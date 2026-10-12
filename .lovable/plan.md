@@ -24,9 +24,16 @@ Arrange the café workflow from setup through daily operations and reporting:
 - Preserve item-name navigation between Menu Map analysis and the corresponding menu item.
 - Use distinct page headings and metadata for each view while keeping existing item records and calculations unchanged.
 
+## Subcategory selection
+- Start new menu items with **Subcategory** set to an explicit **Unselected** option instead of automatically choosing the category's first subcategory.
+- Reset Subcategory to **Unselected** when the main category changes, so the owner makes a deliberate choice.
+- Allow **Unselected** as a valid saved state and display the item under its main category without assigning a false subcategory.
+- Keep Subcategory optional in file imports; blank values remain unselected instead of defaulting to the first available subcategory.
+
 ## Validation
 - Verify the order and active tab on desktop and phone layouts.
 - Verify horizontal phone scrolling and that labels remain readable.
 - Test navigation to Home, Ingredients, Menu Items, Menu Map, Log Production, Log Waste, and Sales.
 - Confirm add-item, item-detail, Menu Map analysis, and back-navigation flows still work.
+- Confirm manual creation and file import preserve an unselected subcategory without silently categorizing the item.
 - Run relevant navigation tests and confirm the preview builds cleanly.
