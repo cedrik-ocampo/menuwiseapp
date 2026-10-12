@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CircleHelp, History, LogOut, User } from "lucide-react";
+import { CircleHelp, History, LogOut, ShieldCheck, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { amIAdmin } from "@/lib/admin.functions";
 import { clear as idbClear } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
 import { resetStore } from "@/lib/store";
@@ -64,6 +67,8 @@ export function UserMenu() {
   const [me] = useMe();
   const navigate = useNavigate();
   const signOut = useSignOut();
+  const checkAdmin = useServerFn(amIAdmin);
+  const admin = useQuery({ queryKey: ["am-i-admin"], queryFn: () => checkAdmin(), staleTime: 5 * 60_000, retry: false });
   useEffect(() => {
     applyTheme();
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -89,6 +94,11 @@ export function UserMenu() {
         <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => navigate({ to: "/profile" })}>
           <User className="h-4 w-4" /> Profile
         </DropdownMenuItem>
+        {admin.data?.admin && (
+          <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => navigate({ to: "/admin" })}>
+            <ShieldCheck className="h-4 w-4" /> Café Monitoring
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => navigate({ to: "/whats-new" })}>
           <History className="h-4 w-4" /> What’s New
         </DropdownMenuItem>
