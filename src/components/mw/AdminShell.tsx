@@ -22,8 +22,9 @@ export function AdminHeader() {
           </div>
         </div>
         <nav className="flex items-center gap-1">
-          {tab("/admin", "Cafés", path === "/admin" || (path.startsWith("/admin/") && path !== "/admin/logs"))}
+          {tab("/admin", "Cafés", path === "/admin" || (path.startsWith("/admin/") && path !== "/admin/logs" && path !== "/admin/bugs"))}
           {tab("/admin/logs", "My Edit Logs", path === "/admin/logs")}
+          {tab("/admin/bugs", "Bug Reports", path === "/admin/bugs")}
         </nav>
         <UserMenu />
       </div>
