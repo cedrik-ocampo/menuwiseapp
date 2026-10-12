@@ -17,11 +17,13 @@ import { Route as AuthenticatedHelpRouteImport } from './routes/_authenticated/h
 import { Route as AuthenticatedLogProductionRouteImport } from './routes/_authenticated/log-production'
 import { Route as AuthenticatedLogWasteRouteImport } from './routes/_authenticated/log-waste'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedReportBugRouteImport } from './routes/_authenticated/report-bug'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedWhatsNewRouteImport } from './routes/_authenticated/whats-new'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminIdRouteImport } from './routes/_authenticated/admin.$id'
+import { Route as AuthenticatedAdminBugsRouteImport } from './routes/_authenticated/admin.bugs'
 import { Route as AuthenticatedAdminLogsRouteImport } from './routes/_authenticated/admin.logs'
 import { Route as AuthenticatedIngredientsIndexRouteImport } from './routes/_authenticated/ingredients.index'
 import { Route as AuthenticatedIngredientsIdRouteImport } from './routes/_authenticated/ingredients.$id'
@@ -70,6 +72,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReportBugRoute = AuthenticatedReportBugRouteImport.update({
+  id: '/report-bug',
+  path: '/report-bug',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
   id: '/sales',
   path: '/sales',
@@ -93,6 +100,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
 const AuthenticatedAdminIdRoute = AuthenticatedAdminIdRouteImport.update({
   id: '/admin/$id',
   path: '/admin/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminBugsRoute = AuthenticatedAdminBugsRouteImport.update({
+  id: '/admin/bugs',
+  path: '/admin/bugs',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminLogsRoute = AuthenticatedAdminLogsRouteImport.update({
@@ -142,10 +154,12 @@ export interface FileRoutesByFullPath {
   '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/report-bug': typeof AuthenticatedReportBugRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/team': typeof AuthenticatedTeamRoute
   '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/admin/$id': typeof AuthenticatedAdminIdRoute
+  '/admin/bugs': typeof AuthenticatedAdminBugsRoute
   '/admin/logs': typeof AuthenticatedAdminLogsRoute
   '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
@@ -162,11 +176,13 @@ export interface FileRoutesByTo {
   '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/report-bug': typeof AuthenticatedReportBugRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/team': typeof AuthenticatedTeamRoute
   '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/$id': typeof AuthenticatedAdminIdRoute
+  '/admin/bugs': typeof AuthenticatedAdminBugsRoute
   '/admin/logs': typeof AuthenticatedAdminLogsRoute
   '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
@@ -185,11 +201,13 @@ export interface FileRoutesById {
   '/_authenticated/log-production': typeof AuthenticatedLogProductionRoute
   '/_authenticated/log-waste': typeof AuthenticatedLogWasteRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/report-bug': typeof AuthenticatedReportBugRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/whats-new': typeof AuthenticatedWhatsNewRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/$id': typeof AuthenticatedAdminIdRoute
+  '/_authenticated/admin/bugs': typeof AuthenticatedAdminBugsRoute
   '/_authenticated/admin/logs': typeof AuthenticatedAdminLogsRoute
   '/_authenticated/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/_authenticated/ingredients/new': typeof AuthenticatedIngredientsNewRoute
@@ -209,10 +227,12 @@ export interface FileRouteTypes {
     | '/log-production'
     | '/log-waste'
     | '/profile'
+    | '/report-bug'
     | '/sales'
     | '/team'
     | '/whats-new'
     | '/admin/$id'
+    | '/admin/bugs'
     | '/admin/logs'
     | '/ingredients/$id'
     | '/ingredients/new'
@@ -229,11 +249,13 @@ export interface FileRouteTypes {
     | '/log-production'
     | '/log-waste'
     | '/profile'
+    | '/report-bug'
     | '/sales'
     | '/team'
     | '/whats-new'
     | '/'
     | '/admin/$id'
+    | '/admin/bugs'
     | '/admin/logs'
     | '/ingredients/$id'
     | '/ingredients/new'
@@ -251,11 +273,13 @@ export interface FileRouteTypes {
     | '/_authenticated/log-production'
     | '/_authenticated/log-waste'
     | '/_authenticated/profile'
+    | '/_authenticated/report-bug'
     | '/_authenticated/sales'
     | '/_authenticated/team'
     | '/_authenticated/whats-new'
     | '/_authenticated/'
     | '/_authenticated/admin/$id'
+    | '/_authenticated/admin/bugs'
     | '/_authenticated/admin/logs'
     | '/_authenticated/ingredients/$id'
     | '/_authenticated/ingredients/new'
@@ -330,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/report-bug': {
+      id: '/_authenticated/report-bug'
+      path: '/report-bug'
+      fullPath: '/report-bug'
+      preLoaderRoute: typeof AuthenticatedReportBugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sales': {
       id: '/_authenticated/sales'
       path: '/sales'
@@ -363,6 +394,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/$id'
       fullPath: '/admin/$id'
       preLoaderRoute: typeof AuthenticatedAdminIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/bugs': {
+      id: '/_authenticated/admin/bugs'
+      path: '/admin/bugs'
+      fullPath: '/admin/bugs'
+      preLoaderRoute: typeof AuthenticatedAdminBugsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/logs': {
@@ -422,11 +460,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLogProductionRoute: typeof AuthenticatedLogProductionRoute
   AuthenticatedLogWasteRoute: typeof AuthenticatedLogWasteRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedReportBugRoute: typeof AuthenticatedReportBugRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedWhatsNewRoute: typeof AuthenticatedWhatsNewRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminIdRoute: typeof AuthenticatedAdminIdRoute
+  AuthenticatedAdminBugsRoute: typeof AuthenticatedAdminBugsRoute
   AuthenticatedAdminLogsRoute: typeof AuthenticatedAdminLogsRoute
   AuthenticatedIngredientsIdRoute: typeof AuthenticatedIngredientsIdRoute
   AuthenticatedIngredientsNewRoute: typeof AuthenticatedIngredientsNewRoute
@@ -442,11 +482,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLogProductionRoute: AuthenticatedLogProductionRoute,
   AuthenticatedLogWasteRoute: AuthenticatedLogWasteRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedReportBugRoute: AuthenticatedReportBugRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedWhatsNewRoute: AuthenticatedWhatsNewRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminIdRoute: AuthenticatedAdminIdRoute,
+  AuthenticatedAdminBugsRoute: AuthenticatedAdminBugsRoute,
   AuthenticatedAdminLogsRoute: AuthenticatedAdminLogsRoute,
   AuthenticatedIngredientsIdRoute: AuthenticatedIngredientsIdRoute,
   AuthenticatedIngredientsNewRoute: AuthenticatedIngredientsNewRoute,
