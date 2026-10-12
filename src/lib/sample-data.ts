@@ -57,7 +57,7 @@ export function loadSampleData() {
   seed = 42;
   clearCafeData();
   const out: { collection: CollectionName; item: { id: string } }[] = [];
-  const add = (collection: CollectionName, item: { id: string }) => out.push({ collection, item });
+  const add = <T extends { id: string }>(collection: CollectionName, item: T) => out.push({ collection, item });
 
   for (const [id, name, category, unit, unitCost, stock] of ING) {
     add("ingredients", { id, name, category, storage: category === "Dairy" ? "Fridge" : "Dry storage", unit, unitCost, supplier: "Metro Café Supply" } satisfies Ingredient);
