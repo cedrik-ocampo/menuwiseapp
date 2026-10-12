@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useDB, put, remove } from "@/lib/store";
-import { attributedWaste, avgWeeklyProduction, totalUnitsSold, costPerUnit, directWaste, producedThisWeek, sumValue, weekStart } from "@/lib/calc";
+import { attributedWaste, avgWeeklyProduction, avgWeeklySales, costPerUnit, directWaste, producedThisWeek, sumValue, weekStart } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, timeOf, todayISO, uid } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Callout, Field, Panel, SectionTitle, Stat, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
@@ -68,7 +68,7 @@ function MenuItemView() {
       <div className="grid gap-3 md:grid-cols-3">
         <Stat label="Amt. Produced for the Week" value={<>{fmtQty(producedThisWeek(db, m.id))} <span className="text-sm font-normal">{m.batchUnit}</span></>} sub={`${shortDate(ws)}–${shortDate(addDays(ws, 6))} · Week to date`} />
         <Stat label="Average Weekly Production" value={fmtQty(Math.round(avgWeeklyProduction(db, m.id)))} sub={`${m.batchUnit} / week · last 4 complete weeks`} />
-        <Stat label="Total Units Sold" value={fmtQty(totalUnitsSold(db, m.id))} sub={`${m.batchUnit} · all time · Menu Map popularity`} />
+        <Stat label="Average Weekly Sales" value={fmtQty(Math.round(avgWeeklySales(db, m.id)))} sub={`${m.batchUnit} / week · last 30 days`} />
       </div>
 
       <Panel className="mt-6">
