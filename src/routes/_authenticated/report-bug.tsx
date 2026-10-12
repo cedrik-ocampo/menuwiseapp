@@ -28,8 +28,8 @@ function ReportBug() {
   const [done, setDone] = useState(false);
 
   async function submit() {
-    if (!title.trim() || !desc.trim()) return toast.error("Add a title and a description");
-    if (!navigator.onLine) return toast.error("You're offline. Connect to the internet to send a report.");
+    if (!title.trim() || !desc.trim()) { toast.error("Add a title and a description"); return; }
+    if (!navigator.onLine) { toast.error("You're offline. Connect to the internet to send a report."); return; }
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     const ws = currentWorkspace();
@@ -44,7 +44,7 @@ function ReportBug() {
       user_agent: navigator.userAgent.slice(0, 500),
     });
     setBusy(false);
-    if (error) return toast.error("Couldn't send the report. Try again.");
+    if (error) { toast.error("Couldn't send the report. Try again."); return; }
     setDone(true); setTitle(""); setDesc("");
   }
 
