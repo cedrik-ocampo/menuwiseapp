@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { clear as idbClear } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
 import { currentUser, currentWorkspace, getView, useDB } from "@/lib/store";
+import { clearCafeData, loadSampleData } from "@/lib/sample-data";
 import { avatarDataUrl } from "@/lib/image";
 import { isDemoMode, setPrefs, usePrefs, type Currency, type Landing, type Theme } from "@/lib/prefs";
 import { useThreshold } from "@/lib/settings";
@@ -241,6 +242,21 @@ function Profile() {
         <div className="flex flex-wrap gap-2">
           <button type="button" className={btnSecondary} onClick={exportData}><Download className="h-4 w-4" /> Export my data</button>
           <button type="button" className={btnSecondary} onClick={() => void clearCache()}><RefreshCw className="h-4 w-4" /> Clear local cache</button>
+        </div>
+      </Panel>
+
+      <Panel className="space-y-3">
+        <SectionTitle>Demo &amp; presentation data</SectionTitle>
+        <p className="text-sm text-muted-foreground">Fill your café with a realistic sample (ingredients, recipes, 6 weeks of sales, production and waste) for presentations. Loading replaces your current café data.</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={btnPrimary} onClick={() => {
+            if (!confirm("Replace all current café data with sample data? Everyone in your café will see it.")) return;
+            loadSampleData(); toast.success("Sample café data loaded");
+          }}>Load sample café data</button>
+          <button type="button" className={btnSecondary} onClick={() => {
+            if (!confirm("Delete all café data (ingredients, menu, sales, production, waste)? This cannot be undone.")) return;
+            clearCafeData(); toast.success("Café data cleared");
+          }}><Trash2 className="h-4 w-4" /> Clear café data</button>
         </div>
       </Panel>
 

@@ -190,6 +190,36 @@ export function getView(): DBView {
   return view;
 }
 
+/** Bulk-write records (one change-log entry per record), emitting once. */
+export function putMany(entries: { collection: CollectionName; item: { id: string } }[]) {
+  const now = new Date().toISOString();
+  for (const { collection, item } of entries) {
+    const next = TRACKED.includes(collection)
+      ? { ...item, createdBy: userId ?? "", createdByName: userName, createdAt: now }
+      : item;
+    if (TRACKED.includes(collection)) logChange(collection, item.id, "created", []);
+    raw(collection, next as never);
+  }
+  emit();
+  void persist().then(() => sync());
+}
+
+/** Soft-delete every record in the given collections, emitting once. */
+export function clearCollections(collections: CollectionName[]) {
+  const now = new Date().toISOString();
+  for (const c of collections) {
+    for (const [id, r] of Object.entries(state.tables[c])) {
+      if (r.deleted) continue;
+      r.deleted = true;
+      r.updated_at = now;
+      const key = `${c}|${id}`;
+      if (!state.pending.includes(key)) state.pending.push(key);
+    }
+  }
+  emit();
+  void persist().then(() => sync());
+}
+
 export function remove(collection: CollectionName, id: string) {
   const r = state.tables[collection][id];
   if (!r) return;
