@@ -17,4 +17,5 @@
 - Signed-in sessions end after 30 minutes of inactivity without clearing IndexedDB. Why: shared café devices need re-authentication without discarding offline work.
 - Release notes and support live on protected `/whats-new` and `/help` routes linked from the account menu. Why: operational guidance stays accessible without crowding primary navigation.
 - MenuWise admin access is a `user_roles` role checked by `has_role`; admins get an admin-only layout (Café Monitoring, no café store/tabs), reads use SELECT-only RLS, and edits go through an authenticated server function that verifies the role, writes via the admin client, and appends an `adminEdit` changeLogs record in the café. Why: admin edits must be authorized server-side and visible to both the café and the admin's own log.
+- Bug reports are stored in `bug_reports` (members insert/read own; admin reads and updates status via authenticated server functions). Why: reports must reach the admin inbox without exposing other users' reports.
 - Menu Map popularity is all-time total units sold (future sales excluded). Why: team decision for a stable popularity axis.

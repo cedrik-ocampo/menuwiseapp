@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Bug, CheckCircle2 } from "lucide-react";
+import { currentWorkspace } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Field, Panel, btnPrimary, inputCls } from "@/components/mw/ui";
@@ -31,10 +32,10 @@ function ReportBug() {
     if (!navigator.onLine) return toast.error("You're offline. Connect to the internet to send a report.");
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
-    const ws = localStorage.getItem("menuwise:workspace_id");
+    const ws = currentWorkspace();
     const { error } = await supabase.from("bug_reports").insert({
       user_id: u.user!.id,
-      workspace_id: ws && /^[0-9a-f-]{36}$/.test(ws) ? ws : null,
+      workspace_id: ws ?? null,
       reporter_name: (u.user?.user_metadata?.full_name as string) ?? null,
       reporter_email: u.user?.email ?? null,
       title: title.trim().slice(0, 200),
