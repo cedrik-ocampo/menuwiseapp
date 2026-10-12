@@ -6,6 +6,7 @@ import { Check, CheckCircle2, Plus, ArrowUpRight, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDB, put } from "@/lib/store";
 import { avgWeeklyProduction, producedThisWeek, weekStart } from "@/lib/calc";
+import { consumeForProduction } from "@/lib/consume";
 import { addDays, fmtQty, shortDate, todayISO, timeOf } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
 import { ProductionTabs } from "@/components/mw/ProductionTabs";
@@ -73,7 +74,10 @@ function LogProduction() {
     if (errs.some(Boolean)) return;
     const now = new Date();
     const at = new Date(`${date}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`).toISOString();
-    rows.forEach((r) => put("batches", { id: r.batchId.trim(), menuItemId: menu.id, producedAt: at, quantity: parseFloat(r.quantity), expiryDate: r.expiry }));
+    rows.forEach((r) => {
+      put("batches", { id: r.batchId.trim(), menuItemId: menu.id, producedAt: at, quantity: parseFloat(r.quantity), expiryDate: r.expiry });
+      consumeForProduction(menu, parseFloat(r.quantity), date, r.batchId.trim());
+    });
     const total = rows.reduce((a, r) => a + parseFloat(r.quantity), 0);
     setLast(`Latest save: ${fmtQty(total)} ${menu.batchUnit} added to ${rows.map((r) => r.batchId).join(", ")} at ${timeOf(at)} on ${shortDate(date)}. Metrics updated below.`);
     toast.success("Production logged");
@@ -100,7 +104,11 @@ function LogProduction() {
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Log Production" subtitle="Track every batch, from bake to expiry." />
       <ProductionTabs active="log" />
       <SectionTitle right={
-        <ImportButton what="production entries" columns={PROD_COLS} className="h-9 px-3" parse={parseProd} commit={(items) => items.forEach((b) => put("batches", b))}
+        <ImportButton what="production entries" columns={PROD_COLS} className="h-9 px-3" parse={parseProd} commit={(items) => items.forEach((b) => {
+          put("batches", b);
+          const m = db.menuItems.find((x) => x.id === b.menuItemId);
+          if (m) consumeForProduction(m, b.quantity, b.producedAt.slice(0, 10), b.id);
+        })}
           template={{ filename: "production-template.csv", header: ["Menu_Item_ID", "quantity", "producedAt", "expiryDate", "Batch_ID"], rows: [] }} />
       }>Production Log Form</SectionTitle>
       <p className="-mt-2 mb-3 text-xs text-muted-foreground">Import · Required Columns: {PROD_COLS}.</p>
