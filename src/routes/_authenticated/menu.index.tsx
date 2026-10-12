@@ -38,6 +38,7 @@ function MenuMap() {
   const [view, setView] = useState<"Bubble Chart" | "Analysis" | "Menu Catalog">("Bubble Chart");
   const [withWip, setWithWip] = useState(false);
   const [highlight, setHighlight] = useState<string | null>(null);
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const map = useMemo(() => menuMap(db, withWip), [db, withWip]);
 
@@ -79,7 +80,7 @@ function MenuMap() {
         </p>
 
         {view === "Menu Catalog" ? (
-          <MenuInventory db={db} rows={map.rows} />
+          <MenuInventory db={db} rows={map.rows} focusId={focusId} onFocusDone={() => setFocusId(null)} />
         ) : view === "Bubble Chart" ? (
           <MenuMapChart map={map} onSelect={selectBubble} />
         ) : (
@@ -92,13 +93,13 @@ function MenuMap() {
               return (
                 <div key={q} className="overflow-hidden rounded-xl border border-border">
                   <div className="bg-secondary px-3 py-2">
-                    <p className="font-bold text-primary">{q} <span className="text-xs font-semibold text-muted-foreground">· {items.length} item{items.length === 1 ? "" : "s"}</span></p>
+                    <p className="font-bold text-primary">{q} ({items.length})</p>
                     <p className="text-xs text-muted-foreground">{DESC[q]}</p>
                     {items.length > 0 && (
-                      <p className="mt-1 text-xs text-primary">
-                        Highest waste: <b>{hi.item.name}</b> ({formatPeso(hi.waste)})
-                        {items.length > 1 && <> · Lowest waste: <b>{lo.item.name}</b> ({formatPeso(lo.waste)})</>}
-                      </p>
+                      <div className="mt-1 space-y-0.5 text-xs text-primary">
+                        <p>Highest Waste: <b>{hi.item.name}</b> ({formatPeso(hi.waste)})</p>
+                        {items.length > 1 && <p>Lowest Waste: <b>{lo.item.name}</b> ({formatPeso(lo.waste)})</p>}
+                      </div>
                     )}
                   </div>
                   {items.length > 0 && (
@@ -111,7 +112,7 @@ function MenuMap() {
                       <li key={r.item.id} id={`row-${r.item.id}`}
                         className={`m-2 grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 rounded-lg px-3 py-2 text-sm transition-shadow ${highlight === r.item.id ? "ring-2 ring-primary" : ""}`}
                         style={{ background: `color-mix(in oklab, ${wasteColor(r.intensity)} 22%, var(--card))` }}>
-                        <Link to="/menu/$id" params={{ id: r.item.id }} className="truncate font-semibold text-primary underline-offset-2 hover:underline">{r.item.name}</Link>
+                        <button type="button" onClick={() => { setFocusId(r.item.id); setView("Menu Catalog"); }} className="truncate text-left font-semibold text-primary underline-offset-2 hover:underline">{r.item.name}</button>
                         <span className="text-right text-xs text-primary">{r.popularity}</span>
                         <span className="text-right text-xs text-primary">{r.marginPct.toFixed(1)}%</span>
                         <span className="text-right text-xs text-primary">{formatPeso(r.waste)}</span>
@@ -122,7 +123,7 @@ function MenuMap() {
                   {items.length > PREVIEW && (
                     <button type="button" className="w-full border-t border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted"
                       onClick={() => setExpanded((e) => ({ ...e, [q]: !open }))}>
-                      {open ? "Show fewer" : `View all ${items.length} items`}
+                      {open ? "Show less" : `View all ${items.length} items`}
                     </button>
                   )}
                 </div>

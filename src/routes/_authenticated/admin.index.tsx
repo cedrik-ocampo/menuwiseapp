@@ -34,13 +34,13 @@ function AdminHome() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left text-sm [&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2.5 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
               <thead className="text-xs uppercase text-muted-foreground">
-                <tr><th className="py-2">Café</th><th>Owner</th><th className="text-right">Members</th><th className="text-right">Invites</th><th className="text-right">Menu items</th><th className="text-right">Ingredients</th><th className="text-right">Sales</th><th className="text-right">Batches</th><th className="text-right">Waste logs</th><th>Last activity</th><th /></tr>
+                <tr><th className="py-2">Café</th><th>Accounts</th><th className="text-right">Members</th><th className="text-right">Invites</th><th className="text-right">Menu items</th><th className="text-right">Ingredients</th><th className="text-right">Sales</th><th className="text-right">Batches</th><th className="text-right">Waste logs</th><th>Last activity</th><th /></tr>
               </thead>
               <tbody>
                 {q.data.map((c) => (
-                  <tr key={c.id} className="border-t border-border">
+                  <tr key={c.id} className="border-t border-border align-top">
                     <td className="py-2 font-semibold text-primary">{c.name}</td>
-                    <td><span className="block">{c.owner}</span><span className="text-xs text-muted-foreground">{c.ownerEmail}</span></td>
+                    <td><ul className="space-y-1">{c.accounts.map((a) => (<li key={a.email + a.role}><span className="block">{a.name} <span className="text-xs text-muted-foreground">({a.role === "owner" ? "Owner" : "Staff"})</span></span><span className="text-xs text-muted-foreground">{a.email}</span></li>))}</ul></td>
                     <td className="text-right">{c.members}</td><td className="text-right">{c.pendingInvites}</td>
                     <td className="text-right">{c.counts.menuItems}</td><td className="text-right">{c.counts.ingredients}</td>
                     <td className="text-right">{c.counts.sales}</td><td className="text-right">{c.counts.batches}</td><td className="text-right">{c.counts.wasteLogs}</td>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CircleHelp, History, LogOut, ShieldCheck, User } from "lucide-react";
+import { Bug, CircleHelp, History, LogOut, ShieldCheck, User } from "lucide-react";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { clear as idbClear } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,6 +108,9 @@ export function UserMenu() {
             </DropdownMenuItem>
             <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => navigate({ to: "/help" })}>
               <CircleHelp className="h-4 w-4" /> Help & Contact
+            </DropdownMenuItem>
+            <DropdownMenuItem className="min-h-11 gap-2" onSelect={() => navigate({ to: "/report-bug" })}>
+              <Bug className="h-4 w-4" /> Report a bug
             </DropdownMenuItem>
           </>
         )}

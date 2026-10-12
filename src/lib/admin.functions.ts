@@ -34,7 +34,7 @@ export const listCafes = createServerFn({ method: "POST" })
       return {
         id: w.id, name: w.name, createdAt: w.created_at,
         owner: owner?.display_name || owner?.email || "—", ownerEmail: owner?.email ?? "",
-        members: m.length, pendingInvites: (invites ?? []).filter((x) => x.workspace_id === w.id).length,
+        members: m.length, accounts: m.map((x) => ({ name: x.display_name || (x.email ?? "").split("@")[0] || "—", email: x.email ?? "", role: x.role as string })), pendingInvites: (invites ?? []).filter((x) => x.workspace_id === w.id).length,
         lastActivity: r.map((x) => x.updated_at).sort().pop() ?? null,
         counts: { menuItems: count("menuItems"), ingredients: count("ingredients"), sales: count("sales"), batches: count("batches"), wasteLogs: count("wasteLogs") },
       };
@@ -120,4 +120,26 @@ export const listAdminEdits = createServerFn({ method: "POST" })
     ]);
     const names = new Map((ws ?? []).map((w) => [w.id, w.name]));
     return JSON.stringify((logs ?? []).map((l) => ({ cafeId: l.workspace_id, cafe: names.get(l.workspace_id) ?? "—", ...(l.data as object) })));
+  });
+
+export const listBugReports = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const [{ data: reps }, { data: ws }] = await Promise.all([
+      context.supabase.from("bug_reports").select("*").order("created_at", { ascending: false }).limit(500),
+      context.supabase.from("workspaces").select("id,name"),
+    ]);
+    const names = new Map((ws ?? []).map((w) => [w.id, w.name]));
+    return (reps ?? []).map((r) => ({ ...r, cafe: r.workspace_id ? names.get(r.workspace_id) ?? "—" : "—" }));
+  });
+
+export const setBugStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["open", "resolved"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase.from("bug_reports").update({ status: data.status }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

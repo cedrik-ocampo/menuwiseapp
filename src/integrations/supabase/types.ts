@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      bug_reports: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          page: string | null
+          reporter_email: string | null
+          reporter_name: string | null
+          status: string
+          title: string
+          user_agent: string | null
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          page?: string | null
+          reporter_email?: string | null
+          reporter_name?: string | null
+          status?: string
+          title: string
+          user_agent?: string | null
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          page?: string | null
+          reporter_email?: string | null
+          reporter_name?: string | null
+          status?: string
+          title?: string
+          user_agent?: string | null
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       records: {
         Row: {
           collection: string
