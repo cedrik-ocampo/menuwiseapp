@@ -14,3 +14,4 @@
 - [x] Dashboard week dropdowns (8 weeks, day-aligned This Week) on waste and sales cards.
 - [x] Sales chart oldest → newest; fix label overlap/doubling.
 - [x] Simplify menu-item costing, recipe setup, and recipe-based file imports.
+- [x] Reorder the seven main tabs, separate Menu Items from Menu Map, and support an unselected subcategory.

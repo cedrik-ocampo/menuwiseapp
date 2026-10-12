@@ -40,7 +40,7 @@ function MenuItemView() {
     return (
       <div className="py-20 text-center">
         <p className="text-lg font-semibold text-primary">Menu item not found.</p>
-        <Link to="/menu" className="mt-3 inline-block text-accent">← Back to Menu Map</Link>
+        <Link to="/menu-items" search={{ item: undefined }} className="mt-3 inline-block text-accent">← Back to Menu Items</Link>
       </div>
     );
   }
@@ -54,12 +54,12 @@ function MenuItemView() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageTitle back={{ to: "/menu", label: "Menu Overview / Summary Map" }} title="Individual Menu Item View" subtitle="Track production, review batches and record losses at the right stage.">
+      <PageTitle back={{ to: "/menu-items", label: "Menu Items" }} title="Individual Menu Item View" subtitle="Track production, review batches and record losses at the right stage.">
         <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-destructive px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10" onClick={() => {
           if (!window.confirm(`Delete ${m.name}? Its batches, sales and waste history will also be removed.`)) return;
           deleteMenuItem(m.id);
           toast.success("Menu item deleted");
-          navigate({ to: "/menu" });
+          navigate({ to: "/menu-items", search: { item: undefined } });
         }}><Trash2 className="h-4 w-4" /> Delete menu item</button>
       </PageTitle>
       <h3 className="text-2xl font-bold text-primary">{m.name}</h3>

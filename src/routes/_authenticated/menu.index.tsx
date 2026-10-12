@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 const PREVIEW = 5;
-import { Plus, PackagePlus } from "lucide-react";
+import { PackagePlus } from "lucide-react";
 import { useDB } from "@/lib/store";
 import { menuMap, QUADRANTS, wasteColor } from "@/lib/calc";
 import { formatPeso } from "@/lib/format";
@@ -9,7 +9,6 @@ import { PageTitle } from "@/components/mw/AppShell";
 import { ProductionHistory } from "@/components/mw/History";
 import { Panel, SectionTitle, Segmented, btnPrimary, btnSecondary } from "@/components/mw/ui";
 import { MenuMapChart } from "@/components/mw/MenuMapChart";
-import { MenuInventory } from "@/components/mw/MenuInventory";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/menu/")({
@@ -35,10 +34,9 @@ const DESC: Record<string, string> = {
 
 function MenuMap() {
   const db = useDB();
-  const [view, setView] = useState<"Bubble Chart" | "Analysis" | "Menu Catalog">("Bubble Chart");
+  const [view, setView] = useState<"Bubble Chart" | "Analysis">("Bubble Chart");
   const [withWip, setWithWip] = useState(false);
   const [highlight, setHighlight] = useState<string | null>(null);
-  const [focusId, setFocusId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const map = useMemo(() => menuMap(db, withWip), [db, withWip]);
 
@@ -60,14 +58,14 @@ function MenuMap() {
 
   return (
     <div>
-      <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Menu Overview / Summary Map" subtitle="Where each menu item sits, coloured by waste.">
+      <PageTitle back={{ to: "/", label: "Home" }} title="Menu Map" subtitle="Compare popularity, profitability, and waste across the menu.">
         <div className="flex gap-2">
           <Link to="/log-production" search={{ item: undefined }} className={btnSecondary}><PackagePlus className="h-4 w-4" /> Quick add batch</Link>
-          <Link to="/menu/new" className={btnPrimary}><Plus className="h-4 w-4" /> Add Menu Item</Link>
+          <Link to="/menu-items" search={{ item: undefined }} className={btnPrimary}>View Menu Items</Link>
         </div>
       </PageTitle>
 
-      <div className="mb-3 w-full max-w-md"><Segmented value={view} options={["Bubble Chart", "Analysis", "Menu Catalog"] as const} onChange={setView} /></div>
+      <div className="mb-3 w-full max-w-sm"><Segmented value={view} options={["Bubble Chart", "Analysis"] as const} onChange={setView} /></div>
       <Panel className="space-y-4">
         <div className="flex flex-wrap items-center justify-end gap-3">
           <label className="flex items-center gap-2 text-sm text-primary">
@@ -79,9 +77,7 @@ function MenuMap() {
           Primary metric: direct finished-product waste per menu item{withWip ? " + attributed prep/WIP waste" : ""}. Unallocated ingredient waste is not included.
         </p>
 
-        {view === "Menu Catalog" ? (
-          <MenuInventory db={db} rows={map.rows} focusId={focusId} onFocusDone={() => setFocusId(null)} />
-        ) : view === "Bubble Chart" ? (
+        {view === "Bubble Chart" ? (
           <MenuMapChart map={map} onSelect={selectBubble} />
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
@@ -112,7 +108,7 @@ function MenuMap() {
                       <li key={r.item.id} id={`row-${r.item.id}`}
                         className={`m-2 grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 rounded-lg px-3 py-2 text-sm transition-shadow ${highlight === r.item.id ? "ring-2 ring-primary" : ""}`}
                         style={{ background: `color-mix(in oklab, ${wasteColor(r.intensity)} 22%, var(--card))` }}>
-                        <button type="button" onClick={() => { setFocusId(r.item.id); setView("Menu Catalog"); }} className="truncate text-left font-semibold text-primary underline-offset-2 hover:underline">{r.item.name}</button>
+                        <Link to="/menu-items" search={{ item: r.item.id }} className="truncate text-left font-semibold text-primary underline-offset-2 hover:underline">{r.item.name}</Link>
                         <span className="text-right text-xs text-primary">{r.popularity}</span>
                         <span className="text-right text-xs text-primary">{r.marginPct.toFixed(1)}%</span>
                         <span className="text-right text-xs text-primary">{formatPeso(r.waste)}</span>

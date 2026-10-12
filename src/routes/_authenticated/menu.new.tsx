@@ -97,7 +97,7 @@ function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
     }
 
     const subcategories = CATS[category.value] ?? [];
-    const subcategory = normalizeCategory(row.subcategory || subcategories[0] || "", subcategories).value;
+    const subcategory = row.subcategory?.trim() ? normalizeCategory(row.subcategory, subcategories).value : "";
     const item: MenuItem = {
       id: internalId(db.menuItems.length + groupIndex), name: group.name, category: category.value, subcategory,
       description: "", available: true, tags: [], type, batchCost: 0, yield: type === "Outsourced" ? toNum(row.piecesperbatch) : yieldAmount,
@@ -129,7 +129,7 @@ type Draft = Omit<MenuItem, "recipe"> & { recipe: RecipeDraft[]; tagsText: strin
 
 function blank(nextId: string): Draft {
   return {
-    id: nextId, name: "", category: "Pastry", subcategory: "Croissants & Danishes", description: "", available: true, tags: [], tagsText: "",
+    id: nextId, name: "", category: "Pastry", subcategory: "", description: "", available: true, tags: [], tagsText: "",
     type: "In-house", batchCost: 0, yield: 1, purchaseCost: 0, outsourcedBatchPrice: 0, outsourcedPieces: 1, unit: "piece", retailPrice: 0,
     supplier: "", shelfLifeDays: 2, expiryRule: EXPIRY_OPTIONS[0], defaultBatchSize: 1, batchUnit: "pieces", defaultExpiryDays: 2,
     defaultWasteStage: "Finished Product", defaultWasteType: "Unsold", allowQuickAdd: true, recipe: [],
@@ -229,7 +229,7 @@ function AddMenuItem() {
   return (
     <div>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm text-accent">
-        <Link to="/menu" className="font-medium hover:underline">Menu Overview</Link> <span className="text-muted-foreground">&gt;</span> <span className="text-muted-foreground">Add New Menu Item</span>
+        <Link to="/menu-items" search={{ item: undefined }} className="font-medium hover:underline">Menu Items</Link> <span className="text-muted-foreground">&gt;</span> <span className="text-muted-foreground">Add New Menu Item</span>
       </nav>
       <ProductionTabs active="add" />
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -238,7 +238,7 @@ function AddMenuItem() {
           what="menu items with recipes"
           columns={MENU_COLS}
           parse={(rows) => parseMenuRows(rows, db)}
-          commit={(items) => { items.forEach((item) => put("menuItems", item)); navigate({ to: "/menu" }); }}
+          commit={(items) => { items.forEach((item) => put("menuItems", item)); navigate({ to: "/menu-items", search: { item: undefined } }); }}
           template={{
             filename: "menu-items-with-recipes-template.csv",
             header: MENU_TEMPLATE_COLS,
@@ -266,9 +266,9 @@ function AddMenuItem() {
           <Panel className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2"><Field required label="Menu Item Name" error={errors.name}><input className={inputCls} value={draft.name} onChange={(event) => set("name", event.target.value)} placeholder="Chocolate Croissant" /></Field></div>
             <Field required label="Category" error={errors.category}>
-              <select className={inputCls} value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value, subcategory: CATS[event.target.value]?.[0] ?? "" })}>{Object.keys(CATS).map((category) => <option key={category}>{category}</option>)}</select>
+              <select className={inputCls} value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value, subcategory: "" })}>{Object.keys(CATS).map((category) => <option key={category}>{category}</option>)}</select>
             </Field>
-            <Field label="Subcategory"><select className={inputCls} value={draft.subcategory} onChange={(event) => set("subcategory", event.target.value)}>{(CATS[draft.category] ?? []).map((subcategory) => <option key={subcategory}>{subcategory}</option>)}</select></Field>
+            <Field label="Subcategory"><select className={inputCls} value={draft.subcategory} onChange={(event) => set("subcategory", event.target.value)}><option value="">Unselected</option>{(CATS[draft.category] ?? []).map((subcategory) => <option key={subcategory}>{subcategory}</option>)}</select></Field>
             <Field required label="Selling Price (per piece)" error={errors.retailPrice}><input inputMode="decimal" className={inputCls} value={draft.retailPrice || ""} onChange={(event) => set("retailPrice", numberValue(event.target.value))} placeholder="₱0.00" /></Field>
             <Field label="Tags · optional" hint="Separate with commas"><input className={inputCls} value={draft.tagsText} onChange={(event) => set("tagsText", event.target.value)} placeholder="bestseller, breakfast" /></Field>
             <div className="sm:col-span-2"><Field label="Description · optional"><textarea className={`${inputCls} h-20 py-2`} maxLength={300} value={draft.description} onChange={(event) => set("description", event.target.value)} /></Field></div>
@@ -367,7 +367,7 @@ function AddMenuItem() {
         )}
 
         <div className="sticky bottom-20 z-30 flex flex-wrap gap-2 rounded-lg border border-border bg-card p-3 shadow-lg md:bottom-4">
-          <button type="button" className={btnSecondary} onClick={() => navigate({ to: "/menu" })}>Cancel</button>
+          <button type="button" className={btnSecondary} onClick={() => navigate({ to: "/menu-items", search: { item: undefined } })}>Cancel</button>
           <button type="button" className={btnSecondary} disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>Back</button>
           {step < 2 ? <button type="button" className={`${btnPrimary} ml-auto`} onClick={next}>Next</button> : <>
             <button type="button" className={`${btnSecondary} ml-auto`} onClick={() => save(true)}>Save & Add Another</button>

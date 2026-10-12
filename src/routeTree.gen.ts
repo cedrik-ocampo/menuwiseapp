@@ -16,6 +16,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedHelpRouteImport } from './routes/_authenticated/help'
 import { Route as AuthenticatedLogProductionRouteImport } from './routes/_authenticated/log-production'
 import { Route as AuthenticatedLogWasteRouteImport } from './routes/_authenticated/log-waste'
+import { Route as AuthenticatedMenuItemsRouteImport } from './routes/_authenticated/menu-items'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedReportBugRouteImport } from './routes/_authenticated/report-bug'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
@@ -65,6 +66,11 @@ const AuthenticatedLogProductionRoute =
 const AuthenticatedLogWasteRoute = AuthenticatedLogWasteRouteImport.update({
   id: '/log-waste',
   path: '/log-waste',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMenuItemsRoute = AuthenticatedMenuItemsRouteImport.update({
+  id: '/menu-items',
+  path: '/menu-items',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/help': typeof AuthenticatedHelpRoute
   '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
+  '/menu-items': typeof AuthenticatedMenuItemsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/report-bug': typeof AuthenticatedReportBugRoute
   '/sales': typeof AuthenticatedSalesRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByTo {
   '/help': typeof AuthenticatedHelpRoute
   '/log-production': typeof AuthenticatedLogProductionRoute
   '/log-waste': typeof AuthenticatedLogWasteRoute
+  '/menu-items': typeof AuthenticatedMenuItemsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/report-bug': typeof AuthenticatedReportBugRoute
   '/sales': typeof AuthenticatedSalesRoute
@@ -200,6 +208,7 @@ export interface FileRoutesById {
   '/_authenticated/help': typeof AuthenticatedHelpRoute
   '/_authenticated/log-production': typeof AuthenticatedLogProductionRoute
   '/_authenticated/log-waste': typeof AuthenticatedLogWasteRoute
+  '/_authenticated/menu-items': typeof AuthenticatedMenuItemsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/report-bug': typeof AuthenticatedReportBugRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
@@ -226,6 +235,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/log-production'
     | '/log-waste'
+    | '/menu-items'
     | '/profile'
     | '/report-bug'
     | '/sales'
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/log-production'
     | '/log-waste'
+    | '/menu-items'
     | '/profile'
     | '/report-bug'
     | '/sales'
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
     | '/_authenticated/help'
     | '/_authenticated/log-production'
     | '/_authenticated/log-waste'
+    | '/_authenticated/menu-items'
     | '/_authenticated/profile'
     | '/_authenticated/report-bug'
     | '/_authenticated/sales'
@@ -345,6 +357,13 @@ declare module '@tanstack/react-router' {
       path: '/log-waste'
       fullPath: '/log-waste'
       preLoaderRoute: typeof AuthenticatedLogWasteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/menu-items': {
+      id: '/_authenticated/menu-items'
+      path: '/menu-items'
+      fullPath: '/menu-items'
+      preLoaderRoute: typeof AuthenticatedMenuItemsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/profile': {
@@ -459,6 +478,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHelpRoute: typeof AuthenticatedHelpRoute
   AuthenticatedLogProductionRoute: typeof AuthenticatedLogProductionRoute
   AuthenticatedLogWasteRoute: typeof AuthenticatedLogWasteRoute
+  AuthenticatedMenuItemsRoute: typeof AuthenticatedMenuItemsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedReportBugRoute: typeof AuthenticatedReportBugRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
@@ -481,6 +501,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHelpRoute: AuthenticatedHelpRoute,
   AuthenticatedLogProductionRoute: AuthenticatedLogProductionRoute,
   AuthenticatedLogWasteRoute: AuthenticatedLogWasteRoute,
+  AuthenticatedMenuItemsRoute: AuthenticatedMenuItemsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedReportBugRoute: AuthenticatedReportBugRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,

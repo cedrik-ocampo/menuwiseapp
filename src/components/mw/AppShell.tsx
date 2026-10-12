@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X, Users, PhilippinePeso } from "lucide-react";
+import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, WifiOff, Pencil, Check, X, Users, PhilippinePeso, BookOpen } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import logo from "@/assets/mw-logo.png.asset.json";
@@ -11,17 +11,23 @@ import { UserMenu } from "./UserMenu";
 import type { CollectionName } from "@/lib/types";
 
 const TABS: { to: string; label: string; mobileLabel: string; icon: typeof Trash2; pending?: CollectionName[] }[] = [
-  { to: "/", label: "Dashboard", mobileLabel: "Home", icon: LayoutDashboard },
-  { to: "/log-waste", label: "Log Waste", mobileLabel: "Waste", icon: Trash2, pending: ["wasteLogs"] },
-  { to: "/log-production", label: "Log Production", mobileLabel: "Production", icon: PackagePlus, pending: ["batches"] },
-  { to: "/menu", label: "Menu Map", mobileLabel: "Menu", icon: LayoutGrid },
-  { to: "/sales", label: "Sales", mobileLabel: "Sales", icon: PhilippinePeso, pending: ["sales"] },
+  { to: "/", label: "Home", mobileLabel: "Home", icon: LayoutDashboard },
   { to: "/ingredients", label: "Ingredients", mobileLabel: "Ingredients", icon: Package },
+  { to: "/menu-items", label: "Menu Items", mobileLabel: "Menu Items", icon: BookOpen },
+  { to: "/menu", label: "Menu Map", mobileLabel: "Menu Map", icon: LayoutGrid },
+  { to: "/log-production", label: "Log Production", mobileLabel: "Production", icon: PackagePlus, pending: ["batches"] },
+  { to: "/log-waste", label: "Log Waste", mobileLabel: "Waste", icon: Trash2, pending: ["wasteLogs"] },
+  { to: "/sales", label: "Sales", mobileLabel: "Sales", icon: PhilippinePeso, pending: ["sales"] },
 ];
 
 function useActive() {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  return (to: string) => (to === "/" ? path === "/" : path === to || path.startsWith(to + "/"));
+  return (to: string) => {
+    if (to === "/") return path === "/";
+    if (to === "/menu-items") return path === "/menu-items" || (path.startsWith("/menu/") && path !== "/menu/");
+    if (to === "/menu") return path === "/menu" || path === "/menu/";
+    return path === to || path.startsWith(to + "/");
+  };
 }
 
 export function NavBar() {
@@ -33,21 +39,21 @@ export function NavBar() {
       <nav
         aria-label="Main"
         role="tablist"
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card shadow-[0_-2px_8px_color-mix(in_oklab,var(--foreground)_6%,transparent)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 overflow-x-auto border-t border-border bg-card shadow-[0_-2px_8px_color-mix(in_oklab,var(--foreground)_6%,transparent)] md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <ul className="grid h-16 grid-cols-6">
+        <ul className="flex h-16 min-w-max">
           {TABS.map((t, i) => {
             const active = isActive(t.to);
             const pending = t.pending?.some((c) => db.pendingCollections.has(c)) && !db.online;
             return (
-              <li key={t.to} className="flex">
+              <li key={t.to} className="flex w-[76px] shrink-0">
                 <Link
                   to={t.to}
                   role="tab"
                   aria-selected={active}
                   aria-current={active ? "page" : undefined}
-                   aria-label={`${t.label}, tab, ${i + 1} of 6`}
+                   aria-label={`${t.label}, tab, ${i + 1} of ${TABS.length}`}
                   className={`relative flex min-h-12 w-full flex-col items-center justify-center gap-1 py-1.5 transition-transform duration-100 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${active ? "font-semibold text-primary" : "font-medium text-nav-inactive"}`}
                 >
                   {active && <span className="absolute top-0 h-[3px] w-8 rounded-full bg-primary" />}
@@ -80,7 +86,7 @@ export function NavBar() {
                 role="tab"
                 aria-selected={active}
                 aria-current={active ? "page" : undefined}
-                 aria-label={`${t.label}, tab, ${i + 1} of 6`}
+                 aria-label={`${t.label}, tab, ${i + 1} of ${TABS.length}`}
                 className={`relative flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${active ? "bg-secondary font-semibold text-primary" : "font-medium text-nav-inactive hover:bg-muted"}`}
               >
                 {active && <span className="absolute left-0 h-6 w-[3px] rounded-full bg-primary" />}
