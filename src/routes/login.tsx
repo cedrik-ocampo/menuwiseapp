@@ -61,6 +61,9 @@ function Login() {
       setBusy(false);
       if (error) return setMsg({ tone: "error", text: error.message });
       if (data.session) return navigate({ to: getPrefs().landing });
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        return setMsg({ tone: "error", text: "An account with this email already exists. Try logging in instead, or use 'Forgot password' if you can't sign in." });
+      }
       return setMsg({ tone: "ok", text: "Check your email to confirm your account, then log in." });
     }
     const { error } = await supabase.auth.signInWithPassword(r.data);
