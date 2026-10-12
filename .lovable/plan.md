@@ -7,7 +7,6 @@ Make **Menu Overview > Add New Menu Item** easier for café owners to understand
 Replace the five-step setup with four focused steps:
 
 1. **Basic Info**
-   - Menu Item ID
    - Menu Item Name
    - Category and Subcategory
    - Optional image and tags
@@ -17,6 +16,8 @@ Replace the five-step setup with four focused steps:
 4. Save the item or save and add another
 
 Remove the entire **Production & Waste Defaults** step. MenuWise will save safe internal defaults so production and waste logging continue to work without asking the user to configure them here.
+
+MenuWise will also generate and hide the internal Menu Item ID during manual setup. The recipe is attached directly to the item being created, so café owners will not enter or see an ID field.
 
 ## Clear item types and costing
 Show these clearer labels while preserving compatibility with existing saved items:
@@ -43,6 +44,8 @@ Existing recipes with allocation values remain readable and keep their stored va
 ## One-row-per-ingredient import
 Update the downloadable menu-item template and importer so repeated Menu Item IDs are grouped into one item and recipe.
 
+The spreadsheet keeps a short **Item Code** only because several ingredient rows need a reliable grouping key. It is an import helper, not a field shown during manual item creation. MenuWise converts it to the item’s internal ID when imported.
+
 Example:
 
 | Menu Item ID | Name | Type | Selling Price | Batch Yield | Ingredient Name | Amount | Unit |
@@ -53,6 +56,7 @@ Example:
 
 Import behavior:
 - Group rows sharing the same Menu Item ID into one recipe.
+- Accept the spreadsheet heading **Item Code** instead of exposing the technical “Menu Item ID” wording.
 - Match recipe ingredients by name, case-insensitively, against Ingredient Inventory.
 - Require recipe rows for Individual and Batch-made items.
 - Allow one row with no recipe ingredient for Outsourced items, using batch purchase price and pieces per batch.
