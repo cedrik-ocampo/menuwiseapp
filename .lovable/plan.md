@@ -34,6 +34,7 @@ Selling price remains a required basic-information field. Computed item cost, ma
 Replace the wide table with a compact, setup-focused editor:
 
 - Search and select by **ingredient name**, not ID; retain an option to create a missing ingredient.
+- After selection, store the ingredient’s existing internal code on the recipe line so costs, inventory usage, edits, and reports continue tracking the correct ingredient. The code remains hidden during recipe setup.
 - Each recipe line shows ingredient name search, amount, unit dropdown, computed **Ingredient Cost**, and remove control.
 - Rename “Line Cost” to **Ingredient Cost** and add a question-mark help pop-up explaining: “The cost of the amount used in this recipe, based on the ingredient’s saved unit cost.”
 - Remove ingredient ID, recipe-share percentage, and allocation method from recipe setup.
@@ -57,7 +58,8 @@ Example:
 Import behavior:
 - Group rows sharing the same normalized Menu Item Name into one recipe.
 - Match recipe ingredients by name, case-insensitively, against Ingredient Inventory.
-- Require recipe rows for Individual and Batch-made items.
+- Resolve every matched name to its saved ingredient code before importing.
+- Require complete recipe details—Ingredient Name, Amount, and Unit—for every Individual and Batch-made item. These items cannot import without valid recipe rows.
 - Allow one row with no recipe ingredient for Outsourced items, using batch purchase price and pieces per batch.
 - Reject unmatched or ambiguous ingredient names, invalid amounts/units, duplicate ingredient lines, inconsistent repeated item details, missing yields, and menu-item names already in MenuWise.
 - Preview results by menu item, with clear row-specific errors before anything is saved.
