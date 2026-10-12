@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check } from "lucide-react";
+import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check, AlertTriangle } from "lucide-react";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { useDB } from "@/lib/store";
 import { compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import { THRESHOLD_OPTIONS, thresholdLabel, useThreshold } from "@/lib/settings";
 import { Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
+import { STAGES, type Stage, type WasteLog } from "@/lib/types";
 
 import { suggestionFor } from "@/lib/suggest";
 
@@ -52,12 +53,16 @@ function Dashboard() {
   const navigate = useNavigate();
   const [wasteWeek, setWasteWeek] = useState(0);
   const [salesWeek, setSalesWeek] = useState(0);
-  const [showStages, setShowStages] = useState(false);
+  const [selectedWasteStage, setSelectedWasteStage] = useState<Stage | null>(null);
   const [threshold, setThreshold] = useThreshold();
   const t = todayISO();
 
   const wc = compareWeeks((f, to) => totalWaste(db, f, to).total, wasteWeek, t);
   const cur = totalWaste(db, wc.window.from, wc.window.to);
+  const largestWasteStage = STAGES.reduce((largest, stage) => cur.byStage[stage] > cur.byStage[largest] ? stage : largest, STAGES[0]);
+  const selectedWasteLogs = selectedWasteStage
+    ? cur.logs.filter((log) => log.stage === selectedWasteStage).sort((a, b) => b.value - a.value)
+    : [];
   const sc = compareWeeks((f, to) => totalSales(db, f, to), salesWeek, t);
   const expiring = expiringWithin(db, threshold);
   const nowIso = new Date().toISOString();
@@ -82,17 +87,57 @@ function Dashboard() {
         </div>
         <p className="mt-2 text-4xl font-bold text-primary">{formatPeso(cur.total)}</p>
         <Trend pct={wc.pct} offset={wasteWeek} prev={wc.prev} hidden={db.wasteLogs.length === 0} />
-        <button className="mt-3 text-sm font-semibold text-accent" onClick={() => setShowStages(!showStages)}>
-          {showStages ? "Hide" : "Show"} breakdown by stage
+        <button
+          type="button"
+          className="mt-3 text-sm font-semibold text-accent hover:underline"
+          aria-expanded={selectedWasteStage !== null}
+          onClick={() => setSelectedWasteStage(selectedWasteStage ? null : largestWasteStage)}
+        >
+          {selectedWasteStage ? "Hide" : "Show"} breakdown by stage
         </button>
-        {showStages && (
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {Object.entries(cur.byStage).map(([k, v]) => (
-              <div key={k} className="rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground">{k}</p>
-                <p className="font-bold text-primary">{formatPeso(v)}</p>
+        {selectedWasteStage && (
+          <div className="mt-4 space-y-4">
+            <div className="grid gap-2 sm:grid-cols-3">
+              {STAGES.map((stage) => {
+                const value = cur.byStage[stage];
+                const percentage = cur.total > 0 ? (value / cur.total) * 100 : 0;
+                const selected = stage === selectedWasteStage;
+                const largest = cur.total > 0 && stage === largestWasteStage;
+                return (
+                  <button
+                    type="button"
+                    key={stage}
+                    aria-pressed={selected}
+                    onClick={() => setSelectedWasteStage(stage)}
+                    className={`min-h-24 rounded-lg border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-ring ${selected ? "border-accent bg-info-soft" : largest ? "border-warning-border bg-warning-soft hover:border-warning" : "border-border bg-muted hover:border-accent"}`}
+                  >
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground">{stage}</span>
+                      {largest && <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-warning">Largest</span>}
+                    </span>
+                    <span className="mt-1 block text-lg font-bold text-primary">{formatPeso(value)}</span>
+                    <span className="block text-xs text-muted-foreground">{percentage.toFixed(0)}% of selected week</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <div className="flex items-start justify-between gap-3 border-b border-border bg-secondary px-4 py-3">
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-bold text-primary"><AlertTriangle className="h-4 w-4 text-warning" /> Waste problems · {selectedWasteStage}</p>
+                  <p className="text-xs text-muted-foreground">Highest-cost occurrences for {weekName(wasteWeek)}</p>
+                </div>
+                <span className="shrink-0 text-xs font-semibold text-muted-foreground">{selectedWasteLogs.length} record{selectedWasteLogs.length === 1 ? "" : "s"}</span>
               </div>
-            ))}
+              {selectedWasteLogs.length === 0 ? (
+                <p className="px-4 py-5 text-sm text-muted-foreground">No {selectedWasteStage.toLowerCase()} waste was recorded in this period.</p>
+              ) : (
+                <div className="max-h-80 divide-y divide-border overflow-y-auto">
+                  {selectedWasteLogs.map((log) => <WasteProblemRow key={log.id} log={log} db={db} />)}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </Panel>
@@ -211,6 +256,31 @@ function Dashboard() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function WasteProblemRow({ log, db }: { log: WasteLog; db: ReturnType<typeof useDB> }) {
+  const ingredient = log.ingredientId ? db.ingredients.find((item) => item.id === log.ingredientId) : undefined;
+  const menuItemId = log.menuItemId ?? log.attributedMenuItemId;
+  const menuItem = menuItemId ? db.menuItems.find((item) => item.id === menuItemId) : undefined;
+  const label = ingredient?.name ?? menuItem?.name ?? (log.stage === "Ingredient" ? "Unlinked ingredient" : "Unlinked menu item");
+
+  const name = ingredient ? (
+    <Link to="/ingredients/$id" params={{ id: ingredient.id }} className="font-bold text-accent hover:underline">{label}</Link>
+  ) : menuItem ? (
+    <Link to="/menu/$id" params={{ id: menuItem.id }} className="font-bold text-accent hover:underline">{label}</Link>
+  ) : (
+    <span className="font-bold text-primary">{label}</span>
+  );
+
+  return (
+    <div className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="min-w-0">
+        <p className="truncate">{name}</p>
+        <p className="text-xs text-muted-foreground">{log.wasteType} · {shortDate(log.at)} · {fmtQty(log.quantity)} {log.unit}</p>
+      </div>
+      <p className="text-lg font-bold text-primary">{formatPeso(log.value)}</p>
     </div>
   );
 }
