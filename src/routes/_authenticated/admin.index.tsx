@@ -26,7 +26,7 @@ function AdminHome() {
   const q = useQuery({ queryKey: ["admin", "cafes"], queryFn: () => fn(), retry: false });
   return (
     <div>
-      <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Café Monitoring" subtitle="Read-only view of every café. Admins can view but never change records." />
+      <PageTitle title="Café Monitoring" subtitle="Every café using MenuWise. Open a café and turn on Edit mode to make logged changes." />
       <Panel>
         {q.isLoading ? <p className="py-10 text-center text-muted-foreground">Loading cafés…</p>
           : q.error ? <p className="py-10 text-center text-destructive">You don’t have admin access.</p>
@@ -53,7 +53,6 @@ function AdminHome() {
           </div>
         )}
       </Panel>
-      <p className="mt-4 text-xs text-muted-foreground">Future enhancement: an admin edit mode. Admin access is currently read-only.</p>
     </div>
   );
 }

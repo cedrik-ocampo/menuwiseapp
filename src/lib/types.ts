@@ -135,6 +135,9 @@ export interface ChangeLog {
   by: string;
   byName: string;
   changes: FieldChange[];
+  /** Set when a MenuWise admin made this change from Café Monitoring. */
+  adminEdit?: boolean;
+  note?: string;
 }
 
 export interface InsightResponse {

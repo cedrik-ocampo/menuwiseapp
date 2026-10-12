@@ -41,8 +41,8 @@ export function AuditCaption({ collection, record }: { collection: CollectionNam
         <ul className="mt-1 space-y-0.5 rounded-md bg-muted p-2">
           {edits.map((c) => (
             <li key={c.id}>
-              <b className="text-primary">{c.byName}</b> · {shortDate(c.at)} {new Date(c.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}:{" "}
-              {c.changes.map((ch) => `${LABEL[ch.field] ?? ch.field} ${fmt(ch.field, ch.from)} → ${fmt(ch.field, ch.to)}`).join("; ")}
+              <b className="text-primary">{c.byName}</b>{c.adminEdit && <span className="ml-1 rounded bg-warning-soft px-1 font-semibold text-warning">Admin edit</span>} · {shortDate(c.at)} {new Date(c.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}:{" "}
+              {c.changes.map((ch) => `${LABEL[ch.field] ?? ch.field} ${fmt(ch.field, ch.from)} → ${fmt(ch.field, ch.to)}`).join("; ")}{c.note ? ` — “${c.note}”` : ""}
             </li>
           ))}
         </ul>
