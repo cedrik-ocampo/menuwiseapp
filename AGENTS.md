@@ -20,3 +20,4 @@
 - Bug reports are stored in `bug_reports` (members insert/read own; admin reads and updates status via authenticated server functions). Why: reports must reach the admin inbox without exposing other users' reports.
 - Menu Map popularity is all-time total units sold (future sales excluded). Why: team decision for a stable popularity axis.
 - Menu-item recipes store ingredient IDs internally but owner-facing setup and imports select ingredients by name; all recipe costing uses compatible-unit conversion from the ingredient's saved unit. Why: café owners need readable setup without losing reliable inventory links or cost accuracy.
+- Menu Items and Menu Map are separate top-level workflows, while menu item details remain under `/menu/$id`. Why: catalog setup and menu-engineering analysis are distinct owner tasks without duplicating records.
