@@ -13,4 +13,4 @@
 - [x] Replace Sales line chart with 8-week revenue bars; confirm Dashboard sales KPIs.
 - [x] Dashboard week dropdowns (8 weeks, day-aligned This Week) on waste and sales cards.
 - [x] Sales chart oldest → newest; fix label overlap/doubling.
-- [ ] Simplify menu-item costing, recipe setup, and recipe-based file imports.
+- [x] Simplify menu-item costing, recipe setup, and recipe-based file imports.
