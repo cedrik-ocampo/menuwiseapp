@@ -186,7 +186,7 @@ export function totalWaste(db: DBView, from: string, to: string) {
   const ws = db.wasteLogs.filter((w) => w.at.slice(0, 10) >= from && w.at.slice(0, 10) <= to);
   const byStage = { Ingredient: 0, WIP: 0, "Finished Product": 0 } as Record<string, number>;
   ws.forEach((w) => (byStage[w.stage] += w.value));
-  return { total: sumValue(ws), byStage };
+  return { total: sumValue(ws), byStage, logs: ws };
 }
 export function expiringWithin(db: DBView, days: number) {
   const limit = addDays(todayISO(), days);
