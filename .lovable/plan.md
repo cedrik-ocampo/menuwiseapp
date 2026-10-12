@@ -30,6 +30,8 @@ Show these clearer labels while preserving compatibility with existing saved ite
 
 Selling price remains a required basic-information field. Computed item cost, margin, and food-cost percentage appear in the review rather than crowding recipe entry.
 
+Rename the owner-facing **Default Expiry Rule** field to **Expires When**, with plain options such as “After the shelf life,” “At the end of the same day,” and “Made to order — no expiry tracking.” Use the same wording in the review summary.
+
 ## Recipe input redesign
 Replace the wide table with a compact, setup-focused editor:
 
