@@ -63,6 +63,7 @@ function CafeLayout() {
           {db.ready && <AdminEditNotice />}
           {db.ready ? <Outlet /> : <p className="py-20 text-center text-muted-foreground">Loading your café data…</p>}
         </main>
+        <footer className="px-5 pb-4 text-center text-xs text-muted-foreground md:px-8">Need help or have concerns? Contact <a href="mailto:menuwise.contact@gmail.com" className="font-semibold text-accent">menuwise.contact@gmail.com</a></footer>
       </div>
     </div>
   );

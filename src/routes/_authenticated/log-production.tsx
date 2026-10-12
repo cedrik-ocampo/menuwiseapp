@@ -1,3 +1,4 @@
+import { ProductionHistory } from "@/components/mw/History";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
@@ -156,6 +157,7 @@ function LogProduction() {
           </Link>
         </div>
       )}
+      <div className="mt-8"><ProductionHistory db={db} /></div>
     </div>
   );
 }

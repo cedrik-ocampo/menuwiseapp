@@ -211,6 +211,7 @@ function Profile() {
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-primary">{invite.email}</p>
                     <p className="text-xs text-muted-foreground">Invited {new Date(invite.created_at).toLocaleDateString()} · Waiting for signup</p>
+                    <p className="mt-0.5 text-xs text-warning">Email not sent — ask this person to sign up at MenuWise with this email address to join your café. <button type="button" className="font-semibold underline" onClick={() => { void navigator.clipboard.writeText(`${window.location.origin}/login`); toast.success("Sign-up link copied"); }}>Copy sign-up link</button></p>
                   </div>
                   <button type="button" aria-label={`Cancel invitation for ${invite.email}`} className="text-muted-foreground hover:text-destructive" onClick={() => void cancel(invite.id)}><X className="h-4 w-4" /></button>
                 </li>

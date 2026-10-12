@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Pencil, Trash2, X, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
@@ -26,9 +26,15 @@ const RARITY: Record<Quadrant, { label: string; ring: string }> = {
   Dogs: { label: "Dog", ring: "oklch(0.6 0.1 30)" },
 };
 
-export function MenuInventory({ db, rows }: { db: DBView; rows: InvRow[] }) {
+export function MenuInventory({ db, rows, focusId, onFocusDone }: { db: DBView; rows: InvRow[]; focusId?: string | null; onFocusDone?: () => void }) {
   const [selected, setSelected] = useState<InvRow | null>(null);
   const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    if (!focusId) return;
+    const r = rows.find((x) => x.item.id === focusId);
+    if (r) { setSelected(r); setEditing(false); setTimeout(() => document.getElementById(`card-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60); }
+    onFocusDone?.();
+  }, [focusId, rows, onFocusDone]);
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => a.item.name.localeCompare(b.item.name)),
@@ -54,6 +60,7 @@ export function MenuInventory({ db, rows }: { db: DBView; rows: InvRow[] }) {
             return (
               <button
                 key={r.item.id}
+                id={`card-${r.item.id}`}
                 type="button"
                 onClick={() => {
                   setSelected(r);

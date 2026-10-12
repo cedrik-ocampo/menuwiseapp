@@ -223,11 +223,11 @@ export function compareWeeks(total: (from: string, to: string) => number, offset
   return { cur: c, prev: p, pct: p > 0 ? ((c - p) / p) * 100 : null, window: cur };
 }
 
-export interface TrendPoint { key: string; label: string; start: string; end: string; revenue: number; rolling: number; current: boolean }
+export interface TrendPoint { key: string; label: string; start: string; end: string; revenue: number; rolling: number | null; current: boolean }
 /**
  * Progressive weekly revenue line: starts at the first week with (non-future) sales,
  * grows one point per week, capped at the latest 6 weeks, oldest → newest.
- * `rolling` = average of up to 4 weeks ending at (and including) that week.
+ * `rolling` = flat average weekly revenue of all completed weeks before the current week (null if none).
  */
 export function salesTrend(sales: { date: string }[], revenueOf: (s: any) => number, today = todayISO()): TrendPoint[] {
   const past = sales.filter((s) => s.date <= today);
@@ -243,10 +243,10 @@ export function salesTrend(sales: { date: string }[], revenueOf: (s: any) => num
     const end = i === 0 ? today : addDays(start, 6);
     all.push({ start, end, revenue: start < first ? 0 : revOf(start, end) });
   }
-  const pts = all.map((w, idx) => {
-    const win = all.slice(Math.max(0, idx - 3), idx + 1).filter((x) => x.start >= first);
-    return { ...w, rolling: win.reduce((a, x) => a + x.revenue, 0) / Math.max(1, win.length) };
-  });
+  const completed: number[] = [];
+  for (let i = span - 1; i >= 1; i--) { const st = addDays(ws, -7 * i); completed.push(revOf(st, addDays(st, 6))); }
+  const flat = completed.length ? completed.reduce((a, x) => a + x, 0) / completed.length : null;
+  const pts = all.map((w) => ({ ...w, rolling: flat }));
   return pts.slice(-count).map((p, i, arr) => {
     const back = arr.length - 1 - i;
     return { ...p, key: p.start, current: back === 0, label: back === 0 ? "This Week" : back === 1 ? "Last Week" : `${back}w ago` };

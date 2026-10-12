@@ -192,13 +192,13 @@ function WeeklyRevenue({ points, hasSales }: { points: TrendPoint[]; hasSales: b
                       <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow">
                         <p className="font-semibold text-primary">{head}</p>
                         <p>Revenue: <b>{formatPeso(w.revenue)}</b></p>
-                        <p className="text-muted-foreground">Rolling average: {formatPeso(w.rolling)}</p>
+                        {w.rolling !== null && <p className="text-muted-foreground">Average weekly revenue (as of last week): {formatPeso(w.rolling)}</p>}
                       </div>
                     );
                   }}
                 />
                 <Line type="monotone" dataKey="revenue" name="Weekly revenue" stroke="var(--primary)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--primary)" }} activeDot={{ r: 6 }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="rolling" name="Rolling average" stroke="var(--accent)" strokeWidth={2} strokeDasharray="6 4" dot={false} isAnimationActive={false} />
+                <Line type="linear" dataKey="rolling" name="Average weekly revenue" stroke="var(--accent)" strokeWidth={2} strokeDasharray="6 4" dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div></div>
