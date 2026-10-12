@@ -97,7 +97,7 @@ function Dashboard() {
         </button>
         {selectedWasteStage && (
           <div className="mt-4 space-y-4">
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2">
               {STAGES.map((stage) => {
                 const value = cur.byStage[stage];
                 const percentage = cur.total > 0 ? (value / cur.total) * 100 : 0;
@@ -109,11 +109,11 @@ function Dashboard() {
                     key={stage}
                     aria-pressed={selected}
                     onClick={() => setSelectedWasteStage(stage)}
-                    className={`min-h-24 rounded-lg border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-ring ${selected ? "border-accent bg-info-soft" : largest ? "border-warning-border bg-warning-soft hover:border-warning" : "border-border bg-muted hover:border-accent"}`}
+                    className={`min-h-24 rounded-lg border p-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-ring sm:p-3 ${selected ? "border-accent bg-info-soft" : largest ? "border-warning-border bg-warning-soft hover:border-warning" : "border-border bg-muted hover:border-accent"}`}
                   >
                     <span className="flex items-start justify-between gap-2">
                       <span className="text-xs font-semibold text-muted-foreground">{stage}</span>
-                      {largest && <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-warning">Largest</span>}
+                      {largest && <span className="hidden rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-warning sm:inline">Largest</span>}
                     </span>
                     <span className="mt-1 block text-lg font-bold text-primary">{formatPeso(value)}</span>
                     <span className="block text-xs text-muted-foreground">{percentage.toFixed(0)}% of selected week</span>
