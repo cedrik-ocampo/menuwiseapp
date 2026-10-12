@@ -28,7 +28,7 @@ const TABS = ["Overview", "Menu Items", "Ingredients", "Sales", "Production", "W
 function AdminCafe() {
   const { id } = Route.useParams();
   const fn = useServerFn(getCafe);
-  const q = useQuery({ queryKey: ["admin", "cafe", id], queryFn: () => fn({ data: { id } }) });
+  const q = useQuery({ queryKey: ["admin", "cafe", id], queryFn: () => fn({ data: { id } }), retry: false });
   const [tab, setTab] = useState<(typeof TABS)[number]>("Overview");
   const by = useMemo(() => {
     const m: Record<string, Rec[]> = {};

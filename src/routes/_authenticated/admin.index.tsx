@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/admin/")({
 
 function AdminHome() {
   const fn = useServerFn(listCafes);
-  const q = useQuery({ queryKey: ["admin", "cafes"], queryFn: () => fn() });
+  const q = useQuery({ queryKey: ["admin", "cafes"], queryFn: () => fn(), retry: false });
   return (
     <div>
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Café Monitoring" subtitle="Read-only view of every café. Admins can view but never change records." />
