@@ -19,6 +19,8 @@ Remove the entire **Production & Waste Defaults** step. MenuWise will save safe 
 
 MenuWise will also generate and hide the internal Menu Item ID during manual setup. The recipe is attached directly to the item being created, so café owners will not enter or see an ID field.
 
+The costing step will use the entered name as its heading, for example **Chocolate Croissant Costing**. Before a name is entered, it will simply say **Menu Item Costing**. Internal IDs and technical codes will not appear in the owner-facing form, summary, or recipe editor.
+
 ## Clear item types and costing
 Show these clearer labels while preserving compatibility with existing saved items:
 
@@ -42,25 +44,22 @@ Replace the wide table with a compact, setup-focused editor:
 Existing recipes with allocation values remain readable and keep their stored value, but new recipe lines use the standard recipe-based value automatically.
 
 ## One-row-per-ingredient import
-Update the downloadable menu-item template and importer so repeated Menu Item IDs are grouped into one item and recipe.
-
-The spreadsheet keeps a short **Item Code** only because several ingredient rows need a reliable grouping key. It is an import helper, not a field shown during manual item creation. MenuWise converts it to the item’s internal ID when imported.
+Update the downloadable menu-item template and importer so repeated Menu Item Names are grouped into one item and recipe. No visible item-code column is required; MenuWise generates the internal ID after validation.
 
 Example:
 
-| Item Code | Name | Type | Selling Price | Batch Yield | Ingredient Name | Amount | Unit |
-|---|---|---|---:|---:|---|---:|---|
-| MI-001 | Chocolate Croissant | Batch-made item | 120 | 12 | Flour | 500 | g |
-| MI-001 | Chocolate Croissant | Batch-made item | 120 | 12 | Butter | 250 | g |
-| MI-001 | Chocolate Croissant | Batch-made item | 120 | 12 | Chocolate | 180 | g |
+| Menu Item Name | Type | Selling Price | Batch Yield | Ingredient Name | Amount | Unit |
+|---|---|---:|---:|---|---:|---|
+| Chocolate Croissant | Batch-made item | 120 | 12 | Flour | 500 | g |
+| Chocolate Croissant | Batch-made item | 120 | 12 | Butter | 250 | g |
+| Chocolate Croissant | Batch-made item | 120 | 12 | Chocolate | 180 | g |
 
 Import behavior:
-- Group rows sharing the same Item Code into one recipe.
-- Accept the spreadsheet heading **Item Code** instead of exposing the technical “Menu Item ID” wording.
+- Group rows sharing the same normalized Menu Item Name into one recipe.
 - Match recipe ingredients by name, case-insensitively, against Ingredient Inventory.
 - Require recipe rows for Individual and Batch-made items.
 - Allow one row with no recipe ingredient for Outsourced items, using batch purchase price and pieces per batch.
-- Reject unmatched or ambiguous ingredient names, invalid amounts/units, duplicate ingredient lines, inconsistent repeated item details, missing yields, and Item Codes already in MenuWise.
+- Reject unmatched or ambiguous ingredient names, invalid amounts/units, duplicate ingredient lines, inconsistent repeated item details, missing yields, and menu-item names already in MenuWise.
 - Preview results by menu item, with clear row-specific errors before anything is saved.
 
 ## Existing screens and calculations
