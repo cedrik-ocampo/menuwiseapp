@@ -2,9 +2,9 @@
 
 - [x] Phase 1: Business Profile, pending invitations, and account safety (invite email awaits a configured app-email domain).
 - [x] Phase 1: What’s New, Help/Contact, and Ongoing Insights guidance.
-- [ ] Phase 2: Menu engineering, Production/Waste imports, and recipes.
-- [ ] Phase 3: Progressive six-week Sales line chart.
-- [ ] Phase 4: Read-only MenuWise admin café monitoring.
+- [x] Phase 2: Menu engineering, Production/Waste imports, and recipes.
+- [x] Phase 3: Progressive six-week Sales line chart.
+- [x] Phase 4: Read-only MenuWise admin café monitoring.
 
 - [x] Move Sales to a sixth top-level tab with pending-sync status.
 - [x] Add Sales chart range controls and empty state.

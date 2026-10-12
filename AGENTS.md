@@ -16,3 +16,5 @@
 - Owner-managed café invitations use authenticated server functions, while invitation email delivery depends on a configured app-email domain. Why: invitation access must be authorized server-side and email availability must not block the pending invite.
 - Signed-in sessions end after 30 minutes of inactivity without clearing IndexedDB. Why: shared café devices need re-authentication without discarding offline work.
 - Release notes and support live on protected `/whats-new` and `/help` routes linked from the account menu. Why: operational guidance stays accessible without crowding primary navigation.
+- MenuWise admin access is a `user_roles` role checked by `has_role`, granting SELECT-only RLS policies across cafés; admin pages read via authenticated server functions and never enter the offline store. Why: admins monitor all cafés read-only without risking writes.
+- Menu Map popularity is all-time total units sold (future sales excluded). Why: team decision for a stable popularity axis.

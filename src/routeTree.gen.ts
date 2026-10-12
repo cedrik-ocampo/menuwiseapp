@@ -20,6 +20,8 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedWhatsNewRouteImport } from './routes/_authenticated/whats-new'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedAdminIdRouteImport } from './routes/_authenticated/admin.$id'
 import { Route as AuthenticatedIngredientsIndexRouteImport } from './routes/_authenticated/ingredients.index'
 import { Route as AuthenticatedIngredientsIdRouteImport } from './routes/_authenticated/ingredients.$id'
 import { Route as AuthenticatedIngredientsNewRouteImport } from './routes/_authenticated/ingredients.new'
@@ -82,6 +84,16 @@ const AuthenticatedWhatsNewRoute = AuthenticatedWhatsNewRouteImport.update({
   path: '/whats-new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminIdRoute = AuthenticatedAdminIdRouteImport.update({
+  id: '/admin/$id',
+  path: '/admin/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIngredientsIndexRoute =
   AuthenticatedIngredientsIndexRouteImport.update({
     id: '/ingredients/',
@@ -127,10 +139,12 @@ export interface FileRoutesByFullPath {
   '/sales': typeof AuthenticatedSalesRoute
   '/team': typeof AuthenticatedTeamRoute
   '/whats-new': typeof AuthenticatedWhatsNewRoute
+  '/admin/$id': typeof AuthenticatedAdminIdRoute
   '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
   '/menu/new': typeof AuthenticatedMenuNewRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
   '/ingredients/': typeof AuthenticatedIngredientsIndexRoute
   '/menu/': typeof AuthenticatedMenuIndexRoute
 }
@@ -145,10 +159,12 @@ export interface FileRoutesByTo {
   '/team': typeof AuthenticatedTeamRoute
   '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/': typeof AuthenticatedIndexRoute
+  '/admin/$id': typeof AuthenticatedAdminIdRoute
   '/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
   '/menu/new': typeof AuthenticatedMenuNewRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/ingredients': typeof AuthenticatedIngredientsIndexRoute
   '/menu': typeof AuthenticatedMenuIndexRoute
 }
@@ -165,10 +181,12 @@ export interface FileRoutesById {
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/whats-new': typeof AuthenticatedWhatsNewRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/$id': typeof AuthenticatedAdminIdRoute
   '/_authenticated/ingredients/$id': typeof AuthenticatedIngredientsIdRoute
   '/_authenticated/ingredients/new': typeof AuthenticatedIngredientsNewRoute
   '/_authenticated/menu/$id': typeof AuthenticatedMenuIdRoute
   '/_authenticated/menu/new': typeof AuthenticatedMenuNewRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/ingredients/': typeof AuthenticatedIngredientsIndexRoute
   '/_authenticated/menu/': typeof AuthenticatedMenuIndexRoute
 }
@@ -185,10 +203,12 @@ export interface FileRouteTypes {
     | '/sales'
     | '/team'
     | '/whats-new'
+    | '/admin/$id'
     | '/ingredients/$id'
     | '/ingredients/new'
     | '/menu/$id'
     | '/menu/new'
+    | '/admin/'
     | '/ingredients/'
     | '/menu/'
   fileRoutesByTo: FileRoutesByTo
@@ -203,10 +223,12 @@ export interface FileRouteTypes {
     | '/team'
     | '/whats-new'
     | '/'
+    | '/admin/$id'
     | '/ingredients/$id'
     | '/ingredients/new'
     | '/menu/$id'
     | '/menu/new'
+    | '/admin'
     | '/ingredients'
     | '/menu'
   id:
@@ -222,10 +244,12 @@ export interface FileRouteTypes {
     | '/_authenticated/team'
     | '/_authenticated/whats-new'
     | '/_authenticated/'
+    | '/_authenticated/admin/$id'
     | '/_authenticated/ingredients/$id'
     | '/_authenticated/ingredients/new'
     | '/_authenticated/menu/$id'
     | '/_authenticated/menu/new'
+    | '/_authenticated/admin/'
     | '/_authenticated/ingredients/'
     | '/_authenticated/menu/'
   fileRoutesById: FileRoutesById
@@ -315,6 +339,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWhatsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/$id': {
+      id: '/_authenticated/admin/$id'
+      path: '/admin/$id'
+      fullPath: '/admin/$id'
+      preLoaderRoute: typeof AuthenticatedAdminIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ingredients/': {
       id: '/_authenticated/ingredients/'
       path: '/ingredients'
@@ -369,10 +407,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedWhatsNewRoute: typeof AuthenticatedWhatsNewRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminIdRoute: typeof AuthenticatedAdminIdRoute
   AuthenticatedIngredientsIdRoute: typeof AuthenticatedIngredientsIdRoute
   AuthenticatedIngredientsNewRoute: typeof AuthenticatedIngredientsNewRoute
   AuthenticatedMenuIdRoute: typeof AuthenticatedMenuIdRoute
   AuthenticatedMenuNewRoute: typeof AuthenticatedMenuNewRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedIngredientsIndexRoute: typeof AuthenticatedIngredientsIndexRoute
   AuthenticatedMenuIndexRoute: typeof AuthenticatedMenuIndexRoute
 }
@@ -386,10 +426,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedWhatsNewRoute: AuthenticatedWhatsNewRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminIdRoute: AuthenticatedAdminIdRoute,
   AuthenticatedIngredientsIdRoute: AuthenticatedIngredientsIdRoute,
   AuthenticatedIngredientsNewRoute: AuthenticatedIngredientsNewRoute,
   AuthenticatedMenuIdRoute: AuthenticatedMenuIdRoute,
   AuthenticatedMenuNewRoute: AuthenticatedMenuNewRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedIngredientsIndexRoute: AuthenticatedIngredientsIndexRoute,
   AuthenticatedMenuIndexRoute: AuthenticatedMenuIndexRoute,
 }
