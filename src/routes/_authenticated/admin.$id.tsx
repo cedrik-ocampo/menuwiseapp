@@ -94,9 +94,9 @@ function Table({ head, rows }: { head: string[]; rows: (string | number)[][] }) 
     <Panel>
       {rows.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No records.</p> : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-left text-sm">
-            <thead className="text-xs uppercase text-muted-foreground"><tr>{head.map((h) => <th key={h} className="py-2">{h}</th>)}</tr></thead>
-            <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-border">{r.map((c, j) => <td key={j} className="py-2 pr-3">{c}</td>)}</tr>)}</tbody>
+          <table className="w-full min-w-[520px] text-left text-sm [&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2.5 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
+            <thead className="text-xs uppercase text-muted-foreground"><tr>{head.map((h) => <th key={h}>{h}</th>)}</tr></thead>
+            <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-border">{r.map((c, j) => <td key={j}>{c}</td>)}</tr>)}</tbody>
           </table>
         </div>
       )}
