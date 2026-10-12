@@ -54,5 +54,5 @@ export const getCafe = createServerFn({ method: "POST" })
       sb.from("records").select("id,collection,data,updated_at").eq("workspace_id", data.id).eq("deleted", false).limit(20000),
     ]);
     if (!ws) throw new Error("Café not found");
-    return { cafe: ws, members: members ?? [], invites: invites ?? [], records: (recs ?? []) as { id: string; collection: string; data: Record<string, unknown>; updated_at: string }[] };
+    return { cafe: ws, members: members ?? [], invites: invites ?? [], recordsJson: JSON.stringify((recs ?? []).map((r) => ({ collection: r.collection, data: r.data }))) };
   });

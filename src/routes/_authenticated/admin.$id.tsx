@@ -32,7 +32,7 @@ function AdminCafe() {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Overview");
   const by = useMemo(() => {
     const m: Record<string, Rec[]> = {};
-    q.data?.records.forEach((r) => (m[r.collection] ??= []).push(r.data));
+    if (q.data) (JSON.parse(q.data.recordsJson) as { collection: string; data: Rec }[]).forEach((r) => (m[r.collection] ??= []).push(r.data));
     return m;
   }, [q.data]);
   const menuName = (mid: string) => by.menuItems?.find((m) => m.id === mid)?.name ?? mid;
