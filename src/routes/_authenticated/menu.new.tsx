@@ -4,7 +4,7 @@ import { Check, CircleHelp, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useDB, put, type DBView } from "@/lib/store";
 import { costPerUnit, foodCostPct, margin, recipeCost } from "@/lib/calc";
-import { ITEM_TYPES, type ItemType, type MenuItem, type RecipeLine } from "@/lib/types";
+import { ITEM_TYPES, type MenuItem, type RecipeLine } from "@/lib/types";
 import { compatibleRecipeUnits, ingredientAmountCost, ITEM_TYPE_LABELS, itemTypeFromLabel } from "@/lib/menu-costing";
 import { formatPeso, uid } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image";
@@ -17,7 +17,8 @@ import { ProductionTabs } from "@/components/mw/ProductionTabs";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
 import { normalizeCategory, num as toNum, type Row } from "@/lib/import";
 
-const MENU_COLS = "Menu_Item_Name, category, subcategory, type, Selling_Price, Batch_Yield, Batch_Purchase_Price, Pieces_Per_Batch, Ingredient_Name, Amount, Unit, Shelf_Life_Days, Expires_When";
+const MENU_COLS = "Menu_Item_Name, category, subcategory, type, Selling_Price, Shelf_Life_Days, Expires_When";
+const MENU_TEMPLATE_COLS = ["Menu_Item_Name", "category", "subcategory", "type", "Selling_Price", "Batch_Yield", "Batch_Purchase_Price", "Pieces_Per_Batch", "Ingredient_Name", "Amount", "Unit", "Shelf_Life_Days", "Expires_When"];
 const EXPIRY_OPTIONS = ["After the shelf life", "At the end of the same day", "Made to order — no expiry tracking"];
 const TYPE_OPTIONS = ITEM_TYPES.map((type) => ITEM_TYPE_LABELS[type]);
 
@@ -240,7 +241,7 @@ function AddMenuItem() {
           commit={(items) => { items.forEach((item) => put("menuItems", item)); navigate({ to: "/menu" }); }}
           template={{
             filename: "menu-items-with-recipes-template.csv",
-            header: MENU_COLS.split(", "),
+            header: MENU_TEMPLATE_COLS,
             rows: [
               ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Flour", "500", "g", "2", "After the shelf life"],
               ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Butter", "250", "g", "2", "After the shelf life"],
@@ -318,7 +319,7 @@ function AddMenuItem() {
                           <Field label="Ingredient Name"><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input list="ingredient-names" className={`${inputCls} pl-9`} value={line.ingredientSearch} onChange={(event) => selectIngredient(index, event.target.value)} placeholder="Search by name" /></div></Field>
                           <Field label="Amount"><input inputMode="decimal" className={inputCls} value={line.quantity || ""} onChange={(event) => updateRecipe(index, { quantity: numberValue(event.target.value) })} /></Field>
                           <Field label="Unit"><select className={inputCls} value={line.unit} onChange={(event) => updateRecipe(index, { unit: event.target.value })}>{units.map((unit) => <option key={unit}>{unit}</option>)}</select></Field>
-                          <Field label={<span className="inline-flex items-center gap-1">Ingredient Cost <Popover><PopoverTrigger asChild><button type="button" aria-label="What is ingredient cost?" className="text-accent"><CircleHelp className="h-4 w-4" /></button></PopoverTrigger><PopoverContent className="w-64 text-sm">The cost of the amount used in this recipe, based on the ingredient’s saved unit cost.</PopoverContent></Popover></span> as unknown as string}><input className={inputCls} disabled value={Number.isFinite(lineCost) ? formatPeso(lineCost) : "Incompatible unit"} /></Field>
+                          <Field label={<span className="inline-flex items-center gap-1">Ingredient Cost <Popover><PopoverTrigger asChild><button type="button" aria-label="What is ingredient cost?" className="text-accent"><CircleHelp className="h-4 w-4" /></button></PopoverTrigger><PopoverContent className="w-64 text-sm">The cost of the amount used in this recipe, based on the ingredient’s saved unit cost.</PopoverContent></Popover></span>}><input className={inputCls} disabled value={Number.isFinite(lineCost) ? formatPeso(lineCost) : "Incompatible unit"} /></Field>
                           <button type="button" aria-label="Remove ingredient" className="flex h-11 items-center justify-center text-destructive" onClick={() => set("recipe", draft.recipe.filter((_, lineIndex) => lineIndex !== index))}><Trash2 className="h-4 w-4" /></button>
                           {errors[`recipe-${index}`] && <p className="text-xs text-destructive sm:col-span-5">{errors[`recipe-${index}`]}</p>}
                         </div>

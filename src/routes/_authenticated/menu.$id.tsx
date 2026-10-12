@@ -15,6 +15,7 @@ import { MenuSalesHistory } from "@/components/mw/SalesTab";
 import { SaleDialog } from "@/components/mw/SaleDialog";
 import { EditBatchDialog } from "@/components/mw/EditDialogs";
 import type { Batch } from "@/lib/types";
+import { ingredientAmountCost, ITEM_TYPE_LABELS } from "@/lib/menu-costing";
 
 export const Route = createFileRoute("/_authenticated/menu/$id")({
   head: () => ({
@@ -62,7 +63,7 @@ function MenuItemView() {
         }}><Trash2 className="h-4 w-4" /> Delete menu item</button>
       </PageTitle>
       <h3 className="text-2xl font-bold text-primary">{m.name}</h3>
-      <p className="mb-4 text-sm text-muted-foreground">{m.id} · {m.category} · {m.type} · Cost/unit {formatPeso(costPerUnit(m))} · Retail {formatPeso(m.retailPrice)}</p>
+      <p className="mb-4 text-sm text-muted-foreground">{m.category} · {ITEM_TYPE_LABELS[m.type]} · Cost per piece {formatPeso(costPerUnit(m))} · Selling price {formatPeso(m.retailPrice)}</p>
 
       <div className="grid gap-3 md:grid-cols-3">
         <Stat label="Amt. Produced for the Week" value={<>{fmtQty(producedThisWeek(db, m.id))} <span className="text-sm font-normal">{m.batchUnit}</span></>} sub={`${shortDate(ws)}–${shortDate(addDays(ws, 6))} · Week to date`} />
@@ -77,14 +78,15 @@ function MenuItemView() {
         ) : (() => {
           const lines = m.recipe.map((r) => {
             const ing = db.ingredients.find((i) => i.id === r.ingredientId);
-            return { r, ing, cost: r.quantity * (ing?.unitCost ?? 0) };
+            const amountCost = ingredientAmountCost(ing, r.quantity, r.unit);
+            return { r, ing, cost: Number.isFinite(amountCost) ? amountCost : 0 };
           });
           const total = lines.reduce((a, l) => a + l.cost, 0) || 1;
           return (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead className="text-xs uppercase text-muted-foreground">
-                  <tr><th className="py-2">Ingredient</th><th className="text-right">Quantity</th><th>Unit</th><th>Allocation</th><th className="text-right">Line cost</th><th className="text-right">Recipe share</th></tr>
+                  <tr><th className="py-2">Ingredient</th><th className="text-right">Amount</th><th>Unit</th><th className="text-right">Ingredient Cost</th><th className="text-right">Recipe Share</th></tr>
                 </thead>
                 <tbody>
                   {lines.map(({ r, ing, cost }) => (
@@ -92,13 +94,12 @@ function MenuItemView() {
                       <td className="py-2">{ing ? <Link to="/ingredients/$id" params={{ id: ing.id }} className="font-semibold text-accent hover:underline">{ing.name}</Link> : <span className="text-muted-foreground">{r.ingredientId} (removed)</span>}</td>
                       <td className="text-right">{fmtQty(r.quantity)}</td>
                       <td className="pl-2">{r.unit}</td>
-                      <td>{r.allocation}</td>
                       <td className="text-right">{formatPeso(cost)}</td>
                       <td className="text-right">{((cost / total) * 100).toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot><tr className="border-t border-border font-bold text-primary"><td className="py-2" colSpan={4}>Recipe cost per batch (yield {m.yield})</td><td className="text-right">{formatPeso(lines.reduce((a, l) => a + l.cost, 0))}</td><td className="text-right">100%</td></tr></tfoot>
+                <tfoot><tr className="border-t border-border font-bold text-primary"><td className="py-2" colSpan={3}>{m.type === "Made-to-order" ? "Total ingredient cost" : `Total batch ingredient cost (makes ${m.yield})`}</td><td className="text-right">{formatPeso(lines.reduce((a, l) => a + l.cost, 0))}</td><td className="text-right">100%</td></tr></tfoot>
               </table>
             </div>
           );

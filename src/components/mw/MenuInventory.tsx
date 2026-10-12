@@ -8,6 +8,7 @@ import { costPerUnit, margin, wasteColor, type Quadrant } from "@/lib/calc";
 import { formatPeso } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image";
 import { ITEM_TYPES, type ItemType, type MenuItem } from "@/lib/types";
+import { ITEM_TYPE_LABELS, itemTypeFromLabel } from "@/lib/menu-costing";
 import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 
 export interface InvRow {
@@ -150,7 +151,7 @@ export function MenuInventory({ db, rows, focusId, onFocusDone }: { db: DBView; 
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  {live.item.type} · Batch unit: {live.item.batchUnit} · {live.item.available ? "Available on the menu" : "Hidden from the menu"}
+                  {ITEM_TYPE_LABELS[live.item.type]} · Batch unit: {live.item.batchUnit} · {live.item.available ? "Available on the menu" : "Hidden from the menu"}
                 </p>
                 {live.item.description && <p className="mt-2 text-sm text-muted-foreground">{live.item.description}</p>}
 
@@ -226,8 +227,8 @@ function EditForm({ item, onDone, onDeleted }: { item: MenuItem; onDone: () => v
       <div className="grid grid-cols-2 gap-3">
         <Field label="Category"><input className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} /></Field>
         <Field label="Type">
-          <select className={inputCls} value={type} onChange={(e) => setType(e.target.value as ItemType)}>
-            {ITEM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          <select className={inputCls} value={type} onChange={(e) => { const next = itemTypeFromLabel(e.target.value); if (next) setType(next); }}>
+            {ITEM_TYPES.map((t) => <option key={t} value={t}>{ITEM_TYPE_LABELS[t]}</option>)}
           </select>
         </Field>
       </div>

@@ -40,7 +40,7 @@ export function SectionTitle({ children, right }: { children: ReactNode; right?:
 export const inputCls =
   "h-11 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60";
 
-export function Field({ label, hint, error, required, children }: { label: string; hint?: string; error?: string; required?: boolean; children: ReactNode }) {
+export function Field({ label, hint, error, required, children }: { label: ReactNode; hint?: string; error?: string; required?: boolean; children: ReactNode }) {
   return (
     <label className="block space-y-1.5">
       <span className="flex items-baseline justify-between gap-2 text-sm font-semibold text-primary">
