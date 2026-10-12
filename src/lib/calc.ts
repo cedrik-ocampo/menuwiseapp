@@ -1,6 +1,7 @@
 import type { DBView } from "./store";
 import type { Ingredient, MenuItem, WasteLog } from "./types";
 import { addDays, daysBetween, parseDate, todayISO, toISODate } from "./format";
+import { ingredientAmountCost } from "./menu-costing";
 
 /* ---------- Ingredients ---------- */
 export function lotsOf(db: DBView, ingredientId: string) {
@@ -69,7 +70,10 @@ export function ingredientUsageShare(db: DBView, ingredientId: string) {
 
 /* ---------- Menu items ---------- */
 export function recipeCost(db: DBView, m: Pick<MenuItem, "recipe">) {
-  return m.recipe.reduce((a, r) => a + r.quantity * (db.ingredients.find((i) => i.id === r.ingredientId)?.unitCost ?? 0), 0);
+  return m.recipe.reduce((total, line) => {
+    const cost = ingredientAmountCost(db.ingredients.find((ingredient) => ingredient.id === line.ingredientId), line.quantity, line.unit);
+    return total + (Number.isFinite(cost) ? cost : 0);
+  }, 0);
 }
 export function costPerUnit(m: Pick<MenuItem, "type" | "batchCost" | "yield" | "purchaseCost">) {
   if (m.type === "Outsourced") return m.purchaseCost;

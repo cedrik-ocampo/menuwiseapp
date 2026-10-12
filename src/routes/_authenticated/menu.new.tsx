@@ -1,44 +1,112 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Plus, Trash2, Check } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, CircleHelp, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useDB, put } from "@/lib/store";
+import { useDB, put, type DBView } from "@/lib/store";
 import { costPerUnit, foodCostPct, margin, recipeCost } from "@/lib/calc";
-import { ALLOCATIONS, ITEM_TYPES, STAGES, WASTE_TYPES, type Allocation, type MenuItem, type RecipeLine } from "@/lib/types";
-import { formatPeso } from "@/lib/format";
+import { ITEM_TYPES, type MenuItem, type RecipeLine } from "@/lib/types";
+import { compatibleRecipeUnits, ingredientAmountCost, ITEM_TYPE_LABELS, itemTypeFromLabel } from "@/lib/menu-costing";
+import { formatPeso, uid } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image";
 import { Field, Panel, Segmented, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 import { IngredientForm } from "@/components/mw/IngredientForm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ProductionTabs } from "@/components/mw/ProductionTabs";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
 import { normalizeCategory, num as toNum, type Row } from "@/lib/import";
-import type { DBView } from "@/lib/store";
 
-const MENU_COLS = "Menu_Item_ID, Menu_Item_Name, category, subcategory, type, retailPrice, unitCost, unit, shelfLifeDays";
+const MENU_COLS = "Menu_Item_Name, category, subcategory, type, Selling_Price, Shelf_Life_Days, Expires_When";
+const MENU_TEMPLATE_COLS = ["Menu_Item_Name", "category", "subcategory", "type", "Selling_Price", "Batch_Yield", "Batch_Purchase_Price", "Pieces_Per_Batch", "Ingredient_Name", "Amount", "Unit", "Shelf_Life_Days", "Expires_When"];
+const EXPIRY_OPTIONS = ["After the shelf life", "At the end of the same day", "Made to order — no expiry tracking"];
+const TYPE_OPTIONS = ITEM_TYPES.map((type) => ITEM_TYPE_LABELS[type]);
+
+export const CATS: Record<string, string[]> = {
+  Pastry: ["Croissants & Danishes", "Bread", "Tart", "Cake", "Cookie"],
+  Drinks: ["Espresso", "Non-coffee", "Tea", "Cold drinks"],
+};
+
+function internalId(index: number) {
+  return `MI-${String(index + 1).padStart(3, "0")}-${uid().slice(-4)}`;
+}
 
 function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
-  const known = [...new Set([...Object.keys(CATS), ...db.menuItems.map((m) => m.category)])];
-  const seen = new Set<string>();
-  return rows.map((r, k) => {
-    const id = r.menuitemid || r.id, name = r.menuitemname || r.name;
-    const cat = normalizeCategory(r.category ?? "", known);
-    const price = toNum(r.retailprice), cost = toNum(r.unitcost || "0"), shelf = toNum(r.shelflifedays || "1");
-    const typeRaw = (r.type || "In-house").toLowerCase();
-    const type = ITEM_TYPES.find((t) => t.toLowerCase().replace(/[^a-z]/g, "") === typeRaw.replace(/[^a-z]/g, "")) ?? (typeRaw.includes("out") ? "Outsourced" : typeRaw.includes("order") ? "Made-to-order" : "In-house");
-    const base = { line: k + 2, label: `${id ?? ""} ${name ?? ""}`.trim() };
-    const err = !id ? "Missing Menu_Item_ID" : !name ? "Missing Menu_Item_Name" : !cat.value ? "Missing category" : !(price > 0) ? "retailPrice must be more than 0" : !(cost >= 0) ? "unitCost must be a number" : db.menuItems.some((m) => m.id.toLowerCase() === id.toLowerCase()) ? "This Menu_Item_ID already exists" : "";
-    if (err) return { ...base, error: err };
-    const subs = CATS[cat.value] ?? [];
-    const sub = r.subcategory ? normalizeCategory(r.subcategory.toLowerCase() === "viennoiserie" ? "Croissants & Danishes" : r.subcategory, subs).value : subs[0] ?? "";
-    const flag = !cat.known && !seen.has(cat.value) ? `New category: "${cat.value}"` : undefined;
-    if (!cat.known) { seen.add(cat.value); known.push(cat.value); }
-    const unit = r.unit || "pieces";
-    const b = blank(id);
-    const { tagsText: _t, recipe: _r, ...rest } = b;
-    return { ...base, flag, item: { ...rest, recipe: [], id, name, category: cat.value, subcategory: sub, type, retailPrice: price, unit, batchUnit: unit,
-      purchaseCost: type === "Outsourced" ? cost : 0, batchCost: type === "Outsourced" ? 0 : cost, yield: 1, shelfLifeDays: shelf || 1, defaultExpiryDays: shelf || 1 } };
+  const groups = new Map<string, { name: string; rows: { row: Row; line: number }[] }>();
+  rows.forEach((row, index) => {
+    const name = (row.menuitemname || row.name || "").trim();
+    const key = name.toLowerCase().replace(/\s+/g, " ");
+    const group = groups.get(key) ?? { name, rows: [] };
+    group.rows.push({ row, line: index + 2 });
+    groups.set(key, group);
+  });
+
+  const knownCategories = [...new Set([...Object.keys(CATS), ...db.menuItems.map((item) => item.category)])];
+  return [...groups.values()].map((group, groupIndex) => {
+    const first = group.rows[0];
+    const row = first.row;
+    const base = { line: first.line, label: `${group.name || "Unnamed item"} · ${group.rows.length} recipe row${group.rows.length === 1 ? "" : "s"}` };
+    if (!group.name) return { ...base, error: "Menu Item Name is required" };
+    if (db.menuItems.some((item) => item.name.trim().toLowerCase() === group.name.toLowerCase())) return { ...base, error: "A menu item with this name already exists" };
+
+    const type = itemTypeFromLabel(row.type || "");
+    if (!type) return { ...base, error: `Unknown item type "${row.type || ""}"` };
+    const category = normalizeCategory(row.category || "", knownCategories);
+    if (!category.value) return { ...base, error: "Category is required" };
+    const sellingPrice = toNum(row.sellingprice || row.retailprice);
+    if (!(sellingPrice > 0)) return { ...base, error: "Selling Price must be more than 0" };
+
+    const repeated = ["category", "subcategory", "type", "sellingprice", "batchyield", "batchpurchaseprice", "piecesperbatch", "shelflifedays", "expireswhen"];
+    const inconsistent = repeated.find((key) => group.rows.some(({ row: current }) => String(current[key] || "").trim().toLowerCase() !== String(row[key] || "").trim().toLowerCase()));
+    if (inconsistent) return { ...base, error: `Repeated item details do not match in ${inconsistent}` };
+
+    const shelfLife = toNum(row.shelflifedays || "1");
+    if (!(shelfLife >= 0)) return { ...base, error: "Shelf Life Days must be 0 or more" };
+    const expiryRule = EXPIRY_OPTIONS.find((option) => option.toLowerCase() === (row.expireswhen || "").toLowerCase()) ?? EXPIRY_OPTIONS[0];
+    const yieldAmount = type === "Made-to-order" ? 1 : toNum(row.batchyield || "0");
+    let purchaseCost = 0;
+    let recipe: RecipeLine[] = [];
+
+    if (type === "Outsourced") {
+      const batchPrice = toNum(row.batchpurchaseprice || "0");
+      const pieces = toNum(row.piecesperbatch || "0");
+      if (!(batchPrice > 0)) return { ...base, error: "Batch Purchase Price must be more than 0 for an outsourced item" };
+      if (!(pieces > 0)) return { ...base, error: "Pieces Per Batch must be more than 0 for an outsourced item" };
+      purchaseCost = batchPrice / pieces;
+    } else {
+      if (type === "In-house" && !(yieldAmount > 0)) return { ...base, error: "Batch Yield must be more than 0" };
+      const used = new Set<string>();
+      for (const entry of group.rows) {
+        const ingredientName = (entry.row.ingredientname || "").trim();
+        const matches = db.ingredients.filter((ingredient) => ingredient.name.trim().toLowerCase() === ingredientName.toLowerCase());
+        if (!ingredientName) return { ...base, line: entry.line, error: "Ingredient Name is required for every recipe row" };
+        if (matches.length === 0) return { ...base, line: entry.line, error: `Ingredient "${ingredientName}" was not found in Ingredient Inventory` };
+        if (matches.length > 1) return { ...base, line: entry.line, error: `Ingredient name "${ingredientName}" is ambiguous` };
+        const ingredient = matches[0];
+        if (used.has(ingredient.id)) return { ...base, line: entry.line, error: `${ingredient.name} appears more than once in this recipe` };
+        const amount = toNum(entry.row.amount || "0");
+        const unit = (entry.row.unit || "").trim();
+        if (!(amount > 0)) return { ...base, line: entry.line, error: "Amount must be more than 0" };
+        if (!unit) return { ...base, line: entry.line, error: "Unit is required for every recipe row" };
+        const ingredientCost = ingredientAmountCost(ingredient, amount, unit);
+        if (!Number.isFinite(ingredientCost)) return { ...base, line: entry.line, error: `${unit} cannot be converted to ${ingredient.unit} for ${ingredient.name}` };
+        used.add(ingredient.id);
+        recipe.push({ ingredientId: ingredient.id, quantity: amount, unit, allocation: "Recipe-based" });
+      }
+      if (!recipe.length) return { ...base, error: "A complete recipe is required" };
+    }
+
+    const subcategories = CATS[category.value] ?? [];
+    const subcategory = normalizeCategory(row.subcategory || subcategories[0] || "", subcategories).value;
+    const item: MenuItem = {
+      id: internalId(db.menuItems.length + groupIndex), name: group.name, category: category.value, subcategory,
+      description: "", available: true, tags: [], type, batchCost: 0, yield: type === "Outsourced" ? toNum(row.piecesperbatch) : yieldAmount,
+      purchaseCost, unit: "piece", retailPrice: sellingPrice, supplier: "", shelfLifeDays: shelfLife, expiryRule,
+      defaultBatchSize: type === "In-house" ? yieldAmount : 1, batchUnit: "pieces", defaultExpiryDays: expiryRule === EXPIRY_OPTIONS[1] ? 0 : shelfLife,
+      defaultWasteStage: "Finished Product", defaultWasteType: "Unsold", allowQuickAdd: true, recipe,
+    };
+    item.batchCost = type === "Outsourced" ? 0 : recipeCost(db, item);
+    return { ...base, flag: category.known ? undefined : `New category: "${category.value}"`, item };
   });
 }
 
@@ -46,27 +114,24 @@ export const Route = createFileRoute("/_authenticated/menu/new")({
   head: () => ({
     meta: [
       { title: "Add New Menu Item — MenuWise" },
-      { name: "description", content: "Set up a menu item, map its recipe and set production and waste defaults." },
+      { name: "description", content: "Create a menu item and calculate its cost from its recipe or purchase batch." },
       { property: "og:title", content: "Add New Menu Item — MenuWise" },
-      { property: "og:description", content: "Set up a menu item, map its recipe and set production and waste defaults." },
+      { property: "og:description", content: "Create a menu item and calculate its cost from its recipe or purchase batch." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AddMenuItem,
 });
 
-export const CATS: Record<string, string[]> = {
-  Pastry: ["Croissants & Danishes", "Bread", "Tart", "Cake", "Cookie"],
-  Drinks: ["Espresso", "Non-coffee", "Tea", "Cold drinks"],
-};
-const STEPS = ["Basic Info", "Type & Cost", "Recipe", "Production & Waste Defaults", "Review"];
-
-type Draft = Omit<MenuItem, "recipe"> & { recipe: (RecipeLine & { key: number })[]; tagsText: string };
+type RecipeDraft = RecipeLine & { key: number; ingredientSearch: string };
+type Draft = Omit<MenuItem, "recipe"> & { recipe: RecipeDraft[]; tagsText: string; outsourcedBatchPrice: number; outsourcedPieces: number };
 
 function blank(nextId: string): Draft {
   return {
     id: nextId, name: "", category: "Pastry", subcategory: "Croissants & Danishes", description: "", available: true, tags: [], tagsText: "",
-    type: "In-house", batchCost: 0, yield: 1, purchaseCost: 0, unit: "pieces", retailPrice: 0, supplier: "", shelfLifeDays: 2,
-    expiryRule: "Expires after shelf life", defaultBatchSize: 12, batchUnit: "pieces", defaultExpiryDays: 2,
+    type: "In-house", batchCost: 0, yield: 1, purchaseCost: 0, outsourcedBatchPrice: 0, outsourcedPieces: 1, unit: "piece", retailPrice: 0,
+    supplier: "", shelfLifeDays: 2, expiryRule: EXPIRY_OPTIONS[0], defaultBatchSize: 1, batchUnit: "pieces", defaultExpiryDays: 2,
     defaultWasteStage: "Finished Product", defaultWasteType: "Unsold", allowQuickAdd: true, recipe: [],
   };
 }
@@ -74,108 +139,92 @@ function blank(nextId: string): Draft {
 function AddMenuItem() {
   const db = useDB();
   const navigate = useNavigate();
-  const nextId = `MI-${String(db.menuItems.length + 1).padStart(3, "0")}`;
   const [step, setStep] = useState(0);
-  const [d, setD] = useState<Draft>(() => blank(nextId));
+  const [draft, setDraft] = useState<Draft>(() => blank(internalId(db.menuItems.length)));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [drawerRow, setDrawerRow] = useState<number | null>(null);
-  const [batchTouched, setBatchTouched] = useState(false);
-  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
-  const outsourced = d.type === "Outsourced";
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((current) => ({ ...current, [key]: value }));
+  const outsourced = draft.type === "Outsourced";
+  const individual = draft.type === "Made-to-order";
+  const recipeTotal = recipeCost(db, draft);
+  const effective = useMemo(() => ({
+    ...draft,
+    batchCost: outsourced ? 0 : recipeTotal,
+    yield: individual ? 1 : draft.yield,
+    purchaseCost: outsourced && draft.outsourcedPieces > 0 ? draft.outsourcedBatchPrice / draft.outsourcedPieces : 0,
+  }), [draft, individual, outsourced, recipeTotal]);
+  const itemCost = costPerUnit(effective);
 
-  const recipeTotal = recipeCost(db, d);
-  const effective: Draft = { ...d, batchCost: !outsourced && !batchTouched && d.recipe.length ? +recipeTotal.toFixed(2) : d.batchCost };
-  const cpu = costPerUnit(effective);
+  function updateRecipe(index: number, change: Partial<RecipeDraft>) {
+    set("recipe", draft.recipe.map((line, lineIndex) => lineIndex === index ? { ...line, ...change } : line));
+  }
 
-  function validate(upTo: number) {
-    const e: Record<string, string> = {};
-    if (upTo >= 0) {
-      if (!d.id.trim()) e.id = "Menu Item ID is required";
-      else if (db.menuItems.some((m) => m.id.toLowerCase() === d.id.trim().toLowerCase())) e.id = "This Menu Item ID is already used";
-      if (!d.name.trim()) e.name = "Menu item name is required";
-      else if (d.name.length > 80) e.name = "Keep the name under 80 characters";
-      if (!d.category) e.category = "Choose a category";
+  function selectIngredient(index: number, name: string) {
+    const ingredient = db.ingredients.find((item) => item.name.toLowerCase() === name.trim().toLowerCase());
+    updateRecipe(index, ingredient
+      ? { ingredientSearch: ingredient.name, ingredientId: ingredient.id, unit: ingredient.unit }
+      : { ingredientSearch: name, ingredientId: "" });
+  }
+
+  function validate(targetStep: number) {
+    const nextErrors: Record<string, string> = {};
+    if (targetStep >= 0) {
+      if (!draft.name.trim()) nextErrors.name = "Menu item name is required";
+      else if (db.menuItems.some((item) => item.name.toLowerCase() === draft.name.trim().toLowerCase())) nextErrors.name = "A menu item with this name already exists";
+      if (!draft.category) nextErrors.category = "Choose a category";
+      if (!(draft.retailPrice > 0)) nextErrors.retailPrice = "Selling price must be more than 0";
     }
-    if (upTo >= 1) {
-      if (!(d.retailPrice >= 0) || !d.retailPrice) e.retailPrice = "Retail price is required (0 or more)";
+    if (targetStep >= 1) {
+      if (!(draft.shelfLifeDays >= 0)) nextErrors.shelfLifeDays = "Shelf life must be 0 or more";
       if (outsourced) {
-        if (!(d.purchaseCost > 0)) e.purchaseCost = "Purchase cost per unit must be more than 0";
-        if (!d.unit.trim()) e.unit = "Unit is required";
+        if (!(draft.outsourcedBatchPrice > 0)) nextErrors.outsourcedBatchPrice = "Batch purchase price must be more than 0";
+        if (!(draft.outsourcedPieces > 0)) nextErrors.outsourcedPieces = "Pieces per batch must be more than 0";
       } else {
-        if (!(effective.batchCost >= 0)) e.batchCost = "Batch cost can't be negative";
-        if (!(d.yield > 0)) e.yield = "Yield must be more than 0";
+        if (!individual && !(draft.yield > 0)) nextErrors.yield = "Batch yield must be more than 0";
+        if (!draft.recipe.length) nextErrors.recipe = "Add at least one ingredient to the recipe";
+        draft.recipe.forEach((line, index) => {
+          const ingredient = db.ingredients.find((item) => item.id === line.ingredientId);
+          if (!ingredient) nextErrors[`recipe-${index}`] = "Choose an ingredient from the list";
+          else if (!(line.quantity > 0)) nextErrors[`recipe-${index}`] = "Amount must be more than 0";
+          else if (!Number.isFinite(ingredientAmountCost(ingredient, line.quantity, line.unit))) nextErrors[`recipe-${index}`] = `${line.unit} cannot be converted to ${ingredient.unit}`;
+        });
       }
-      if (!(d.shelfLifeDays >= 0) || Number.isNaN(d.shelfLifeDays)) e.shelfLifeDays = "Shelf life is required";
     }
-    if (upTo >= 2 && !outsourced) {
-      d.recipe.forEach((r, i) => {
-        if (!r.ingredientId) e[`r${i}`] = "Choose an ingredient";
-        else if (!(r.quantity > 0)) e[`r${i}`] = "Quantity must be more than 0";
-      });
-    }
-    if (upTo >= 3) {
-      if (!(d.defaultBatchSize > 0)) e.defaultBatchSize = "Default batch size must be more than 0";
-      if (!d.batchUnit.trim()) e.batchUnit = "Batch unit is required";
-    }
-    setErrors(e);
-    return e;
+    setErrors(nextErrors);
+    return nextErrors;
   }
 
   function next() {
-    const e = validate(step);
-    if (Object.keys(e).length) return;
-    setStep((s) => Math.min(4, s === 1 && outsourced ? 3 : s + 1));
-  }
-  function back() {
-    setStep((s) => Math.max(0, s === 3 && outsourced ? 1 : s - 1));
+    if (Object.keys(validate(step)).length) return;
+    setStep((current) => Math.min(2, current + 1));
   }
 
   function save(addAnother: boolean) {
-    const e = validate(3);
-    if (Object.keys(e).length) {
-      const first = Object.keys(e)[0];
-      setStep(["id", "name", "category"].includes(first) ? 0 : first.startsWith("r") ? 2 : ["defaultBatchSize", "batchUnit"].includes(first) ? 3 : 1);
+    const nextErrors = validate(1);
+    if (Object.keys(nextErrors).length) {
+      setStep(nextErrors.name || nextErrors.category || nextErrors.retailPrice ? 0 : 1);
       return;
     }
-    const { tagsText, recipe, ...rest } = effective;
+    const { tagsText, recipe, outsourcedBatchPrice: _batchPrice, outsourcedPieces: _pieces, ...rest } = effective;
     const item: MenuItem = {
       ...rest,
-      id: d.id.trim(),
-      name: d.name.trim(),
-      tags: tagsText.split(",").map((t) => t.trim()).filter(Boolean),
-      recipe: outsourced ? [] : recipe.map(({ key: _k, ...r }) => r),
-      batchCost: outsourced ? 0 : effective.batchCost,
+      name: draft.name.trim(),
+      tags: tagsText.split(",").map((tag) => tag.trim()).filter(Boolean),
+      recipe: outsourced ? [] : recipe.map(({ key: _key, ingredientSearch: _search, ...line }) => line),
+      batchCost: outsourced ? 0 : recipeTotal,
+      defaultBatchSize: individual || outsourced ? 1 : draft.yield,
+      defaultExpiryDays: draft.expiryRule === EXPIRY_OPTIONS[1] ? 0 : draft.shelfLifeDays,
     };
     put("menuItems", item);
     toast.success(`${item.name} saved`);
     if (addAnother) {
-      setD(blank(`MI-${String(db.menuItems.length + 2).padStart(3, "0")}`));
-      setBatchTouched(false);
+      setDraft(blank(internalId(db.menuItems.length + 1)));
       setStep(0);
     } else navigate({ to: "/menu/$id", params: { id: item.id } });
   }
 
-  const num = (v: string) => (v === "" ? 0 : parseFloat(v));
-
-  const Summary = (
-    <Panel className="space-y-2 text-sm">
-      <p className="font-bold text-primary">Menu item summary</p>
-      {[
-        ["Menu Item ID", d.id || "—"],
-        ["Name", d.name || "—"],
-        ["Type", d.type],
-        ["Cost per Unit", formatPeso(cpu)],
-        ["Retail Price", formatPeso(d.retailPrice)],
-        ["Margin", formatPeso(margin(effective))],
-        ["Food Cost %", `${foodCostPct(effective).toFixed(1)}%`],
-        ["Ingredients Count", outsourced ? "Not tracked" : String(d.recipe.length)],
-        ["Expiry Rule", `${d.shelfLifeDays} day${d.shelfLifeDays === 1 ? "" : "s"} · ${d.expiryRule}`],
-        ["Waste Defaults", `${d.defaultWasteStage} · ${d.defaultWasteType}`],
-      ].map(([k, v]) => (
-        <p key={k} className="flex justify-between gap-2 border-b border-border pb-1"><span className="text-muted-foreground">{k}</span><b className="text-right text-primary">{v}</b></p>
-      ))}
-    </Panel>
-  );
+  const numberValue = (value: string) => value === "" ? 0 : parseFloat(value);
+  const costingTitle = draft.name.trim() ? `${draft.name.trim()} Costing` : "Menu Item Costing";
 
   return (
     <div>
@@ -186,210 +235,154 @@ function AddMenuItem() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-2xl font-bold text-primary md:text-3xl">Add New Menu Item</h2>
         <ImportButton
-          what="menu items"
+          what="menu items with recipes"
           columns={MENU_COLS}
           parse={(rows) => parseMenuRows(rows, db)}
-          commit={(items) => { items.forEach((m) => put("menuItems", m)); navigate({ to: "/menu" }); }}
+          commit={(items) => { items.forEach((item) => put("menuItems", item)); navigate({ to: "/menu" }); }}
+          template={{
+            filename: "menu-items-with-recipes-template.csv",
+            header: MENU_TEMPLATE_COLS,
+            rows: [
+              ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Flour", "500", "g", "2", "After the shelf life"],
+              ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Butter", "250", "g", "2", "After the shelf life"],
+            ],
+          }}
         />
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: {MENU_COLS}.</p>
-      <ol className="my-5 flex flex-wrap gap-2">
-        {STEPS.map((s, i) => (
-          <li key={s}>
-            <button
-              type="button"
-              disabled={i > step}
-              onClick={() => setStep(i)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-secondary text-primary" : "bg-muted text-muted-foreground"} ${outsourced && i === 2 ? "line-through opacity-60" : ""}`}
-            >
-              {i < 4 ? `${i + 1} ` : ""}{s}
+      <p className="mt-1 text-xs text-muted-foreground">For recipes, use one row per ingredient and repeat the same menu item name.</p>
+
+      <ol className="my-5 grid max-w-2xl grid-cols-3 gap-2">
+        {["Basic Info", "Costing & Recipe", "Review"].map((label, index) => (
+          <li key={label}>
+            <button type="button" disabled={index > step} onClick={() => setStep(index)} className={`h-full w-full rounded-lg px-3 py-2 text-xs font-semibold ${index === step ? "bg-primary text-primary-foreground" : index < step ? "bg-secondary text-primary" : "bg-muted text-muted-foreground"}`}>
+              {index + 1}. {label}
             </button>
           </li>
         ))}
       </ol>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
-          {step === 0 && (
-            <Panel className="grid gap-4 sm:grid-cols-2">
-              <Field required label="Menu Item ID" hint="Auto-filled; you can type your own." error={errors.id}><input className={inputCls} value={d.id} onChange={(e) => set("id", e.target.value)} /></Field>
-              <Field required label="Menu Item Name" error={errors.name}><input className={inputCls} value={d.name} onChange={(e) => set("name", e.target.value)} placeholder="Custard Bun" /></Field>
-              <Field required label="Category" error={errors.category}>
-                <select className={inputCls} value={d.category} onChange={(e) => setD({ ...d, category: e.target.value, subcategory: CATS[e.target.value][0] })}>
-                  {Object.keys(CATS).map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </Field>
-              <Field label="Subcategory">
-                <select className={inputCls} value={d.subcategory} onChange={(e) => set("subcategory", e.target.value)}>
-                  {CATS[d.category].map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </Field>
-              <div className="sm:col-span-2"><Field label="Description"><textarea className={`${inputCls} h-20 py-2`} maxLength={300} value={d.description} onChange={(e) => set("description", e.target.value)} /></Field></div>
-              <Field label="Image · optional" hint="Shown on the menu inventory grid.">
-                <div className="flex items-center gap-3">
-                  {d.image && <img src={d.image} alt="" className="h-12 w-12 rounded-lg border border-border object-cover" />}
-                  <input type="file" accept="image/*" className={`${inputCls} py-2`} onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try { set("image", await fileToDataUrl(file)); } catch { toast.error("Couldn't read that image"); }
-                  }} />
-                </div>
-              </Field>
-              <Field label="Tags · optional" hint="Separate with commas"><input className={inputCls} value={d.tagsText} onChange={(e) => set("tagsText", e.target.value)} placeholder="bestseller, breakfast" /></Field>
-              <label className="flex items-center gap-3 text-sm font-semibold text-primary"><Switch checked={d.available} onCheckedChange={(v) => set("available", v)} /> Available for Sale</label>
-            </Panel>
-          )}
+      <div className="mx-auto max-w-4xl space-y-4">
+        {step === 0 && (
+          <Panel className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2"><Field required label="Menu Item Name" error={errors.name}><input className={inputCls} value={draft.name} onChange={(event) => set("name", event.target.value)} placeholder="Chocolate Croissant" /></Field></div>
+            <Field required label="Category" error={errors.category}>
+              <select className={inputCls} value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value, subcategory: CATS[event.target.value]?.[0] ?? "" })}>{Object.keys(CATS).map((category) => <option key={category}>{category}</option>)}</select>
+            </Field>
+            <Field label="Subcategory"><select className={inputCls} value={draft.subcategory} onChange={(event) => set("subcategory", event.target.value)}>{(CATS[draft.category] ?? []).map((subcategory) => <option key={subcategory}>{subcategory}</option>)}</select></Field>
+            <Field required label="Selling Price (per piece)" error={errors.retailPrice}><input inputMode="decimal" className={inputCls} value={draft.retailPrice || ""} onChange={(event) => set("retailPrice", numberValue(event.target.value))} placeholder="₱0.00" /></Field>
+            <Field label="Tags · optional" hint="Separate with commas"><input className={inputCls} value={draft.tagsText} onChange={(event) => set("tagsText", event.target.value)} placeholder="bestseller, breakfast" /></Field>
+            <div className="sm:col-span-2"><Field label="Description · optional"><textarea className={`${inputCls} h-20 py-2`} maxLength={300} value={draft.description} onChange={(event) => set("description", event.target.value)} /></Field></div>
+            <Field label="Image · optional" hint="Shown in Menu Catalog">
+              <div className="flex items-center gap-3">
+                {draft.image && <img src={draft.image} alt="" className="h-12 w-12 rounded-lg border border-border object-cover" />}
+                <input type="file" accept="image/*" className={`${inputCls} py-2`} onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  try { set("image", await fileToDataUrl(file)); } catch { toast.error("Couldn't read that image"); }
+                }} />
+              </div>
+            </Field>
+            <label className="flex items-center gap-3 self-end pb-3 text-sm font-semibold text-primary"><Switch checked={draft.available} onCheckedChange={(value) => set("available", value)} /> Available for sale</label>
+          </Panel>
+        )}
 
-          {step === 1 && (
-            <Panel className="space-y-4">
-              <Segmented value={d.type} options={ITEM_TYPES} onChange={(v) => set("type", v)} />
+        {step === 1 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold text-primary">{costingTitle}</h3>
+              <p className="text-sm text-muted-foreground">Choose how this item is prepared, then enter only the details needed to calculate its cost.</p>
+            </div>
+            <Panel className="space-y-5">
+              <Segmented value={ITEM_TYPE_LABELS[draft.type]} options={TYPE_OPTIONS} onChange={(label) => {
+                const type = itemTypeFromLabel(label);
+                if (type) set("type", type);
+              }} />
+
               {outsourced ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field required label="Purchase Cost per Unit" error={errors.purchaseCost}><input inputMode="decimal" className={inputCls} value={d.purchaseCost || ""} onChange={(e) => set("purchaseCost", num(e.target.value))} /></Field>
-                  <Field required label="Unit" error={errors.unit}><input className={inputCls} value={d.unit} onChange={(e) => set("unit", e.target.value)} /></Field>
-                  <Field required label="Retail Price" error={errors.retailPrice}><input inputMode="decimal" className={inputCls} value={d.retailPrice || ""} onChange={(e) => set("retailPrice", num(e.target.value))} /></Field>
-                  <Field label="Supplier"><input className={inputCls} value={d.supplier} onChange={(e) => set("supplier", e.target.value)} /></Field>
-                  <Field required label="Shelf Life (days)" error={errors.shelfLifeDays}><input inputMode="numeric" className={inputCls} value={d.shelfLifeDays} onChange={(e) => set("shelfLifeDays", num(e.target.value))} /></Field>
+                  <Field required label="Batch Purchase Price" hint="What you pay for the full purchased batch." error={errors.outsourcedBatchPrice}><input inputMode="decimal" className={inputCls} value={draft.outsourcedBatchPrice || ""} onChange={(event) => set("outsourcedBatchPrice", numberValue(event.target.value))} /></Field>
+                  <Field required label="Pieces in the Batch" error={errors.outsourcedPieces}><input inputMode="numeric" className={inputCls} value={draft.outsourcedPieces || ""} onChange={(event) => set("outsourcedPieces", numberValue(event.target.value))} /></Field>
+                  <div className="rounded-lg bg-info-soft p-4 sm:col-span-2"><p className="text-xs text-muted-foreground">Cost per piece · calculated</p><p className="text-2xl font-bold text-primary">{formatPeso(itemCost)}</p></div>
                 </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Batch Cost" hint={d.recipe.length && !batchTouched ? "Taken from the recipe total. Type to override." : "Total cost to make one batch."} error={errors.batchCost}>
-                    <input inputMode="decimal" className={inputCls} value={effective.batchCost || ""} onChange={(e) => { setBatchTouched(true); set("batchCost", num(e.target.value)); }} />
-                  </Field>
-                  <Field required label="Yield" hint="Units per batch" error={errors.yield}><input inputMode="numeric" className={inputCls} value={d.yield || ""} onChange={(e) => set("yield", num(e.target.value))} /></Field>
-                  <Field label="Cost per Unit · computed"><input className={inputCls} disabled value={formatPeso(cpu)} /></Field>
-                  <Field label="Standard Recipe Cost · computed"><input className={inputCls} disabled value={formatPeso(recipeTotal)} /></Field>
-                  <Field required label="Retail Price" error={errors.retailPrice}><input inputMode="decimal" className={inputCls} value={d.retailPrice || ""} onChange={(e) => set("retailPrice", num(e.target.value))} /></Field>
-                  <Field label="Margin · computed"><input className={inputCls} disabled value={formatPeso(margin(effective))} /></Field>
-                  <Field label="Food Cost % · computed"><input className={inputCls} disabled value={`${foodCostPct(effective).toFixed(1)}%`} /></Field>
-                  <Field required label="Shelf Life (days)" error={errors.shelfLifeDays}><input inputMode="numeric" className={inputCls} value={d.shelfLifeDays} onChange={(e) => set("shelfLifeDays", num(e.target.value))} /></Field>
-                  <div className="sm:col-span-2">
-                    <Field label="Default Expiry Rule">
-                      <select className={inputCls} value={d.expiryRule} onChange={(e) => set("expiryRule", e.target.value)}>
-                        <option>Expires after shelf life</option><option>Same day (end of day)</option><option>Made to order (no shelf life)</option>
-                      </select>
-                    </Field>
-                  </div>
-                </div>
-              )}
-            </Panel>
-          )}
-
-          {step === 2 && (
-            <Panel className="space-y-4">
-              {outsourced ? (
-                <p className="text-sm text-muted-foreground">Outsourced items don't track raw ingredients. Waste is logged as finished-product waste under the menu item.</p>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[760px] text-left text-sm">
-                      <thead className="bg-secondary text-xs uppercase text-primary">
-                        <tr>{["Ingredient ID", "Ingredient Name", "Quantity", "Unit", "Unit Cost", "Line Cost", "% of Recipe Cost", "Allocation Method", ""].map((h) => <th key={h} className="p-2">{h}</th>)}</tr>
-                      </thead>
-                      <tbody>
-                        {d.recipe.map((r, i) => {
-                          const ing = db.ingredients.find((x) => x.id === r.ingredientId);
-                          const line = r.quantity * (ing?.unitCost ?? 0);
-                          return (
-                            <tr key={r.key} className="border-t border-border align-top">
-                              <td className="p-2">
-                                <select className={`${inputCls} h-9`} value={r.ingredientId} onChange={(e) => {
-                                  if (e.target.value === "__new") return setDrawerRow(i);
-                                  const ni = db.ingredients.find((x) => x.id === e.target.value);
-                                  set("recipe", d.recipe.map((x, j) => (j === i ? { ...x, ingredientId: e.target.value, unit: ni?.unit ?? x.unit } : x)));
-                                }}>
-                                  <option value="">Search ingredient…</option>
-                                  {db.ingredients.map((x) => <option key={x.id} value={x.id}>{x.id}</option>)}
-                                  <option value="__new">+ Create new ingredient</option>
-                                </select>
-                                {errors[`r${i}`] && <p className="mt-1 text-xs text-destructive">{errors[`r${i}`]}</p>}
-                              </td>
-                              <td className="p-2 pt-4 font-semibold text-primary">{ing?.name ?? "—"}</td>
-                              <td className="p-2"><input inputMode="decimal" className={`${inputCls} h-9 w-20`} value={r.quantity || ""} onChange={(e) => set("recipe", d.recipe.map((x, j) => (j === i ? { ...x, quantity: num(e.target.value) } : x)))} /></td>
-                              <td className="p-2 pt-4">{r.unit || ing?.unit || "—"}</td>
-                              <td className="p-2 pt-4">{formatPeso(ing?.unitCost ?? 0)}</td>
-                              <td className="p-2 pt-4 font-semibold">{formatPeso(line)}</td>
-                              <td className="p-2 pt-4">{recipeTotal ? ((line / recipeTotal) * 100).toFixed(0) : 0}%</td>
-                              <td className="p-2">
-                                <select className={`${inputCls} h-9`} value={r.allocation} onChange={(e) => set("recipe", d.recipe.map((x, j) => (j === i ? { ...x, allocation: e.target.value as Allocation } : x)))}>
-                                  {ALLOCATIONS.map((a) => <option key={a}>{a}</option>)}
-                                </select>
-                              </td>
-                              <td className="p-2 pt-3"><button aria-label="Remove row" onClick={() => set("recipe", d.recipe.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4 text-destructive" /></button></td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  {!individual && <Field required label="Pieces Made per Batch" hint="The number of saleable pieces this recipe produces." error={errors.yield}><input inputMode="numeric" className={inputCls} value={draft.yield || ""} onChange={(event) => set("yield", numberValue(event.target.value))} /></Field>}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3"><h4 className="font-bold text-primary">Recipe Ingredients</h4><span className="text-xs text-muted-foreground">Costs come from Ingredient Inventory</span></div>
+                    <datalist id="ingredient-names">{db.ingredients.map((ingredient) => <option key={ingredient.id} value={ingredient.name} />)}</datalist>
+                    {draft.recipe.map((line, index) => {
+                      const ingredient = db.ingredients.find((item) => item.id === line.ingredientId);
+                      const lineCost = ingredientAmountCost(ingredient, line.quantity, line.unit);
+                      const units = compatibleRecipeUnits(ingredient?.unit);
+                      return (
+                        <div key={line.key} className="grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-[minmax(0,1.8fr)_minmax(90px,.7fr)_minmax(90px,.7fr)_minmax(110px,.8fr)_40px] sm:items-end">
+                          <Field label="Ingredient Name"><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input list="ingredient-names" className={`${inputCls} pl-9`} value={line.ingredientSearch} onChange={(event) => selectIngredient(index, event.target.value)} placeholder="Search by name" /></div></Field>
+                          <Field label="Amount"><input inputMode="decimal" className={inputCls} value={line.quantity || ""} onChange={(event) => updateRecipe(index, { quantity: numberValue(event.target.value) })} /></Field>
+                          <Field label="Unit"><select className={inputCls} value={line.unit} onChange={(event) => updateRecipe(index, { unit: event.target.value })}>{units.map((unit) => <option key={unit}>{unit}</option>)}</select></Field>
+                          <Field label={<span className="inline-flex items-center gap-1">Ingredient Cost <Popover><PopoverTrigger asChild><button type="button" aria-label="What is ingredient cost?" className="text-accent"><CircleHelp className="h-4 w-4" /></button></PopoverTrigger><PopoverContent className="w-64 text-sm">The cost of the amount used in this recipe, based on the ingredient’s saved unit cost.</PopoverContent></Popover></span>}><input className={inputCls} disabled value={Number.isFinite(lineCost) ? formatPeso(lineCost) : "Incompatible unit"} /></Field>
+                          <button type="button" aria-label="Remove ingredient" className="flex h-11 items-center justify-center text-destructive" onClick={() => set("recipe", draft.recipe.filter((_, lineIndex) => lineIndex !== index))}><Trash2 className="h-4 w-4" /></button>
+                          {errors[`recipe-${index}`] && <p className="text-xs text-destructive sm:col-span-5">{errors[`recipe-${index}`]}</p>}
+                        </div>
+                      );
+                    })}
+                    {errors.recipe && <p className="text-sm text-destructive">{errors.recipe}</p>}
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" className={btnSecondary} onClick={() => set("recipe", [...draft.recipe, { key: Date.now(), ingredientSearch: "", ingredientId: "", quantity: 0, unit: "g", allocation: "Recipe-based" }])}><Plus className="h-4 w-4" /> Add Ingredient</button>
+                      <button type="button" className={btnSecondary} onClick={() => { set("recipe", [...draft.recipe, { key: Date.now(), ingredientSearch: "", ingredientId: "", quantity: 0, unit: "g", allocation: "Recipe-based" }]); setDrawerRow(draft.recipe.length); }}><Plus className="h-4 w-4" /> Create New Ingredient</button>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" className={btnSecondary} onClick={() => set("recipe", [...d.recipe, { key: Date.now(), ingredientId: "", quantity: 0, unit: "", allocation: "Recipe-based" }])}><Plus className="h-4 w-4" /> Add Ingredient Row</button>
-                    <button type="button" className={btnSecondary} onClick={() => { set("recipe", [...d.recipe, { key: Date.now(), ingredientId: "", quantity: 0, unit: "", allocation: "Recipe-based" }]); setDrawerRow(d.recipe.length); }}><Plus className="h-4 w-4" /> Create new ingredient</button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 rounded-xl bg-info-soft p-4 text-sm md:grid-cols-4">
-                    <p><span className="block text-xs text-muted-foreground">Total Recipe Cost</span><b className="text-primary">{formatPeso(recipeTotal)}</b></p>
-                    <p><span className="block text-xs text-muted-foreground">Batch Cost</span><b className="text-primary">{formatPeso(effective.batchCost)}</b></p>
-                    <p><span className="block text-xs text-muted-foreground">Cost per Unit</span><b className="text-primary">{formatPeso(cpu)}</b></p>
-                    <p><span className="block text-xs text-muted-foreground">Yield</span><b className="text-primary">{d.yield} {d.batchUnit}</b></p>
+                  <div className="grid gap-3 rounded-lg bg-info-soft p-4 sm:grid-cols-3">
+                    <p><span className="block text-xs text-muted-foreground">{individual ? "Total Ingredient Cost" : "Total Batch Ingredient Cost"}</span><b className="text-xl text-primary">{formatPeso(recipeTotal)}</b></p>
+                    {!individual && <p><span className="block text-xs text-muted-foreground">Pieces per Batch</span><b className="text-xl text-primary">{draft.yield || 0}</b></p>}
+                    <p><span className="block text-xs text-muted-foreground">Cost per Piece</span><b className="text-xl text-primary">{formatPeso(itemCost)}</b></p>
                   </div>
                 </>
               )}
-            </Panel>
-          )}
 
-          {step === 3 && (
-            <Panel className="grid gap-4 sm:grid-cols-2">
-              <Field required label="Default Batch Size" error={errors.defaultBatchSize}><input inputMode="numeric" className={inputCls} value={d.defaultBatchSize || ""} onChange={(e) => set("defaultBatchSize", num(e.target.value))} /></Field>
-              <Field required label="Batch Unit" error={errors.batchUnit}><input className={inputCls} value={d.batchUnit} onChange={(e) => set("batchUnit", e.target.value)} /></Field>
-              <Field label="Default Expiry After Production (days)"><input inputMode="numeric" className={inputCls} value={d.defaultExpiryDays} onChange={(e) => set("defaultExpiryDays", num(e.target.value))} /></Field>
-              <Field label="Default Waste Stage">
-                <select className={inputCls} value={d.defaultWasteStage} onChange={(e) => set("defaultWasteStage", e.target.value as never)}>{STAGES.filter((s) => s !== "Ingredient").map((s) => <option key={s}>{s}</option>)}</select>
-              </Field>
-              <Field label="Default Waste Type">
-                <select className={inputCls} value={d.defaultWasteType} onChange={(e) => set("defaultWasteType", e.target.value as never)}>{WASTE_TYPES.map((s) => <option key={s}>{s}</option>)}</select>
-              </Field>
-              <label className="flex items-center gap-3 self-end pb-2 text-sm font-semibold text-primary"><Switch checked={d.allowQuickAdd} onCheckedChange={(v) => set("allowQuickAdd", v)} /> Allow Quick Add Batch</label>
-              <div className="rounded-xl bg-muted p-4 text-sm sm:col-span-2">
-                <p className="font-semibold text-primary">Initial metrics</p>
-                <p className="text-muted-foreground">Amt. Produced for the Week: 0 · Average Weekly Production: 0 · Average Weekly Sales: 0. These update as you log production and sales.</p>
+              <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+                <Field required label="Shelf Life (days)" error={errors.shelfLifeDays}><input inputMode="numeric" className={inputCls} value={draft.shelfLifeDays} onChange={(event) => set("shelfLifeDays", numberValue(event.target.value))} /></Field>
+                <Field label="Expires When"><select className={inputCls} value={draft.expiryRule} onChange={(event) => set("expiryRule", event.target.value)}>{EXPIRY_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></Field>
               </div>
             </Panel>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Everything looks ready? Saving creates this menu item and opens its page.</p>
-              {Summary}
-            </div>
-          )}
-
-          <div className="sticky bottom-20 z-30 flex flex-wrap gap-2 rounded-2xl border border-border bg-card p-3 shadow-lg md:bottom-4">
-            <button type="button" className={btnSecondary} onClick={() => navigate({ to: "/menu" })}>Cancel</button>
-            <button type="button" className={btnSecondary} disabled={step === 0} onClick={back}>Back</button>
-            <button type="button" className={btnSecondary} disabled={step === 4} onClick={next}>Next</button>
-            <button type="button" className={`${btnSecondary} ml-auto`} onClick={() => save(true)}>Save & Add Another</button>
-            <button type="button" className={btnPrimary} onClick={() => save(false)}><Check className="h-4 w-4" /> Save</button>
           </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Check the item before saving. Costs update automatically from the recipe and Ingredient Inventory.</p>
+            <Panel className="space-y-3 text-sm">
+              <h3 className="text-xl font-bold text-primary">{draft.name || "Menu Item"}</h3>
+              {[
+                ["Category", `${draft.category}${draft.subcategory ? ` · ${draft.subcategory}` : ""}`],
+                ["Item Type", ITEM_TYPE_LABELS[draft.type]],
+                ["Selling Price per Piece", formatPeso(draft.retailPrice)],
+                ["Cost per Piece", formatPeso(itemCost)],
+                ["Margin per Piece", formatPeso(margin(effective))],
+                ["Food Cost", `${foodCostPct(effective).toFixed(1)}%`],
+                ["Recipe Ingredients", outsourced ? "Not required" : String(draft.recipe.length)],
+                ["Expires When", `${draft.expiryRule}${draft.expiryRule === EXPIRY_OPTIONS[0] ? ` · ${draft.shelfLifeDays} day${draft.shelfLifeDays === 1 ? "" : "s"}` : ""}`],
+              ].map(([label, value]) => <p key={label} className="flex justify-between gap-4 border-b border-border pb-2"><span className="text-muted-foreground">{label}</span><b className="text-right text-primary">{value}</b></p>)}
+            </Panel>
+          </div>
+        )}
+
+        <div className="sticky bottom-20 z-30 flex flex-wrap gap-2 rounded-lg border border-border bg-card p-3 shadow-lg md:bottom-4">
+          <button type="button" className={btnSecondary} onClick={() => navigate({ to: "/menu" })}>Cancel</button>
+          <button type="button" className={btnSecondary} disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>Back</button>
+          {step < 2 ? <button type="button" className={`${btnPrimary} ml-auto`} onClick={next}>Next</button> : <>
+            <button type="button" className={`${btnSecondary} ml-auto`} onClick={() => save(true)}>Save & Add Another</button>
+            <button type="button" className={btnPrimary} onClick={() => save(false)}><Check className="h-4 w-4" /> Save Menu Item</button>
+          </>}
         </div>
-        {step !== 4 && <aside className="lg:sticky lg:top-6 lg:self-start">{Summary}</aside>}
       </div>
 
-      <Sheet open={drawerRow !== null} onOpenChange={(o) => !o && setDrawerRow(null)}>
+      <Sheet open={drawerRow !== null} onOpenChange={(open) => !open && setDrawerRow(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <p className="text-xs text-accent">Ingredient Inventory &gt; Manual Input</p>
-            <SheetTitle>Add Ingredient</SheetTitle>
-          </SheetHeader>
-          <div className="mt-4">
-            <IngredientForm
-              compact
-              onCancel={() => setDrawerRow(null)}
-              onSaved={(ing) => {
-                set("recipe", d.recipe.map((x, j) => (j === drawerRow ? { ...x, ingredientId: ing.id, unit: ing.unit } : x)));
-                setDrawerRow(null);
-              }}
-            />
-          </div>
+          <SheetHeader><SheetTitle>Add Ingredient</SheetTitle></SheetHeader>
+          <div className="mt-4"><IngredientForm compact onCancel={() => setDrawerRow(null)} onSaved={(ingredient) => {
+            if (drawerRow !== null) updateRecipe(drawerRow, { ingredientId: ingredient.id, ingredientSearch: ingredient.name, unit: ingredient.unit });
+            setDrawerRow(null);
+          }} /></div>
         </SheetContent>
       </Sheet>
     </div>
