@@ -32,7 +32,7 @@ function AdminHome() {
           : q.error ? <p className="py-10 text-center text-destructive">You don’t have admin access.</p>
           : !q.data?.length ? <p className="py-10 text-center text-muted-foreground">No cafés yet.</p> : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm">
+            <table className="w-full min-w-[900px] text-left text-sm [&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2.5 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
               <thead className="text-xs uppercase text-muted-foreground">
                 <tr><th className="py-2">Café</th><th>Owner</th><th className="text-right">Members</th><th className="text-right">Invites</th><th className="text-right">Menu items</th><th className="text-right">Ingredients</th><th className="text-right">Sales</th><th className="text-right">Batches</th><th className="text-right">Waste logs</th><th>Last activity</th><th /></tr>
               </thead>
