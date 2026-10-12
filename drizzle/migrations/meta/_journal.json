@@ -15,6 +15,13 @@
       "when": 1791742946490,
       "tag": "0001_admin_read_only_monitoring",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791779497961,
+      "tag": "0002_bug_reports",
+      "breakpoints": true
     }
   ]
 }
