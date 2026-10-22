@@ -11,7 +11,7 @@ import { addDays, fmtQty, shortDate, todayISO, timeOf } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
 import { ProductionTabs } from "@/components/mw/ProductionTabs";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
-import { normDate, num as toNum, type Row as SheetRow } from "@/lib/import";
+import { parseProductionRows } from "@/lib/import-parsers";
 import type { Batch } from "@/lib/types";
 import { Field, Panel, SectionTitle, Stat, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 
@@ -23,6 +23,8 @@ export const Route = createFileRoute("/_authenticated/log-production")({
       { name: "description", content: "Track every batch, from bake to expiry." },
       { property: "og:title", content: "Log Production — MenuWise" },
       { property: "og:description", content: "Track every batch, from bake to expiry." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LogProduction,
@@ -84,32 +86,18 @@ function LogProduction() {
     setRows([{ ...mkRow(rows.length), batchId: `${rows[0].batchId.slice(0, -1)}${String.fromCharCode(65 + rows.length)}` }]);
   }
 
-  function parseProd(rows: SheetRow[]): ParsedRow<Batch>[] {
-    const used = new Set(db.batches.map((b) => b.id));
-    return rows.map((r, k) => {
-      const mid = r.menuitemid || r.menuitem || "";
-      const m = db.menuItems.find((x) => x.id.toLowerCase() === mid.toLowerCase() || x.name.toLowerCase() === mid.toLowerCase());
-      const q = toNum(r.quantity), produced = normDate(r.producedat || r.productiondate || r.date), exp = normDate(r.expirydate);
-      const id = (r.batchid || `${(m?.id ?? "B").split("-")[0]}-${produced.replace(/-/g, "").slice(4)}-I${k}`).trim();
-      const base = { line: k + 2, label: `${m?.name ?? mid} · ${r.quantity ?? ""}` };
-      const err = !m ? `Unknown menu item "${mid}"` : !(q > 0) ? "Quantity must be more than 0" : !produced ? "Invalid producedAt" : !exp ? "Invalid expiryDate" : exp < produced ? "Expiry is before production date" : used.has(id) ? `Batch ID ${id} already used` : "";
-      if (err) return { ...base, error: err };
-      used.add(id);
-      return { ...base, item: { id, menuItemId: m!.id, producedAt: new Date(`${produced}T08:00`).toISOString(), quantity: q, expiryDate: exp } };
-    });
-  }
 
   return (
     <div className="mx-auto max-w-3xl">
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Log Production" subtitle="Track every batch, from bake to expiry." />
       <ProductionTabs active="log" />
       <SectionTitle right={
-        <ImportButton what="production entries" columns={PROD_COLS} className="h-9 px-3" parse={parseProd} commit={(items) => items.forEach((b) => {
+        <ImportButton what="production entries" columns={PROD_COLS} className="h-9 px-3" fields={{ menuitemid: { options: db.menuItems.map((m) => m.id), labels: Object.fromEntries(db.menuItems.map((m) => [m.id, m.name])) }, producedat: { type: "date" }, expirydate: { type: "date" }, quantity: { type: "number" } }} parse={(rows) => parseProductionRows(rows, db)} commit={(items) => items.forEach((b) => {
           put("batches", b);
           const m = db.menuItems.find((x) => x.id === b.menuItemId);
           if (m) consumeForProduction(m, b.quantity, b.producedAt.slice(0, 10), b.id);
         })}
-          template={{ filename: "production-template.csv", header: ["Menu_Item_ID", "quantity", "producedAt", "expiryDate", "Batch_ID"], rows: [] }} />
+          template={{ filename: "production-template.csv", header: ["Menu_Item_ID", "quantity", "producedAt", "expiryDate", "Batch_ID", "Note"], rows: [[db.menuItems[0]?.id ?? "Spanish Latte", "12", todayISO(), addDays(todayISO(), 1), "EXAMPLE-BATCH", "Example batch"]] }} />
       }>Production Log Form</SectionTitle>
       <p className="-mt-2 mb-3 text-xs text-muted-foreground">Import · Required Columns: {PROD_COLS}.</p>
       <Panel className="space-y-4">

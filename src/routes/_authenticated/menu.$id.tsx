@@ -24,6 +24,8 @@ export const Route = createFileRoute("/_authenticated/menu/$id")({
       { name: "description", content: "Production, sales, batches and waste history for one menu item." },
       { property: "og:title", content: "Menu Item — MenuWise" },
       { property: "og:description", content: "Production, sales, batches and waste history for one menu item." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: MenuItemView,

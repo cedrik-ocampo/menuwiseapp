@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Plus, ChevronRight, ArrowDownUp } from "lucide-react";
 import type { Ingredient, Purchase } from "@/lib/types";
-import { normDate, normalizeCategory, num, type Row } from "@/lib/import";
+import { parseIngredientRows, INGREDIENT_UNITS, INGREDIENT_STORAGE } from "@/lib/import-parsers";
 import { AuditCaption } from "@/components/mw/Audit";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
 import { INGREDIENT_CATEGORIES } from "@/components/mw/IngredientForm";
@@ -21,6 +21,8 @@ export const Route = createFileRoute("/_authenticated/ingredients/")({
       { name: "description", content: "Keep stock visible and use the soonest-expiring ingredients first." },
       { property: "og:title", content: "Ingredient Inventory — MenuWise" },
       { property: "og:description", content: "Keep stock visible and use the soonest-expiring ingredients first." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Inventory,
@@ -66,51 +68,27 @@ function Inventory() {
 
   const knownCats = useMemo(() => [...new Set([...INGREDIENT_CATEGORIES, ...db.ingredients.map((i) => i.category).filter(Boolean)])], [db.ingredients]);
 
-  function parseRows(rows: Row[]): ParsedRow<{ ing: Ingredient; purchase: Purchase }>[] {
-    const seen = new Set<string>();
-    return rows.map((r, k) => {
-      const id = r.ingredientid || r.id, name = r.ingredientname || r.name, unit = r.unit;
-      const quantity = num(r.quantity), unitCost = num(r.unitcost);
-      const purchaseDate = normDate(r.purchasedate), expiryDate = normDate(r.expirydate);
-      const cat = normalizeCategory(r.category ?? "", knownCats);
-      const base = { line: k + 2, label: `${id ?? ""} ${name ?? ""}`.trim() };
-      const err =
-        !id ? "Missing Ingredient_ID" : !name ? "Missing Ingredient_Name" : !cat.value ? "Missing category" : !unit ? "Missing unit"
-        : !(quantity > 0) ? "Quantity must be more than 0" : !(unitCost >= 0) ? "unitCost must be a number"
-        : !purchaseDate ? "Invalid purchaseDate" : !expiryDate ? "Invalid expiryDate" : expiryDate < purchaseDate ? "Expiry is before purchase date" : "";
-      if (err) return { ...base, error: err };
-      const existing = db.ingredients.find((i) => i.id.toLowerCase() === id.toLowerCase());
-      const iid = existing?.id ?? id;
-      const flag = !cat.known && !seen.has(cat.value) ? `New category: "${cat.value}"` : undefined;
-      if (!cat.known) { seen.add(cat.value); knownCats.push(cat.value); }
-      return {
-        ...base,
-        flag,
-        item: {
-          ing: existing ?? { id: iid, name, unit, unitCost, category: cat.value, storage: "" },
-          purchase: { id: `${iid}-P${Date.now().toString(36)}${k}`, ingredientId: iid, purchaseDate, expiryDate, quantity, remaining: quantity, unitCost },
-        },
-      };
-    });
-  }
 
   return (
     <div>
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Ingredient Inventory List" subtitle="Keep stock visible. Use the soonest-expiring ingredients first." />
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
-          <Link to="/ingredients/new" className={`${btnPrimary} h-12 w-full`}><Plus className="h-4 w-4" /> Manual Input</Link>
           <div>
             <p className="mb-2 text-sm font-semibold text-muted-foreground">Import your ingredient inventory</p>
             <ImportButton
               what="ingredients"
               columns={COLS}
               className="h-12 w-full"
-              parse={parseRows}
+              parse={(rows) => parseIngredientRows(rows, db)}
+              fields={{ category: { options: knownCats, allowCustom: true }, unit: { options: INGREDIENT_UNITS }, storage: { options: INGREDIENT_STORAGE }, purchasedate: { type: "date" }, expirydate: { type: "date" }, quantity: { type: "number" }, unitcost: { type: "number" } }}
+              template={{ filename: "ingredients-template.csv", header: ["Ingredient_ID", "Ingredient_Name", "Category", "Storage", "Unit", "Supplier", "Purchase_Date", "Expiry_Date", "Quantity", "Unit_Cost", "Notes"], rows: [["ING-EXAMPLE", "Fresh milk", "Dairy", "Refrigerated", "L", "Example supplier", todayISO(), todayISO(), "10", "80", "Example starting stock"]] }}
               commit={(items) => items.forEach(({ ing, purchase }) => { if (!db.ingredients.some((i) => i.id === ing.id)) put("ingredients", ing); put("purchases", purchase); })}
             />
             <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: {COLS}.</p>
           </div>
+
+          <Link to="/ingredients/new" className="flex items-center gap-2 text-sm font-semibold text-accent"><Plus className="h-4 w-4" /> Add one ingredient manually</Link>
 
           <Panel>
             <p className="mb-2 text-sm font-semibold text-accent">Sort Ingredients by</p>
