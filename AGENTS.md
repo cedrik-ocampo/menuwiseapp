@@ -21,3 +21,5 @@
 - Menu Map popularity is all-time total units sold (future sales excluded). Why: team decision for a stable popularity axis.
 - Menu-item recipes store ingredient IDs internally but owner-facing setup and imports select ingredients by name; all recipe costing uses compatible-unit conversion from the ingredient's saved unit. Why: café owners need readable setup without losing reliable inventory links or cost accuracy.
 - Menu Items and Menu Map are separate top-level workflows, while menu item details remain under `/menu/$id`. Why: catalog setup and menu-engineering analysis are distinct owner tasks without duplicating records.
+
+- Spreadsheet validation lives in browser-safe import-parsers, and all imports use the shared editable ImportButton review with explicit decisions; only sales support merging by date, item, and unit price. Why: bulk entry needs consistent safeguards and testable rules without bypassing audited workspace writes.

@@ -19,6 +19,12 @@ export const Route = createFileRoute("/_authenticated/help")({
 function Help() {
   return <div className="mx-auto max-w-2xl">
     <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Help & Contact" subtitle="Support for your café’s MenuWise account." />
+    <section className="mb-8 space-y-3 border-b border-border pb-6">
+      <SectionTitle>Assisted café setup</SectionTitle>
+      <p className="text-sm text-muted-foreground">The MenuWise team can help prepare ingredients, starting stock, menu recipes and existing sales files, then orient your staff. You can still add individual ingredients and menu items yourself afterward.</p>
+      <a href="mailto:menuwise.contact@gmail.com?subject=MenuWise%20Assisted%20Setup" className={btnPrimary}><Mail className="h-4 w-4" /> Request setup assistance</a>
+      <p className="text-xs text-muted-foreground">Include your café name and what you need help setting up. Scope, schedule and any service fee are agreed with the team.</p>
+    </section>
     <Panel className="space-y-4">
       <SectionTitle>Contact MenuWise</SectionTitle>
       <p className="text-sm text-muted-foreground">Include your café name and a short description of what happened. Do not include your password.</p>

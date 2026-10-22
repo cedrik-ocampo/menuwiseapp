@@ -9,7 +9,10 @@ export async function readSheet(file: File): Promise<Row[]> {
   const XLSX = await import("xlsx");
   const buf = await file.arrayBuffer();
   const wb = /\.csv$/i.test(file.name) ? XLSX.read(new TextDecoder().decode(buf), { type: "string", cellDates: true }) : XLSX.read(buf, { type: "array", cellDates: true });
-  const ws = wb.Sheets[wb.SheetNames[0]];
+  const firstSheet = wb.SheetNames[0];
+  if (!firstSheet) return [];
+  const ws = wb.Sheets[firstSheet];
+  if (!ws) return [];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "", raw: true });
   return rows.map((r) => {
     const out: Row = {};
@@ -28,9 +31,12 @@ function isoDate(d: Date) {
 /** Accept yyyy-mm-dd, mm/dd/yyyy, or anything Date can parse. Returns "" if invalid. */
 export function normDate(v: string): string {
   if (!v) return "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const parsed = new Date(`${v}T12:00:00`);
+    return !isNaN(parsed.getTime()) && isoDate(parsed) === v ? v : "";
+  }
   const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+  if (m) return normDate(`${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`);
   const d = new Date(v);
   return isNaN(d.getTime()) ? "" : isoDate(d);
 }
