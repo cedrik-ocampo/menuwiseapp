@@ -1,0 +1,25 @@
+import { describe, expect, it } from 'vitest';
+import { parseIngredientRows, parseMenuRows, parseProductionRows, parseSales, parseWasteRows } from '@/lib/import-parsers';
+import { mergeSales, resolveImport } from '@/lib/import-review';
+import { normDate } from '@/lib/import';
+import type { DBView } from '@/lib/store';
+import type { Row } from '@/lib/import';
+import { todayISO } from '@/lib/format';
+
+const db: DBView = { ready: true, online: true, pendingCollections: new Set(), ingredients: [{ id: 'ING-1', name: 'Flour', category: 'Dry goods', storage: 'Pantry', unit: 'kg', unitCost: 100 }], purchases: [], usages: [], menuItems: [], batches: [], sales: [], wasteLogs: [], changeLogs: [], insightResponses: [] };
+const outsourced: Row = { menuitemname: 'Cookie', category: 'Pastry', type: 'Outsourced item', sellingprice: '80', batchpurchaseprice: '500', piecesperbatch: '10', shelflifedays: '3', expireswhen: 'After the shelf life', description: 'Fresh cookie', tags: 'sweet, snack', supplier: 'Bakery', available: 'false', __line: '2' };
+const menu = parseMenuRows([outsourced], db)[0].item;
+const cafe = { ...db, menuItems: menu ? [menu] : [] };
+describe('editable import rules', () => {
+  it('imports optional menu fields and outsourced per-piece costing', () => { expect(menu).toMatchObject({ purchaseCost: 50, recipe: [], description: 'Fresh cookie', tags: ['sweet', 'snack'], supplier: 'Bakery', available: false }); });
+  it('requires a complete recipe for non-outsourced items', () => { expect(parseMenuRows([{ ...outsourced, type: 'Individual item' }], db)[0].error).toMatch(/Ingredient Name is required/); });
+  it('groups recipe rows and preserves internal ingredient codes', () => { const result = parseMenuRows([{ ...outsourced, type: 'Batch-made item', batchyield: '10', ingredientname: 'Flour', amount: '500', unit: 'g' }], db)[0]; expect(result.item).toMatchObject({ batchCost: 50, yield: 10, recipe: [{ ingredientId: 'ING-1', quantity: 500, unit: 'g', allocation: 'Recipe-based' }] }); });
+  it('revalidates incompatible recipe units after correction', () => { const row = { ...outsourced, type: 'Individual item', ingredientname: 'Flour', amount: '500', unit: 'ml' }; expect(parseMenuRows([row], db)[0].item).toBeUndefined(); expect(parseMenuRows([{ ...row, unit: 'g' }], db)[0].item?.batchCost).toBe(50); });
+  it('imports storage supplier notes and starting stock', () => { const row = { ingredientid: 'ING-2', ingredientname: 'Milk', category: 'Dairy', unit: 'L', quantity: '10', unitcost: '80', purchasedate: '2026-10-01', expirydate: '2026-10-10', storage: 'Refrigerated', supplier: 'Dairy farm', notes: 'Starting stock' }; const result = parseIngredientRows([row, row], db); expect(result[0].item).toMatchObject({ ing: { storage: 'Refrigerated', supplier: 'Dairy farm', notes: 'Starting stock' }, purchase: { quantity: 10, remaining: 10, unitCost: 80 } }); expect(result[1].duplicate).toBe(true); });
+  it('blocks conflicting ingredient IDs instead of replacing inventory links', () => { const row = { ingredientid: 'ING-1', ingredientname: 'Milk', category: 'Dairy', unit: 'L', quantity: '10', unitcost: '80', purchasedate: '2026-10-01', expirydate: '2026-10-10' }; expect(parseIngredientRows([row], db)[0].error).toMatch(/different name or unit/); });
+  it('retains production notes and blocks duplicate batch IDs', () => { const row = { menuitemid: menu?.id ?? '', quantity: '12', producedat: '2026-10-01', expirydate: '2026-10-03', batchid: 'B-1', note: 'Morning batch' }; const result = parseProductionRows([row, row], cafe); expect(result[0].item?.note).toBe('Morning batch'); expect(result[1].error).toMatch(/already used/); });
+  it('detects repeated sales inside one file and skips them by default', () => { const row = { menuitemid: menu?.id ?? '', saledate: todayISO(), quantity: '5' }; const entries = parseSales([row, row], cafe); expect(entries[1].duplicate).toBe(true); expect(resolveImport(entries, {}).add).toHaveLength(1); expect(resolveImport(entries, { 3: 'add' }).add).toHaveLength(2); });
+  it('merges quantities only when date item and price all match', () => { const sale = { id: 'S-1', date: '2026-10-01', menuItemId: 'MI-1', quantity: 5, unitPrice: 80, revenue: 400 }; const merged = mergeSales([sale], [], [{ ...sale, id: 'S-2', quantity: 3, revenue: 240 }, { ...sale, id: 'S-3', unitPrice: 90, revenue: 450 }]); expect(merged).toHaveLength(2); expect(merged[0]).toMatchObject({ id: 'S-1', quantity: 8, revenue: 640 }); });
+  it('imports waste attribution and allocation and validates time', () => { const row = { stage: 'Ingredient', date: '2026-10-01', time: '08:00', wastetype: 'Spill', quantity: '1', unit: 'kg', unitcost: '100', ingredientid: 'ING-1', attributedmenuitemid: menu?.id ?? '', allocationmethod: 'Manual' }; expect(parseWasteRows([row], cafe)[0].item).toMatchObject({ value: 100, attributedMenuItemId: menu?.id, allocation: 'Manual' }); expect(parseWasteRows([{ ...row, time: '25:99' }], cafe)[0].item).toBeUndefined(); });
+  it('rejects impossible dates', () => { expect(normDate('2026-02-30')).toBe(''); });
+});
