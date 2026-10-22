@@ -97,7 +97,7 @@ function LogProduction() {
           const m = db.menuItems.find((x) => x.id === b.menuItemId);
           if (m) consumeForProduction(m, b.quantity, b.producedAt.slice(0, 10), b.id);
         })}
-          template={{ filename: "production-template.csv", header: ["Menu_Item_ID", "quantity", "producedAt", "expiryDate", "Batch_ID", "Note"], rows: [[db.menuItems[0]?.id ?? "Spanish Latte", "12", todayISO(), addDays(todayISO(), 1), "EXAMPLE-BATCH", "Example batch"] }} />
+          template={{ filename: "production-template.csv", header: ["Menu_Item_ID", "quantity", "producedAt", "expiryDate", "Batch_ID", "Note"], rows: [[db.menuItems[0]?.id ?? "Spanish Latte", "12", todayISO(), addDays(todayISO(), 1), "EXAMPLE-BATCH", "Example batch"]] }} />
       }>Production Log Form</SectionTitle>
       <p className="-mt-2 mb-3 text-xs text-muted-foreground">Import · Required Columns: {PROD_COLS}.</p>
       <Panel className="space-y-4">
