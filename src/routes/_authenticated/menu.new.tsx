@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useDB, put } from "@/lib/store";
 import { costPerUnit, foodCostPct, margin, recipeCost } from "@/lib/calc";
 import { ITEM_TYPES, type MenuItem, type RecipeLine } from "@/lib/types";
-import { compatibleRecipeUnits, ingredientAmountCost, ITEM_TYPE_LABELS } from "@/lib/menu-costing";
+import { compatibleRecipeUnits, ingredientAmountCost, ITEM_TYPE_LABELS, itemTypeFromLabel } from "@/lib/menu-costing";
 import { formatPeso, uid } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image";
 import { Field, Panel, Segmented, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
@@ -16,6 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ProductionTabs } from "@/components/mw/ProductionTabs";
 import { MenuImport } from "@/components/mw/MenuImport";
 import { CATS, EXPIRY_OPTIONS } from "@/lib/import-parsers";
+
+const TYPE_OPTIONS = ITEM_TYPES.map((type) => ITEM_TYPE_LABELS[type]);
 
 function internalId(index: number) {
   return `MI-${String(index + 1).padStart(3, "0")}-${uid().slice(-4)}`;
