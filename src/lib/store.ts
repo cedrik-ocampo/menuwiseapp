@@ -8,6 +8,7 @@ import { useSyncExternalStore } from "react";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
 import { COLLECTIONS, type Audit, type CollectionName, type Collections, type FieldChange } from "./types";
+import { mayAdd, mayEdit, type WorkspaceRole } from './permissions';
 
 interface Rec<T = unknown> {
   data: T;
@@ -44,6 +45,7 @@ const emptyTables = (): Tables =>
 let userId: string | null = null;
 let userName = "";
 let workspaceId: string | null = null;
+let workspaceRole: WorkspaceRole = null;
 let state: Persisted = { tables: emptyTables(), pending: [], lastPull: null, seeded: false };
 let ready = false;
 let online = typeof navigator !== "undefined" ? navigator.onLine : true;
@@ -89,6 +91,11 @@ export function currentUser() {
   return { id: userId, name: userName };
 }
 
+export function isWorkspaceOwner() { return workspaceRole === 'owner'; }
+export function canEditRecord(collection: CollectionName, id: string) {
+  return mayEdit(workspaceRole, userId, collection, id, view[collection] as (Audit & { id: string })[]);
+}
+
 /** Resolve (or create / join via invite) the user's café workspace. Cached for offline use. */
 async function resolveWorkspace(uid: string, display: string, cafe: string): Promise<string | null> {
   const cacheKey = `menuwise:wsid:${uid}`;
@@ -116,6 +123,15 @@ export async function initStore(uid: string, display: string, cafe = "My Café")
     return;
   }
   workspaceId = ws;
+  const roleKey = `menuwise:role:${uid}:${ws}`;
+  workspaceRole = null;
+  if (navigator.onLine) {
+    const { data, error } = await supabase.from('workspace_members').select('role').eq('workspace_id', ws).eq('user_id', uid).maybeSingle();
+    if (!error && data) { workspaceRole = data.role; localStorage.setItem(roleKey, data.role); }
+  } else {
+    const cached = localStorage.getItem(roleKey);
+    workspaceRole = cached === 'owner' || cached === 'staff' ? cached : null;
+  }
   const saved = await idbGet<Persisted>(storeKey());
   state = saved ?? { tables: emptyTables(), pending: [], lastPull: null, seeded: false };
   for (const c of COLLECTIONS) state.tables[c] ??= {};
@@ -127,6 +143,7 @@ export async function initStore(uid: string, display: string, cafe = "My Café")
 export function resetStore() {
   userId = null;
   workspaceId = null;
+  workspaceRole = null;
   ready = false;
   state = { tables: emptyTables(), pending: [], lastPull: null, seeded: false };
   emit();
@@ -169,6 +186,9 @@ const TRACKED: CollectionName[] = ["ingredients", "purchases", "usages", "menuIt
 export function put<K extends CollectionName>(collection: K, item: Collections[K] & { id: string }) {
   const prev = state.tables[collection][item.id];
   const existing = prev && !prev.deleted ? (prev.data as unknown as Record<string, unknown> & Audit) : undefined;
+  if (existing ? !canEditRecord(collection, item.id) : !mayAdd(workspaceRole, collection)) {
+    throw new Error('Only the owner can change café setup. Employees can edit only their own latest entry in each log.');
+  }
   const now = new Date().toISOString();
   let next = item as unknown as Record<string, unknown> & Audit;
   if (TRACKED.includes(collection)) {
@@ -192,6 +212,7 @@ export function getView(): DBView {
 
 /** Bulk-write records (one change-log entry per record), emitting once. */
 export function putMany(entries: { collection: CollectionName; item: { id: string } }[]) {
+  if (!isWorkspaceOwner()) throw new Error('Only the café owner can replace café data');
   const now = new Date().toISOString();
   for (const { collection, item } of entries) {
     const next = TRACKED.includes(collection)
@@ -206,6 +227,7 @@ export function putMany(entries: { collection: CollectionName; item: { id: strin
 
 /** Soft-delete every record in the given collections, emitting once. */
 export function clearCollections(collections: CollectionName[]) {
+  if (!isWorkspaceOwner()) throw new Error('Only the café owner can clear café data');
   const now = new Date().toISOString();
   for (const c of collections) {
     for (const [id, r] of Object.entries(state.tables[c])) {
@@ -221,6 +243,7 @@ export function clearCollections(collections: CollectionName[]) {
 }
 
 export function remove(collection: CollectionName, id: string) {
+  if (!isWorkspaceOwner()) throw new Error('Only the café owner can delete entries');
   const r = state.tables[collection][id];
   if (!r) return;
   r.deleted = true;
@@ -257,17 +280,17 @@ export async function sync(): Promise<void> {
     state.seeded = true;
 
     if (state.pending.length) {
-      const batch = state.pending.slice();
+      const batch = state.pending.filter((key) => workspaceRole === 'owner' || ['batches', 'sales', 'wasteLogs'].includes(key.split('|')[0]));
       const payload = batch.map((key) => {
         const [c, id] = key.split("|") as [CollectionName, string];
         const r = state.tables[c][id];
-        return { id, collection: c, user_id: userId!, workspace_id: ws, data: r.data as never, deleted: !!r.deleted, updated_at: r.updated_at };
+        return { id, collection: c, user_id: userId ?? '', workspace_id: ws, data: r.data as never, deleted: !!r.deleted, updated_at: r.updated_at };
       });
       for (let i = 0; i < payload.length; i += 500) {
         const { error: e } = await supabase.from("records").upsert(payload.slice(i, i + 500), { onConflict: "workspace_id,collection,id" });
         if (e) throw e;
       }
-      state.pending = state.pending.filter((p) => !batch.includes(p));
+      state.pending = state.pending.filter((p) => !batch.includes(p) && (workspaceRole === 'owner' || p.split('|')[0] !== 'changeLogs'));
     }
     await persist();
     emit();
