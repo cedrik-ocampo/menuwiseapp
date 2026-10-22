@@ -2,10 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Check, CircleHelp, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useDB, put, type DBView } from "@/lib/store";
+import { useDB, put } from "@/lib/store";
 import { costPerUnit, foodCostPct, margin, recipeCost } from "@/lib/calc";
 import { ITEM_TYPES, type MenuItem, type RecipeLine } from "@/lib/types";
-import { compatibleRecipeUnits, ingredientAmountCost, ITEM_TYPE_LABELS, itemTypeFromLabel } from "@/lib/menu-costing";
+import { compatibleRecipeUnits, ingredientAmountCost, ITEM_TYPE_LABELS } from "@/lib/menu-costing";
 import { formatPeso, uid } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image";
 import { Field, Panel, Segmented, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
@@ -15,18 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ProductionTabs } from "@/components/mw/ProductionTabs";
 import { MenuImport } from "@/components/mw/MenuImport";
-import { parseMenuRows } from "@/lib/import-parsers";
-import { compatibleRecipeUnits as importUnits } from "@/lib/menu-costing";
-
-const MENU_COLS = "Menu_Item_Name, category, type, Selling_Price, Shelf_Life_Days, Expires_When";
-const MENU_TEMPLATE_COLS = ["Menu_Item_Name", "category", "subcategory", "type", "Selling_Price", "Batch_Yield", "Batch_Purchase_Price", "Pieces_Per_Batch", "Ingredient_Name", "Amount", "Unit", "Shelf_Life_Days", "Expires_When", "Description", "Tags", "Supplier", "Available"];
-const EXPIRY_OPTIONS = ["After the shelf life", "At the end of the same day", "Made to order — no expiry tracking"];
-const TYPE_OPTIONS = ITEM_TYPES.map((type) => ITEM_TYPE_LABELS[type]);
-
-export const CATS: Record<string, string[]> = {
-  Pastry: ["Croissants & Danishes", "Bread", "Tart", "Cake", "Cookie"],
-  Drinks: ["Espresso", "Non-coffee", "Tea", "Cold drinks"],
-};
+import { CATS, EXPIRY_OPTIONS } from "@/lib/import-parsers";
 
 function internalId(index: number) {
   return `MI-${String(index + 1).padStart(3, "0")}-${uid().slice(-4)}`;

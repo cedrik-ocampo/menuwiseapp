@@ -1,9 +1,9 @@
 # Roadmap
 
-- [ ] Complete ingredient, recipe, production, sales and waste templates.
-- [ ] Add editable reviews, live validation and per-entry duplicate decisions.
-- [ ] Emphasize imports while preserving guided manual setup and assisted onboarding.
-- [ ] Test import rules and verify the owner import flow.
+- [x] Complete ingredient, recipe, production, sales and waste templates.
+- [x] Add editable reviews, live validation and per-entry duplicate decisions.
+- [x] Emphasize imports while preserving guided manual setup and assisted onboarding.
+- [x] Test import rules and verify the owner import flow.
 
 - [x] Phase 1: Business Profile, pending invitations, and account safety (invite email awaits a configured app-email domain).
 - [x] Phase 1: What’s New, Help/Contact, and Ongoing Insights guidance.

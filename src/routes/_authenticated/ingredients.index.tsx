@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { Plus, ChevronRight, ArrowDownUp } from "lucide-react";
 import type { Ingredient, Purchase } from "@/lib/types";
 import { parseIngredientRows, INGREDIENT_UNITS, INGREDIENT_STORAGE } from "@/lib/import-parsers";
-import { uid } from "@/lib/format";
 import { AuditCaption } from "@/components/mw/Audit";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
 import { INGREDIENT_CATEGORIES } from "@/components/mw/IngredientForm";

@@ -9,6 +9,8 @@ export const Route = createFileRoute("/_authenticated/ingredients/new")({
       { name: "description", content: "Manually add an ingredient purchase to your inventory." },
       { property: "og:title", content: "Add Ingredient — MenuWise" },
       { property: "og:description", content: "Manually add an ingredient purchase to your inventory." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: NewIngredient,

@@ -19,6 +19,8 @@ export const Route = createFileRoute("/_authenticated/ingredients/$id")({
       { name: "description", content: "Stock, expiry, purchase planning and waste history for one ingredient." },
       { property: "og:title", content: "Ingredient — MenuWise" },
       { property: "og:description", content: "Stock, expiry, purchase planning and waste history for one ingredient." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: IngredientView,

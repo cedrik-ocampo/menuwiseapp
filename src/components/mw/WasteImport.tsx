@@ -1,4 +1,4 @@
-import { ImportButton, type ParsedRow } from "./ImportButton";
+import { ImportButton } from "./ImportButton";
 import { put, useDB } from "@/lib/store";
 import { parseWasteRows } from "@/lib/import-parsers";
 import { STAGES, WASTE_TYPES, ALLOCATIONS } from "@/lib/types";
@@ -17,7 +17,7 @@ export function WasteImport() {
       columns={COLS}
       className="h-9 px-3"
       parse={(rows) => parseWasteRows(rows, db)}
-      fields={{ stage: { options: STAGES }, wastetype: { options: WASTE_TYPES }, ingredientid: { options: db.ingredients.map((i) => i.id), labels: Object.fromEntries(db.ingredients.map((i) => [i.id, i.name])) }, menuitemid: { options: db.menuItems.map((m) => m.id), labels: Object.fromEntries(db.menuItems.map((m) => [m.id, m.name])) }, attributedmenuitemid: { options: db.menuItems.map((m) => m.id), labels: Object.fromEntries(db.menuItems.map((m) => [m.id, m.name])) }, batchid: { options: db.batches.map((b) => b.id) }, allocationmethod: { options: ALLOCATIONS }, date: { type: "date" }, time: { type: "time" }, quantity: { type: "number" }, unitcost: { type: "number" } }}
+      fields={{ unit: { options: ["L", "ml", "kg", "g", "pc", "piece", "pieces", "pack", "box", "batch", "shots", "cups"], allowCustom: true }, stage: { options: STAGES }, wastetype: { options: WASTE_TYPES }, ingredientid: { options: db.ingredients.map((i) => i.id), labels: Object.fromEntries(db.ingredients.map((i) => [i.id, i.name])) }, menuitemid: { options: db.menuItems.map((m) => m.id), labels: Object.fromEntries(db.menuItems.map((m) => [m.id, m.name])) }, attributedmenuitemid: { options: db.menuItems.map((m) => m.id), labels: Object.fromEntries(db.menuItems.map((m) => [m.id, m.name])) }, batchid: { options: db.batches.map((b) => b.id) }, allocationmethod: { options: ALLOCATIONS }, date: { type: "date" }, time: { type: "time" }, quantity: { type: "number" }, unitcost: { type: "number" } }}
       commit={(items) => items.forEach((w) => put("wasteLogs", w))}
       template={{
         filename: "waste-logs-template.csv",
