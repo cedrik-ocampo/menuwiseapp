@@ -1,4 +1,4 @@
-import { getView, put } from "./store";
+import { getView, put, isWorkspaceOwner } from "./store";
 import type { MenuItem } from "./types";
 
 const GROUPS: Record<string, number>[] = [{ g: 1, kg: 1000 }, { ml: 1, L: 1000 }];
@@ -15,6 +15,8 @@ function toIngredientUnit(amount: number, from: string, to: string) {
  * and records a usage entry per ingredient so "Last used" updates.
  */
 export function consumeForProduction(menu: MenuItem, piecesMade: number, date: string, batchId: string) {
+  // Employee inventory effects are calculated by Cloud, never accepted as direct stock edits.
+  if (!isWorkspaceOwner()) return;
   if (menu.type === "Outsourced" || !menu.recipe?.length || !(piecesMade > 0)) return;
   const factor = piecesMade / (menu.type === "In-house" ? menu.yield || 1 : 1);
   const db = getView();
