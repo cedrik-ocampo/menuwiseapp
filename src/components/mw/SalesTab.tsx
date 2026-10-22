@@ -6,41 +6,15 @@ import { toast } from "sonner";
 import { put, remove, useDB, type DBView } from "@/lib/store";
 import { saleRevenue, saleUnitPrice, salesTrend, weekStart, type TrendPoint } from "@/lib/calc";
 import { addDays, formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
-import { normDate, num, type Row } from "@/lib/import";
+import { parseSales } from "@/lib/import-parsers";
+import { mergeSales } from "@/lib/import-review";
 import type { Audit, Sale } from "@/lib/types";
 import { AuditCaption } from "./Audit";
 import { ImportButton, type ParsedRow } from "./ImportButton";
 import { SaleDialog } from "./SaleDialog";
-import { Panel, SectionTitle, Stat, btnPrimary } from "./ui";
+import { Panel, SectionTitle, Stat, btnPrimary, btnSecondary } from "./ui";
 
 const SALES_COLS = "sale_date, menu_item_id, quantity (Optional: unit_price, notes)";
-function parseSales(rows: Row[], db: DBView): ParsedRow<Sale>[] {
-  const t = todayISO(), oldest = addDays(t, -365);
-  const existing = new Set(db.sales.map((s) => `${s.date}|${s.menuItemId}`));
-  return rows.map((r, k) => {
-    const mid = (r.menuitemid ?? "").trim();
-    const m = db.menuItems.find((x) => x.id.toLowerCase() === mid.toLowerCase());
-    const date = normDate(r.saledate ?? "");
-    const q = num(r.quantity ?? "");
-    const hasPrice = (r.unitprice ?? "") !== "";
-    const p = hasPrice ? num(r.unitprice) : m?.retailPrice ?? 0;
-    const base = { line: k + 2, label: `${date || r.saledate || "?"} · ${m?.name ?? mid} · ${r.quantity ?? ""}` };
-    const err = !date ? "Invalid sale_date (use YYYY-MM-DD or MM/DD/YYYY)"
-      : date > t ? "sale_date is in the future"
-      : date < oldest ? "sale_date is more than 1 year old"
-      : !mid ? "Missing menu_item_id"
-      : !m ? `Unknown menu_item_id "${mid}"`
-      : !(Number.isInteger(q) && q > 0) ? "quantity must be a whole number more than 0"
-      : hasPrice && !(Number.isFinite(p) && p >= 0) ? "unit_price must be 0 or more"
-      : "";
-    if (err) return { ...base, error: err };
-    return {
-      ...base,
-      duplicate: existing.has(`${date}|${m!.id}`),
-      item: { id: uid("S-"), menuItemId: m!.id, date, quantity: q, unitPrice: p, revenue: q * p, notes: (r.notes ?? "").trim() || undefined },
-    };
-  });
-}
 
 function template(db: DBView) {
   const t = todayISO();
@@ -84,8 +58,8 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
           <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: sale_date, menu_item_id, quantity. Optional: unit_price, notes.</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" className={btnPrimary} onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Manual Entry</button>
-          <ImportButton what="sales" columns={SALES_COLS} template={template(db)} parse={(rows) => parseSales(rows, db)} commit={(items) => items.forEach((s) => put("sales", s))} />
+          <ImportButton what="sales" columns={SALES_COLS} template={template(db)} parse={(rows) => parseSales(rows, db)} allowMerge fields={{ menuitemid: { options: db.menuItems.map((m) => m.id), labels: Object.fromEntries(db.menuItems.map((m) => [m.id, m.name])) }, saledate: { type: "date" }, quantity: { type: "number" }, unitprice: { type: "number" } }} commit={(items, merges = []) => { const result = mergeSales(db.sales, items, merges); result.filter((sale) => !db.sales.includes(sale)).forEach((sale) => put("sales", sale)); }} />
+          <button type="button" className={btnSecondary} onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Manual Entry</button>
         </div>
       </div>
 

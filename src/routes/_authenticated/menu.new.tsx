@@ -15,10 +15,11 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ProductionTabs } from "@/components/mw/ProductionTabs";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
-import { normalizeCategory, num as toNum, type Row } from "@/lib/import";
+import { parseMenuRows } from "@/lib/import-parsers";
+import { compatibleRecipeUnits as importUnits } from "@/lib/menu-costing";
 
-const MENU_COLS = "Menu_Item_Name, category, subcategory, type, Selling_Price, Shelf_Life_Days, Expires_When";
-const MENU_TEMPLATE_COLS = ["Menu_Item_Name", "category", "subcategory", "type", "Selling_Price", "Batch_Yield", "Batch_Purchase_Price", "Pieces_Per_Batch", "Ingredient_Name", "Amount", "Unit", "Shelf_Life_Days", "Expires_When"];
+const MENU_COLS = "Menu_Item_Name, category, type, Selling_Price, Shelf_Life_Days, Expires_When";
+const MENU_TEMPLATE_COLS = ["Menu_Item_Name", "category", "subcategory", "type", "Selling_Price", "Batch_Yield", "Batch_Purchase_Price", "Pieces_Per_Batch", "Ingredient_Name", "Amount", "Unit", "Shelf_Life_Days", "Expires_When", "Description", "Tags", "Supplier", "Available"];
 const EXPIRY_OPTIONS = ["After the shelf life", "At the end of the same day", "Made to order — no expiry tracking"];
 const TYPE_OPTIONS = ITEM_TYPES.map((type) => ITEM_TYPE_LABELS[type]);
 
@@ -31,84 +32,6 @@ function internalId(index: number) {
   return `MI-${String(index + 1).padStart(3, "0")}-${uid().slice(-4)}`;
 }
 
-function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
-  const groups = new Map<string, { name: string; rows: { row: Row; line: number }[] }>();
-  rows.forEach((row, index) => {
-    const name = (row.menuitemname || row.name || "").trim();
-    const key = name.toLowerCase().replace(/\s+/g, " ");
-    const group = groups.get(key) ?? { name, rows: [] };
-    group.rows.push({ row, line: index + 2 });
-    groups.set(key, group);
-  });
-
-  const knownCategories = [...new Set([...Object.keys(CATS), ...db.menuItems.map((item) => item.category)])];
-  return [...groups.values()].map((group, groupIndex) => {
-    const first = group.rows[0];
-    const row = first.row;
-    const base = { line: first.line, label: `${group.name || "Unnamed item"} · ${group.rows.length} recipe row${group.rows.length === 1 ? "" : "s"}` };
-    if (!group.name) return { ...base, error: "Menu Item Name is required" };
-    if (db.menuItems.some((item) => item.name.trim().toLowerCase() === group.name.toLowerCase())) return { ...base, error: "A menu item with this name already exists" };
-
-    const type = itemTypeFromLabel(row.type || "");
-    if (!type) return { ...base, error: `Unknown item type "${row.type || ""}"` };
-    const category = normalizeCategory(row.category || "", knownCategories);
-    if (!category.value) return { ...base, error: "Category is required" };
-    const sellingPrice = toNum(row.sellingprice || row.retailprice);
-    if (!(sellingPrice > 0)) return { ...base, error: "Selling Price must be more than 0" };
-
-    const repeated = ["category", "subcategory", "type", "sellingprice", "batchyield", "batchpurchaseprice", "piecesperbatch", "shelflifedays", "expireswhen"];
-    const inconsistent = repeated.find((key) => group.rows.some(({ row: current }) => String(current[key] || "").trim().toLowerCase() !== String(row[key] || "").trim().toLowerCase()));
-    if (inconsistent) return { ...base, error: `Repeated item details do not match in ${inconsistent}` };
-
-    const shelfLife = toNum(row.shelflifedays || "1");
-    if (!(shelfLife >= 0)) return { ...base, error: "Shelf Life Days must be 0 or more" };
-    const expiryRule = EXPIRY_OPTIONS.find((option) => option.toLowerCase() === (row.expireswhen || "").toLowerCase()) ?? EXPIRY_OPTIONS[0];
-    const yieldAmount = type === "Made-to-order" ? 1 : toNum(row.batchyield || "0");
-    let purchaseCost = 0;
-    let recipe: RecipeLine[] = [];
-
-    if (type === "Outsourced") {
-      const batchPrice = toNum(row.batchpurchaseprice || "0");
-      const pieces = toNum(row.piecesperbatch || "0");
-      if (!(batchPrice > 0)) return { ...base, error: "Batch Purchase Price must be more than 0 for an outsourced item" };
-      if (!(pieces > 0)) return { ...base, error: "Pieces Per Batch must be more than 0 for an outsourced item" };
-      purchaseCost = batchPrice / pieces;
-    } else {
-      if (type === "In-house" && !(yieldAmount > 0)) return { ...base, error: "Batch Yield must be more than 0" };
-      const used = new Set<string>();
-      for (const entry of group.rows) {
-        const ingredientName = (entry.row.ingredientname || "").trim();
-        const matches = db.ingredients.filter((ingredient) => ingredient.name.trim().toLowerCase() === ingredientName.toLowerCase());
-        if (!ingredientName) return { ...base, line: entry.line, error: "Ingredient Name is required for every recipe row" };
-        if (matches.length === 0) return { ...base, line: entry.line, error: `Ingredient "${ingredientName}" was not found in Ingredient Inventory` };
-        if (matches.length > 1) return { ...base, line: entry.line, error: `Ingredient name "${ingredientName}" is ambiguous` };
-        const ingredient = matches[0];
-        if (used.has(ingredient.id)) return { ...base, line: entry.line, error: `${ingredient.name} appears more than once in this recipe` };
-        const amount = toNum(entry.row.amount || "0");
-        const unit = (entry.row.unit || "").trim();
-        if (!(amount > 0)) return { ...base, line: entry.line, error: "Amount must be more than 0" };
-        if (!unit) return { ...base, line: entry.line, error: "Unit is required for every recipe row" };
-        const ingredientCost = ingredientAmountCost(ingredient, amount, unit);
-        if (!Number.isFinite(ingredientCost)) return { ...base, line: entry.line, error: `${unit} cannot be converted to ${ingredient.unit} for ${ingredient.name}` };
-        used.add(ingredient.id);
-        recipe.push({ ingredientId: ingredient.id, quantity: amount, unit, allocation: "Recipe-based" });
-      }
-      if (!recipe.length) return { ...base, error: "A complete recipe is required" };
-    }
-
-    const subcategories = CATS[category.value] ?? [];
-    const subcategory = row.subcategory?.trim() ? normalizeCategory(row.subcategory, subcategories).value : "";
-    const item: MenuItem = {
-      id: internalId(db.menuItems.length + groupIndex), name: group.name, category: category.value, subcategory,
-      description: "", available: true, tags: [], type, batchCost: 0, yield: type === "Outsourced" ? toNum(row.piecesperbatch) : yieldAmount,
-      purchaseCost, unit: "piece", retailPrice: sellingPrice, supplier: "", shelfLifeDays: shelfLife, expiryRule,
-      defaultBatchSize: type === "In-house" ? yieldAmount : 1, batchUnit: "pieces", defaultExpiryDays: expiryRule === EXPIRY_OPTIONS[1] ? 0 : shelfLife,
-      defaultWasteStage: "Finished Product", defaultWasteType: "Unsold", allowQuickAdd: true, recipe,
-    };
-    item.batchCost = type === "Outsourced" ? 0 : recipeCost(db, item);
-    return { ...base, flag: category.known ? undefined : `New category: "${category.value}"`, item };
-  });
-}
 
 export const Route = createFileRoute("/_authenticated/menu/new")({
   head: () => ({
@@ -237,14 +160,15 @@ function AddMenuItem() {
         <ImportButton
           what="menu items with recipes"
           columns={MENU_COLS}
+          fields={{ ingredientname: { options: db.ingredients.map((i) => i.name) }, category: { options: Object.keys(CATS), allowCustom: true }, subcategory: { options: (row) => CATS[row.category] ?? [], allowCustom: true }, type: { options: TYPE_OPTIONS }, unit: { options: (row) => importUnits(db.ingredients.find((i) => i.name.toLowerCase() === (row.ingredientname || "").toLowerCase())?.unit) }, expireswhen: { options: EXPIRY_OPTIONS }, available: { options: ["true", "false"] } }}
           parse={(rows) => parseMenuRows(rows, db)}
           commit={(items) => { items.forEach((item) => put("menuItems", item)); navigate({ to: "/menu-items", search: { item: undefined } }); }}
           template={{
             filename: "menu-items-with-recipes-template.csv",
             header: MENU_TEMPLATE_COLS,
             rows: [
-              ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Flour", "500", "g", "2", "After the shelf life"],
-              ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Butter", "250", "g", "2", "After the shelf life"],
+              ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Flour", "500", "g", "2", "After the shelf life", "", "", "", "true"],
+              ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Butter", "250", "g", "2", "After the shelf life", "", "", "", "true"],
             ],
           }}
         />
