@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ProductionTabs } from "@/components/mw/ProductionTabs";
-import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
+import { MenuImport } from "@/components/mw/MenuImport";
 import { parseMenuRows } from "@/lib/import-parsers";
 import { compatibleRecipeUnits as importUnits } from "@/lib/menu-costing";
 
@@ -157,21 +157,7 @@ function AddMenuItem() {
       <ProductionTabs active="add" />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-2xl font-bold text-primary md:text-3xl">Add New Menu Item</h2>
-        <ImportButton
-          what="menu items with recipes"
-          columns={MENU_COLS}
-          fields={{ ingredientname: { options: db.ingredients.map((i) => i.name) }, category: { options: Object.keys(CATS), allowCustom: true }, subcategory: { options: (row) => CATS[row.category] ?? [], allowCustom: true }, type: { options: TYPE_OPTIONS }, unit: { options: (row) => importUnits(db.ingredients.find((i) => i.name.toLowerCase() === (row.ingredientname || "").toLowerCase())?.unit) }, expireswhen: { options: EXPIRY_OPTIONS }, available: { options: ["true", "false"] } }}
-          parse={(rows) => parseMenuRows(rows, db)}
-          commit={(items) => { items.forEach((item) => put("menuItems", item)); navigate({ to: "/menu-items", search: { item: undefined } }); }}
-          template={{
-            filename: "menu-items-with-recipes-template.csv",
-            header: MENU_TEMPLATE_COLS,
-            rows: [
-              ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Flour", "500", "g", "2", "After the shelf life", "", "", "", "true"],
-              ["Chocolate Croissant", "Pastry", "Croissants & Danishes", "Batch-made item", "120", "12", "", "", "Butter", "250", "g", "2", "After the shelf life", "", "", "", "true"],
-            ],
-          }}
-        />
+        <MenuImport />
       </div>
       <p className="mt-1 text-xs text-muted-foreground">For recipes, use one row per ingredient and repeat the same menu item name.</p>
 

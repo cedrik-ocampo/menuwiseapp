@@ -34,7 +34,7 @@ export function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
     const category = normalizeCategory(row.category || "", knownCategories);
     if (!category.value) return { ...base, error: "Category is required" };
     const sellingPrice = toNum(row.sellingprice || row.retailprice);
-    if (!(sellingPrice > 0)) return { ...base, error: "Selling Price must be more than 0" };
+    if (!(Number.isFinite(sellingPrice) && sellingPrice > 0)) return { ...base, error: "Selling Price must be more than 0" };
 
     const repeated = ["category", "subcategory", "type", "sellingprice", "batchyield", "batchpurchaseprice", "piecesperbatch", "shelflifedays", "expireswhen", "description", "tags", "supplier", "available"];
     const inconsistent = repeated.find((key) => group.rows.some(({ row: current }) => String(current[key] || "").trim().toLowerCase() !== String(row[key] || "").trim().toLowerCase()));
@@ -43,7 +43,7 @@ export function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
     if (row.available && !["true", "false", "yes", "no", "1", "0"].includes(row.available.toLowerCase())) return { ...base, error: "Available must be true or false" };
     if (row.description?.length > 300) return { ...base, error: "Description must be 300 characters or fewer" };
     const shelfLife = toNum(row.shelflifedays || "");
-    if (!(shelfLife >= 0)) return { ...base, error: "Shelf Life Days must be 0 or more" };
+    if (!(Number.isFinite(shelfLife) && shelfLife >= 0)) return { ...base, error: "Shelf Life Days must be 0 or more" };
     const expiryRule = EXPIRY_OPTIONS.find((option) => option.toLowerCase() === (row.expireswhen || "").toLowerCase());
     if (!expiryRule) return { ...base, error: "Choose a valid Expires When option" };
     const yieldAmount = type === "Made-to-order" ? 1 : toNum(row.batchyield || "0");
@@ -53,11 +53,11 @@ export function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
     if (type === "Outsourced") {
       const batchPrice = toNum(row.batchpurchaseprice || "0");
       const pieces = toNum(row.piecesperbatch || "0");
-      if (!(batchPrice > 0)) return { ...base, error: "Batch Purchase Price must be more than 0 for an outsourced item" };
-      if (!(pieces > 0)) return { ...base, error: "Pieces Per Batch must be more than 0 for an outsourced item" };
+      if (!(Number.isFinite(batchPrice) && batchPrice > 0)) return { ...base, error: "Batch Purchase Price must be more than 0 for an outsourced item" };
+      if (!(Number.isFinite(pieces) && pieces > 0)) return { ...base, error: "Pieces Per Batch must be more than 0 for an outsourced item" };
       purchaseCost = batchPrice / pieces;
     } else {
-      if (type === "In-house" && !(yieldAmount > 0)) return { ...base, error: "Batch Yield must be more than 0" };
+      if (type === "In-house" && !(Number.isFinite(yieldAmount) && yieldAmount > 0)) return { ...base, error: "Batch Yield must be more than 0" };
       const used = new Set<string>();
       for (const entry of group.rows) {
         const ingredientName = (entry.row.ingredientname || "").trim();
@@ -69,7 +69,7 @@ export function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
         if (used.has(ingredient.id)) return { ...base, line: entry.line, error: `${ingredient.name} appears more than once in this recipe` };
         const amount = toNum(entry.row.amount || "0");
         const unit = (entry.row.unit || "").trim();
-        if (!(amount > 0)) return { ...base, line: entry.line, error: "Amount must be more than 0" };
+        if (!(Number.isFinite(amount) && amount > 0)) return { ...base, line: entry.line, error: "Amount must be more than 0" };
         if (!unit) return { ...base, line: entry.line, error: "Unit is required for every recipe row" };
         const ingredientCost = ingredientAmountCost(ingredient, amount, unit);
         if (!Number.isFinite(ingredientCost)) return { ...base, line: entry.line, error: `${unit} cannot be converted to ${ingredient.unit} for ${ingredient.name}` };
@@ -132,7 +132,7 @@ export function parseSales(rows: Row[], db: DBView): ParsedRow<Sale>[] {
       const q = toNum(r.quantity), produced = normDate(r.producedat || r.productiondate || r.date), exp = normDate(r.expirydate);
       const id = (r.batchid || `${(m?.id ?? "B").split("-")[0]}-${produced.replace(/-/g, "").slice(4)}-I${k}`).trim();
       const base = { line: sourceLine(r, k), label: `${m?.name ?? mid} · ${r.quantity ?? ""}` };
-      const err = !m ? `Unknown menu item "${mid}"` : !(q > 0) ? "Quantity must be more than 0" : !produced ? "Invalid producedAt" : !exp ? "Invalid expiryDate" : exp < produced ? "Expiry is before production date" : used.has(id) ? `Batch ID ${id} already used` : "";
+      const err = !m ? `Unknown menu item "${mid}"` : !(Number.isFinite(q) && q > 0) ? "Quantity must be more than 0" : !produced ? "Invalid producedAt" : !exp ? "Invalid expiryDate" : exp < produced ? "Expiry is before production date" : used.has(id) ? `Batch ID ${id} already used` : "";
       if (err) return { ...base, error: err };
       if (!m) return { ...base, error: "Choose a menu item" };
       used.add(id);
@@ -198,9 +198,9 @@ export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: I
         : !date ? "Invalid date"
         : !time ? "Invalid time (use HH:MM)"
         : !wt ? `Unknown waste type "${r.wastetype ?? ""}"`
-        : !(q > 0) ? "Quantity must be more than 0"
+        : !(Number.isFinite(q) && q > 0) ? "Quantity must be more than 0"
         : !unit ? "Unit is required"
-        : !(c >= 0) ? "Unit cost must be 0 or more"
+        : !(Number.isFinite(c) && c >= 0) ? "Unit cost must be 0 or more"
         : stage === "Ingredient" && !ing ? `Unknown Ingredient_ID "${ingRaw}"`
         : stage === "Finished Product" && !menu ? `Unknown Menu_Item_ID "${menuRaw}"`
         : stage === "WIP" && menuRaw && !menu ? `Unknown Menu_Item_ID "${menuRaw}"`

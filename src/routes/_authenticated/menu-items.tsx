@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useMemo } from "react";
 import { PageTitle } from "@/components/mw/AppShell";
+import { MenuImport } from "@/components/mw/MenuImport";
+import { Button } from "@/components/ui/button";
 import { MenuInventory } from "@/components/mw/MenuInventory";
 import { Panel, btnPrimary } from "@/components/mw/ui";
 import { menuMap } from "@/lib/calc";
@@ -32,7 +34,7 @@ function MenuItemsPage() {
   return (
     <div>
       <PageTitle back={{ to: "/", label: "Home" }} title="Menu Items" subtitle="Add, find, and review every item and its recipe cost.">
-        <Link to="/menu/new" className={btnPrimary}><Plus className="h-4 w-4" /> Add Menu Item</Link>
+        <div className="flex flex-wrap gap-2"><MenuImport /><Button variant="outline" asChild><Link to="/menu/new"><Plus className="h-4 w-4" /> Add Menu Item</Link></Button></div>
       </PageTitle>
       <Panel>
         <MenuInventory db={db} rows={rows} focusId={item} />
