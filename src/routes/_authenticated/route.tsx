@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { initStore, useDB } from "@/lib/store";
+import { initStore, useDB, usePermissions } from "@/lib/store";
 import { AppHeader, NavBar } from "@/components/mw/AppShell";
 import { SessionTimeout } from "@/components/mw/SessionTimeout";
 import { AdminHeader, AdminEditNotice } from "@/components/mw/AdminShell";
@@ -48,6 +48,9 @@ function AdminLayout() {
 function CafeLayout() {
   const { user } = Route.useRouteContext();
   const db = useDB();
+  const perm = usePermissions();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const ownerOnly = path === "/menu/new" || path === "/ingredients/new";
   const cafe = (user.user_metadata?.cafe_name as string) || "My Café";
   const display = (user.user_metadata?.full_name as string) || (user.email ?? "").split("@")[0] || "Staff";
   useEffect(() => {
@@ -61,7 +64,7 @@ function CafeLayout() {
         <AppHeader cafeName={cafe} />
         <main className="mx-auto max-w-6xl px-5 py-6 md:px-8">
           {db.ready && <AdminEditNotice />}
-          {db.ready ? <Outlet /> : <p className="py-20 text-center text-muted-foreground">Loading your café data…</p>}
+          {db.ready && ownerOnly && !perm.isOwner ? <p className="py-20 text-center text-muted-foreground">Only the café owner can add ingredients and menu items. You can log production, waste, and sales.</p> : db.ready ? <Outlet /> : <p className="py-20 text-center text-muted-foreground">Loading your café data…</p>}
         </main>
         <footer className="px-5 pb-4 text-center text-xs text-muted-foreground md:px-8">Need help or have concerns? Contact <a href="mailto:menuwise.contact@gmail.com" className="font-semibold text-accent">menuwise.contact@gmail.com</a></footer>
       </div>

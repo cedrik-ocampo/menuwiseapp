@@ -4,7 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { Check, CheckCircle2, Plus, ArrowUpRight, X } from "lucide-react";
 import { toast } from "sonner";
-import { useDB, put } from "@/lib/store";
+import { useDB, put, isWorkspaceOwner } from "@/lib/store";
 import { avgWeeklyProduction, producedThisWeek, weekStart } from "@/lib/calc";
 import { consumeForProduction } from "@/lib/consume";
 import { addDays, fmtQty, shortDate, todayISO, timeOf } from "@/lib/format";
