@@ -3,7 +3,7 @@ import { deleteMenuItem } from "@/lib/deletes";
 import { useState } from "react";
 import { Plus, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useDB, put, remove } from "@/lib/store";
+import { useDB, put, remove, usePermissions } from "@/lib/store";
 import { attributedWaste, avgWeeklyProduction, avgWeeklySales, costPerUnit, directWaste, producedThisWeek, sumValue, weekStart } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, timeOf, todayISO, uid } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/menu/$id")({
 });
 
 function MenuItemView() {
+  const perm = usePermissions();
   const { id } = Route.useParams();
   const db = useDB();
   const [editBatch, setEditBatch] = useState<Batch | null>(null);

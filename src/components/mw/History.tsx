@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Pencil } from "lucide-react";
-import type { DBView } from "@/lib/store";
+import { usePermissions, type DBView } from "@/lib/store";
 import type { Batch, Purchase } from "@/lib/types";
 import { fmtQty, formatPeso, shortDate, timeOf } from "@/lib/format";
 import { AuditCaption } from "./Audit";
@@ -16,6 +16,7 @@ export function EditButton({ label, onClick }: { label: string; onClick: () => v
 }
 
 export function PurchaseEntries({ db, ingredientId }: { db: DBView; ingredientId: string }) {
+  const perm = usePermissions();
   const [edit, setEdit] = useState<Purchase | null>(null);
   const ing = db.ingredients.find((i) => i.id === ingredientId);
   const lots = db.purchases.filter((p) => p.ingredientId === ingredientId).sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate));
@@ -43,6 +44,7 @@ export function PurchaseEntries({ db, ingredientId }: { db: DBView; ingredientId
 
 /** All production entries across the café, newest first. */
 export function ProductionHistory({ db }: { db: DBView }) {
+  const perm = usePermissions();
   const [edit, setEdit] = useState<Batch | null>(null);
   const [limit, setLimit] = useState(15);
   const all = db.batches.slice().sort((a, b) => b.producedAt.localeCompare(a.producedAt));
@@ -61,7 +63,7 @@ export function ProductionHistory({ db }: { db: DBView }) {
                   <Link to="/menu/$id" params={{ id: b.menuItemId }} className="font-semibold text-primary hover:underline">{m?.name ?? b.menuItemId}</Link>
                   <p className="text-muted-foreground">{fmtQty(b.quantity)} {m?.batchUnit} · {shortDate(b.producedAt)} {timeOf(b.producedAt)} · Expiry {shortDate(b.expiryDate)}</p>
                 </div>
-                <EditButton label="Edit production entry" onClick={() => setEdit(b)} />
+                {perm.canEdit("batches", b.id) && <EditButton label="Edit production entry" onClick={() => setEdit(b)} />}
               </div>
               <AuditCaption collection="batches" record={b} />
             </li>

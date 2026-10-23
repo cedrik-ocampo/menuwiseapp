@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { put, remove, useDB, type DBView } from "@/lib/store";
+import { put, remove, useDB, usePermissions, type DBView } from "@/lib/store";
 import { saleRevenue, saleUnitPrice, salesTrend, weekStart, type TrendPoint } from "@/lib/calc";
 import { addDays, formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
 import { parseSales } from "@/lib/import-parsers";
@@ -28,6 +28,7 @@ function template(db: DBView) {
 }
 
 export function SalesTab({ compactHeader = false }: { compactHeader?: boolean }) {
+  const perm = usePermissions();
   const db = useDB();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
