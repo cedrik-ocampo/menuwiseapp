@@ -6,7 +6,7 @@ import { parseIngredientRows, INGREDIENT_UNITS, INGREDIENT_STORAGE } from "@/lib
 import { AuditCaption } from "@/components/mw/Audit";
 import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
 import { INGREDIENT_CATEGORIES } from "@/components/mw/IngredientForm";
-import { useDB, put } from "@/lib/store";
+import { useDB, put, usePermissions } from "@/lib/store";
 import { expiringWithin, lastUsed, nextLot, stockOf } from "@/lib/calc";
 import { daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import { useThreshold, thresholdLabel } from "@/lib/settings";
@@ -34,6 +34,7 @@ type SortKey = "expiry" | "purchase" | "lastUsed" | "alpha";
 const SORT_LABEL: Record<SortKey, string> = { expiry: "Expiry", purchase: "Purchase date", lastUsed: "Last used", alpha: "Alphabetic" };
 
 function Inventory() {
+  const perm = usePermissions();
   const db = useDB();
   const [sort, setSort] = useState<SortKey>("expiry");
   const [asc, setAsc] = useState(true);
@@ -74,7 +75,7 @@ function Inventory() {
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Ingredient Inventory List" subtitle="Keep stock visible. Use the soonest-expiring ingredients first." />
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
-          <div>
+          {perm.isOwner && <><div>
             <p className="mb-2 text-sm font-semibold text-muted-foreground">Import your ingredient inventory</p>
             <ImportButton
               what="ingredients"
@@ -88,7 +89,7 @@ function Inventory() {
             <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: {COLS}.</p>
           </div>
 
-          <Link to="/ingredients/new" className="flex items-center gap-2 text-sm font-semibold text-accent"><Plus className="h-4 w-4" /> Add one ingredient manually</Link>
+          <Link to="/ingredients/new" className="flex items-center gap-2 text-sm font-semibold text-accent"><Plus className="h-4 w-4" /> Add one ingredient manually</Link></>}
 
           <Panel>
             <p className="mb-2 text-sm font-semibold text-accent">Sort Ingredients by</p>
