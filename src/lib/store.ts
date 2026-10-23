@@ -84,6 +84,12 @@ export function useDB(): DBView {
   return useSyncExternalStore(subscribe, () => view, () => serverView);
 }
 
+/** Permission helpers for the UI; re-render with the store. */
+export function usePermissions() {
+  useDB();
+  return { isOwner: workspaceRole === 'owner', canEdit: (c: CollectionName, id: string) => canEditRecord(c, id) };
+}
+
 export function currentWorkspace() {
   return workspaceId;
 }

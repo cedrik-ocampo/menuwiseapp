@@ -88,8 +88,8 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
                 <td className="px-3 py-2 text-muted-foreground">{s.notes ?? ""}</td>
                 <td className="px-3 py-2">
                   <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button type="button" aria-label="Edit sale" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>
-                    <button type="button" aria-label="Delete sale" className="text-muted-foreground hover:text-destructive" onClick={() => { if (window.confirm("Delete this sale?")) { remove("sales", s.id); toast.success("Sale deleted"); } }}><Trash2 className="h-4 w-4" /></button>
+                    {perm.canEdit("sales", s.id) && <button type="button" aria-label="Edit sale" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>}
+                    {perm.isOwner && <button type="button" aria-label="Delete sale" className="text-muted-foreground hover:text-destructive" onClick={() => { if (window.confirm("Delete this sale?")) { remove("sales", s.id); toast.success("Sale deleted"); } }}><Trash2 className="h-4 w-4" /></button>}
                   </div>
                 </td>
               </tr>

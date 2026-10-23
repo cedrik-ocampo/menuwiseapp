@@ -250,10 +250,10 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
             <p className="font-bold text-primary">{formatPeso(w.value)}</p>
           </div>
           <div className="flex justify-end gap-2">
-          <button type="button" aria-label="Edit waste entry" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(w)}>
+          {perm.canEdit("wasteLogs", w.id) && <button type="button" aria-label="Edit waste entry" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(w)}>
             <Pencil className="h-4 w-4" />
-          </button>
-          <button
+          </button>}
+          {perm.isOwner && <button
             type="button"
             aria-label="Delete waste entry"
             className=" text-muted-foreground hover:text-destructive"
@@ -264,7 +264,7 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
             }}
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </button>}
           </div>
           <div className="col-span-3"><AuditCaption collection="wasteLogs" record={w} /></div>
         </div>
