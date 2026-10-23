@@ -4,7 +4,7 @@ import { Check, Calculator, Trash2, Pencil } from "lucide-react";
 import { AuditCaption } from "./Audit";
 import { EditWasteDialog } from "./EditDialogs";
 import { toast } from "sonner";
-import { useDB, put, remove } from "@/lib/store";
+import { useDB, put, remove, usePermissions } from "@/lib/store";
 import { costPerUnit } from "@/lib/calc";
 import { ALLOCATIONS, STAGES, WASTE_TYPES, type Allocation, type Stage, type WasteLog, type WasteType } from "@/lib/types";
 import { formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
@@ -231,6 +231,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
 }
 
 export function WasteList({ logs, empty = "No waste history yet." }: { logs: WasteLog[]; empty?: string }) {
+  const perm = usePermissions();
   const [editing, setEditing] = useState<WasteLog | null>(null);
   if (!logs.length) return <p className="py-4 text-center text-sm text-muted-foreground">{empty}</p>;
   return (
@@ -250,10 +251,10 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
             <p className="font-bold text-primary">{formatPeso(w.value)}</p>
           </div>
           <div className="flex justify-end gap-2">
-          <button type="button" aria-label="Edit waste entry" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(w)}>
+          {perm.canEdit("wasteLogs", w.id) && <button type="button" aria-label="Edit waste entry" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(w)}>
             <Pencil className="h-4 w-4" />
-          </button>
-          <button
+          </button>}
+          {perm.isOwner && <button
             type="button"
             aria-label="Delete waste entry"
             className=" text-muted-foreground hover:text-destructive"
@@ -264,7 +265,7 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
             }}
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </button>}
           </div>
           <div className="col-span-3"><AuditCaption collection="wasteLogs" record={w} /></div>
         </div>

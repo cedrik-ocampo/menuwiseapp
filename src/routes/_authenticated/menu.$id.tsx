@@ -3,7 +3,7 @@ import { deleteMenuItem } from "@/lib/deletes";
 import { useState } from "react";
 import { Plus, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useDB, put, remove } from "@/lib/store";
+import { useDB, put, remove, usePermissions } from "@/lib/store";
 import { attributedWaste, avgWeeklyProduction, avgWeeklySales, costPerUnit, directWaste, producedThisWeek, sumValue, weekStart } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, timeOf, todayISO, uid } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/menu/$id")({
 });
 
 function MenuItemView() {
+  const perm = usePermissions();
   const { id } = Route.useParams();
   const db = useDB();
   const [editBatch, setEditBatch] = useState<Batch | null>(null);
@@ -128,12 +129,12 @@ function MenuItemView() {
                     <p className="text-muted-foreground">Expiry {shortDate(b.expiryDate)}</p>
                     <p className={`text-xs font-bold ${d <= 0 ? "text-destructive" : "text-warning"}`}>{d <= 0 ? "Expires today" : d === 1 ? "Expires tomorrow" : `${d} days left`}</p>
                   </div>
-                  <button type="button" aria-label="Delete batch" className="text-muted-foreground hover:text-destructive" onClick={() => {
+                  {perm.isOwner && <button type="button" aria-label="Delete batch" className="text-muted-foreground hover:text-destructive" onClick={() => {
                     if (!window.confirm(`Delete batch ${b.id}?`)) return;
                     remove("batches", b.id);
                     toast.success("Batch deleted");
-                  }}><Trash2 className="h-4 w-4" /></button>
-                  <EditButton label="Edit batch" onClick={() => setEditBatch(b)} /></div></div>
+                  }}><Trash2 className="h-4 w-4" /></button>}
+                  {perm.canEdit("batches", b.id) && <EditButton label="Edit batch" onClick={() => setEditBatch(b)} />}</div></div>
                   <AuditCaption collection="batches" record={b} />
                 </li>
               );

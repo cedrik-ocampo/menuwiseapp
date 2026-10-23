@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { put, remove, useDB, type DBView } from "@/lib/store";
+import { put, remove, useDB, usePermissions, type DBView } from "@/lib/store";
 import { saleRevenue, saleUnitPrice, salesTrend, weekStart, type TrendPoint } from "@/lib/calc";
 import { addDays, formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
 import { parseSales } from "@/lib/import-parsers";
@@ -28,6 +28,7 @@ function template(db: DBView) {
 }
 
 export function SalesTab({ compactHeader = false }: { compactHeader?: boolean }) {
+  const perm = usePermissions();
   const db = useDB();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -88,8 +89,8 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
                 <td className="px-3 py-2 text-muted-foreground">{s.notes ?? ""}</td>
                 <td className="px-3 py-2">
                   <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button type="button" aria-label="Edit sale" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>
-                    <button type="button" aria-label="Delete sale" className="text-muted-foreground hover:text-destructive" onClick={() => { if (window.confirm("Delete this sale?")) { remove("sales", s.id); toast.success("Sale deleted"); } }}><Trash2 className="h-4 w-4" /></button>
+                    {perm.canEdit("sales", s.id) && <button type="button" aria-label="Edit sale" className="text-muted-foreground hover:text-primary" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>}
+                    {perm.isOwner && <button type="button" aria-label="Delete sale" className="text-muted-foreground hover:text-destructive" onClick={() => { if (window.confirm("Delete this sale?")) { remove("sales", s.id); toast.success("Sale deleted"); } }}><Trash2 className="h-4 w-4" /></button>}
                   </div>
                 </td>
               </tr>

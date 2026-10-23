@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Enforce owner/employee permissions in Cloud and offline entry controls.
-- [ ] Limit employee edits to their own newest entry per operational log and prohibit deletion.
-- [ ] Verify permission rules and real owner/employee flows.
+- [x] Enforce owner/employee permissions in Cloud and offline entry controls.
+- [x] Limit employee edits to their own newest entry per operational log and prohibit deletion.
+- [ ] Verify real owner/employee flows with an employee account (rules tested).
 
 - [x] Complete ingredient, recipe, production, sales and waste templates.
 - [x] Add editable reviews, live validation and per-entry duplicate decisions.

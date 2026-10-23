@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MenuInventory } from "@/components/mw/MenuInventory";
 import { Panel, btnPrimary } from "@/components/mw/ui";
 import { menuMap } from "@/lib/calc";
-import { useDB } from "@/lib/store";
+import { useDB, usePermissions } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/menu-items")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -27,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/menu-items")({
 });
 
 function MenuItemsPage() {
+  const perm = usePermissions();
   const db = useDB();
   const { item } = Route.useSearch();
   const rows = useMemo(() => menuMap(db, false).rows, [db]);
@@ -34,7 +35,7 @@ function MenuItemsPage() {
   return (
     <div>
       <PageTitle back={{ to: "/", label: "Home" }} title="Menu Items" subtitle="Add, find, and review every item and its recipe cost.">
-        <div className="flex flex-wrap gap-2"><MenuImport /><Button variant="outline" asChild><Link to="/menu/new"><Plus className="h-4 w-4" /> Add Menu Item</Link></Button></div>
+        {perm.isOwner && <div className="flex flex-wrap gap-2"><MenuImport /><Button variant="outline" asChild><Link to="/menu/new"><Plus className="h-4 w-4" /> Add Menu Item</Link></Button></div>}
       </PageTitle>
       <Panel>
         <MenuInventory db={db} rows={rows} focusId={item} />

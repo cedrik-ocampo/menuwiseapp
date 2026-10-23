@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check, AlertTriangle } from "lucide-react";
 import { InsightActions } from "@/components/mw/InsightActions";
-import { useDB } from "@/lib/store";
+import { useDB, usePermissions } from "@/lib/store";
 import { compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import { THRESHOLD_OPTIONS, thresholdLabel, useThreshold } from "@/lib/settings";
@@ -49,6 +49,7 @@ function Trend({ pct, offset, prev, hidden, upIsGood }: { pct: number | null; of
 }
 
 function Dashboard() {
+  const perm = usePermissions();
   const db = useDB();
   const navigate = useNavigate();
   const [wasteWeek, setWasteWeek] = useState(0);
@@ -251,8 +252,8 @@ function Dashboard() {
             <Link to="/log-production" search={{ item: undefined }} className={`${btnPrimary} h-12`}><PackagePlus className="h-4 w-4" /> Log Production</Link>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Link to="/menu/new" className={`${btnSecondary} h-11 rounded-xl border border-border text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}><Plus className="h-3.5 w-3.5" /> Add Menu Item</Link>
-            <Link to="/ingredients/new" className={`${btnSecondary} h-11 rounded-xl border border-border text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}><Plus className="h-3.5 w-3.5" /> Add Ingredient</Link>
+            {perm.isOwner && <Link to="/menu/new" className={`${btnSecondary} h-11 rounded-xl border border-border text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}><Plus className="h-3.5 w-3.5" /> Add Menu Item</Link>}
+            {perm.isOwner && <Link to="/ingredients/new" className={`${btnSecondary} h-11 rounded-xl border border-border text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}><Plus className="h-3.5 w-3.5" /> Add Ingredient</Link>}
           </div>
         </div>
       </div>
