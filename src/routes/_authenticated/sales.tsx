@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/sales")({
 function SalesPage() {
   return (
     <div>
-      <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Sales" subtitle="Track daily sales and revenue by menu item." />
+      <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Sales" className="mb-3" />
       <SalesTab compactHeader />
     </div>
   );

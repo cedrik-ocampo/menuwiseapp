@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import logo from "@/assets/mw-logo.png.asset.json";
 import { useDB, resetStore, currentWorkspace } from "@/lib/store";
 import { shortDate, todayISO } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserMenu } from "./UserMenu";
@@ -171,9 +172,9 @@ export function AppHeader({ cafeName }: { cafeName: string }) {
   );
 }
 
-export function PageTitle({ back, title, subtitle, children }: { back?: { to: string; label: string; params?: Record<string, string> }; title: string; subtitle?: string; children?: ReactNode }) {
+export function PageTitle({ back, title, subtitle, className, children }: { back?: { to: string; label: string; params?: Record<string, string> }; title: string; subtitle?: string; className?: string; children?: ReactNode }) {
   return (
-    <div className="mb-6">
+    <div className={cn("mb-6", className)}>
       {back && (
         <Link to={back.to} params={back.params as never} className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">
           ← {back.label}
