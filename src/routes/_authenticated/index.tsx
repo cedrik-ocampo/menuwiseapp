@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check, AlertTriangle } from "lucide-react";
 import { SetupWizard } from "@/components/mw/SetupWizard";
 import { InsightActions } from "@/components/mw/InsightActions";
+import { QuadrantLabel } from "@/components/mw/QuadrantLabel";
 import { useDB, usePermissions } from "@/lib/store";
 import { compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
@@ -222,7 +223,7 @@ function Dashboard() {
               const items = map.plottedRows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
               return (
                 <div key={q} className="rounded-xl bg-muted p-3">
-                  <p className="text-xs font-bold uppercase text-primary">{q}</p>
+                  <QuadrantLabel quadrant={q} className="text-xs font-bold uppercase text-primary" />
                   {items.length === 0 && <p className="mt-1 text-xs text-muted-foreground">None</p>}
                   <ul className="mt-1 space-y-1">
                     {items.map((r) => (
