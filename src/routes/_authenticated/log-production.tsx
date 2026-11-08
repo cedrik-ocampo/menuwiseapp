@@ -2,7 +2,8 @@ import { ProductionHistory } from "@/components/mw/History";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
-import { Check, CheckCircle2, Plus, ArrowUpRight, X } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Info, Plus, ArrowUpRight, X } from "lucide-react";
+import { matchingQuantity, nextBatchId, sameDayBatches } from "@/lib/duplicate-batches";
 import { toast } from "sonner";
 import { useDB, put, isWorkspaceOwner } from "@/lib/store";
 import { avgWeeklyProduction, producedThisWeek, weekStart } from "@/lib/calc";
@@ -40,14 +41,20 @@ function LogProduction() {
   const [menuItemId, setMenuItemId] = useState(item ?? "");
   const [date, setDate] = useState(todayISO());
   const menu = db.menuItems.find((m) => m.id === menuItemId);
-  const mkRow = (i = 0): Row => {
-    const prefix = (menu?.id ?? "B").split("-")[0];
-    const d = date.replace(/-/g, "").slice(4);
-    return { batchId: `${prefix}-${d}-${String.fromCharCode(65 + i)}`, quantity: String(menu?.defaultBatchSize ?? ""), expiry: addDays(date, menu?.defaultExpiryDays ?? 1) };
+  const usedIds = new Set(db.batches.map((b) => b.id));
+  const idPrefix = (id: string, d: string) => `${(id || "B").split("-")[0]}-${d.replace(/-/g, "").slice(4)}`;
+  const mkRow = (reserved: string[] = [], id = menu?.id ?? "", d = date): Row => {
+    const m = db.menuItems.find((x) => x.id === id);
+    return { batchId: nextBatchId(idPrefix(id, d), usedIds, reserved), quantity: String(m?.defaultBatchSize ?? ""), expiry: addDays(d, m?.defaultExpiryDays ?? 1) };
   };
   const [rows, setRows] = useState<Row[]>([mkRow()]);
   const [errors, setErrors] = useState<string[]>([]);
   const [last, setLast] = useState<string | null>(null);
+  const [confirmDup, setConfirmDup] = useState(false);
+  const earlier = menu ? sameDayBatches(db.batches, menu.id, date) : [];
+  const dupRows = rows.map((r) => matchingQuantity(earlier, parseFloat(r.quantity)));
+  const hasDup = dupRows.some((d) => d.length > 0);
+  const who = (b: { createdByName?: string }) => b.createdByName || "Someone";
 
   const rowSchema = z.object({
     batchId: z.string().trim().min(1, "Batch ID is required").max(30),
@@ -57,10 +64,14 @@ function LogProduction() {
 
   function onItemChange(id: string) {
     setMenuItemId(id);
-    const m = db.menuItems.find((x) => x.id === id);
-    const prefix = id.split("-")[0];
-    const d = date.replace(/-/g, "").slice(4);
-    setRows([{ batchId: `${prefix}-${d}-A`, quantity: String(m?.defaultBatchSize ?? ""), expiry: addDays(date, m?.defaultExpiryDays ?? 1) }]);
+    setRows([mkRow([], id)]);
+    setConfirmDup(false);
+  }
+
+  function onDateChange(d: string) {
+    setDate(d);
+    setConfirmDup(false);
+    if (menuItemId) setRows([mkRow([], menuItemId, d)]);
   }
 
   function save() {
@@ -74,6 +85,8 @@ function LogProduction() {
     });
     setErrors(errs);
     if (errs.some(Boolean)) return;
+    if (hasDup && !confirmDup) return setConfirmDup(true);
+    setConfirmDup(false);
     const now = new Date();
     const at = new Date(`${date}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`).toISOString();
     rows.forEach((r) => {
@@ -83,7 +96,7 @@ function LogProduction() {
     const total = rows.reduce((a, r) => a + parseFloat(r.quantity), 0);
     setLast(`Latest save: ${fmtQty(total)} ${menu.batchUnit} added to ${rows.map((r) => r.batchId).join(", ")} at ${timeOf(at)} on ${shortDate(date)}. Metrics updated below.`);
     toast.success("Production logged");
-    setRows([{ ...mkRow(rows.length), batchId: `${rows[0].batchId.slice(0, -1)}${String.fromCharCode(65 + rows.length)}` }]);
+    setRows([mkRow(rows.map((r) => r.batchId.trim()))]);
   }
 
 
@@ -108,8 +121,13 @@ function LogProduction() {
           </select>
         </Field>
         <Field label="Production date">
-          <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} />
+          <input type="date" className={inputCls} value={date} onChange={(e) => onDateChange(e.target.value)} />
         </Field>
+        {menu && earlier.length > 0 && !hasDup && (
+          <p className="flex gap-2 rounded-xl bg-muted p-3 text-sm text-muted-foreground"><Info className="mt-0.5 h-4 w-4 shrink-0" />
+            Note: {earlier.length} earlier batch{earlier.length > 1 ? "es" : ""} of {menu.name} logged on {shortDate(date)} ({earlier.map((b) => `${fmtQty(b.quantity)} ${menu.batchUnit} by ${who(b)} at ${timeOf(b.producedAt)}`).join("; ")}). New batch ID set to {rows[0]?.batchId}.
+          </p>
+        )}
         {rows.map((r, i) => (
           <div key={i} className="space-y-3 border-t border-border pt-4">
             <div className="flex items-center justify-between">
@@ -121,18 +139,33 @@ function LogProduction() {
               <Field label="Quantity made"><input inputMode="decimal" className={inputCls} value={r.quantity} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))} /></Field>
               <Field label="Unit"><input className={inputCls} value={menu?.batchUnit ?? ""} disabled /></Field>
             </div>
+            {menu && dupRows[i].length > 0 && (
+              <p role="alert" className="flex gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                Possible duplicate: {who(dupRows[i][0])} already logged {fmtQty(dupRows[i][0].quantity)} {menu.batchUnit} of {menu.name} on {shortDate(date)} at {timeOf(dupRows[i][0].producedAt)} (Batch {dupRows[i][0].id}). If this is the same bake, don't save again.
+              </p>
+            )}
             <Field label="Expiry date · this batch" hint="Set the expiry for each batch separately." error={errors[i]}>
               <input type="date" className={inputCls} value={r.expiry} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, expiry: e.target.value } : x)))} />
             </Field>
           </div>
         ))}
-        <button type="button" className={`${btnSecondary} w-full`} onClick={() => setRows([...rows, { ...mkRow(rows.length), batchId: `${rows[0].batchId.slice(0, -1)}${String.fromCharCode(65 + rows.length)}` }])}>
+        <button type="button" className={`${btnSecondary} w-full`} onClick={() => setRows([...rows, mkRow(rows.map((r) => r.batchId.trim()))])}>
           <Plus className="h-4 w-4" /> Add another batch
         </button>
         <p className="text-xs text-muted-foreground">Add another batch of this menu item with its own quantity and expiry date.</p>
       </Panel>
       {errors[0] === "Choose a menu item" && <p className="mt-2 text-sm text-destructive">Choose a menu item</p>}
-      <button className={`${btnPrimary} mt-4 h-12 w-full`} onClick={save}><Check className="h-4 w-4" /> Save production log</button>
+      {confirmDup && hasDup ? (
+        <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-3">
+          <p className="text-sm font-semibold text-foreground">A batch with the same quantity was already logged for this item on {shortDate(date)}.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button className={btnSecondary} onClick={() => setConfirmDup(false)}>Cancel</button>
+            <button className={btnPrimary} onClick={save}><Check className="h-4 w-4" /> Confirm: separate batch</button>
+          </div>
+        </div>
+      ) : (
+        <button className={`${btnPrimary} mt-4 h-12 w-full`} onClick={save}><Check className="h-4 w-4" /> Save production log</button>
+      )}
       {isWorkspaceOwner() && <p className="mt-3 text-center text-sm"><Link to="/menu/new" className="font-semibold text-accent">+ Create new menu item</Link></p>}
       {last && (
         <p className="mt-3 flex gap-2 rounded-xl bg-success/10 p-3 text-sm text-success"><CheckCircle2 className="h-5 w-5 shrink-0" /> {last}</p>
