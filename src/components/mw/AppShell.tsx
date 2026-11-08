@@ -12,12 +12,12 @@ import type { CollectionName } from "@/lib/types";
 
 const TABS: { to: string; label: string; mobileLabel: string; icon: typeof Trash2; pending?: CollectionName[] }[] = [
   { to: "/", label: "Home", mobileLabel: "Home", icon: LayoutDashboard },
+  { to: "/log-production", label: "Log Production", mobileLabel: "Production", icon: PackagePlus, pending: ["batches"] },
+  { to: "/sales", label: "Sales", mobileLabel: "Sales", icon: PhilippinePeso, pending: ["sales"] },
+  { to: "/log-waste", label: "Log Waste", mobileLabel: "Waste", icon: Trash2, pending: ["wasteLogs"] },
   { to: "/ingredients", label: "Ingredients", mobileLabel: "Ingredients", icon: Package },
   { to: "/menu-items", label: "Menu Items", mobileLabel: "Menu Items", icon: BookOpen },
   { to: "/menu", label: "Menu Map", mobileLabel: "Menu Map", icon: LayoutGrid },
-  { to: "/log-production", label: "Log Production", mobileLabel: "Production", icon: PackagePlus, pending: ["batches"] },
-  { to: "/log-waste", label: "Log Waste", mobileLabel: "Waste", icon: Trash2, pending: ["wasteLogs"] },
-  { to: "/sales", label: "Sales", mobileLabel: "Sales", icon: PhilippinePeso, pending: ["sales"] },
 ];
 
 function useActive() {
