@@ -11,7 +11,7 @@ export function sameDayBatches(batches: Batch[], menuItemId: string, date: strin
 }
 
 /** Earlier same-day batches whose quantity matches exactly (likely duplicates). */
-export function matchingQuantity(earlier: Batch[], quantity: number): Batch[] {
+export function matchingQuantity<T extends Batch>(earlier: T[], quantity: number): T[] {
   if (!Number.isFinite(quantity)) return [];
   return earlier.filter((b) => b.quantity === quantity);
 }
