@@ -11,6 +11,7 @@ import { clearCafeData, loadSampleData } from "@/lib/sample-data";
 import { avatarDataUrl } from "@/lib/image";
 import { isDemoMode, setPrefs, usePrefs, type Currency, type Landing, type Theme } from "@/lib/prefs";
 import { useThreshold } from "@/lib/settings";
+import { SetupWizard } from "@/components/mw/SetupWizard";
 import { downloadCsv } from "@/components/mw/ImportButton";
 import { PageTitle, CafeName } from "@/components/mw/AppShell";
 import { Avatar, useMe, useSignOut } from "@/components/mw/UserMenu";
@@ -236,6 +237,8 @@ function Profile() {
         <Choice<Currency> label="Currency format" value={prefs.currency} onChange={(currency) => setPrefs({ currency })} options={[{ v: "P", l: "P" }, { v: "₱", l: "₱" }]} />
         <p className="text-xs text-muted-foreground">Saved on this device. Works offline.</p>
       </Panel>
+
+      <SetupWizard alwaysShow />
 
       <Panel className="space-y-3">
         <SectionTitle>Data</SectionTitle>

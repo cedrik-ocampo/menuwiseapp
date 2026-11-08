@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check, AlertTriangle } from "lucide-react";
+import { SetupWizard } from "@/components/mw/SetupWizard";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { useDB, usePermissions } from "@/lib/store";
 import { compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
@@ -80,6 +81,7 @@ function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <SetupWizard />
       <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3">
