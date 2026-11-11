@@ -114,19 +114,17 @@ function Login() {
               </span>
             </label>
           )}
-          {mode === "login" && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{"\n"}</span>
-              <button type="button" className="font-semibold text-accent" onClick={() => setMode("forgot")}>Forgot password?</button>
-            </div>
-          )}
           {msg && <p className={`rounded-lg p-3 text-sm ${msg.tone === "error" ? "bg-destructive/10 text-destructive" : "bg-info-soft text-primary"}`}>{msg.text}</p>}
           <button disabled={busy} className={`${btnPrimary} h-12 w-full`}>
             <ArrowRight className="h-4 w-4" /> {mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Log in"}
           </button>
-          <p className="text-center text-sm">
+          <p className="flex flex-wrap items-center justify-center gap-x-2 text-center text-sm">
             {mode === "login" ? (
-              <button type="button" className="font-semibold text-accent" onClick={() => setMode("signup")}>No account yet? Sign up here.</button>
+              <>
+                <button type="button" className="font-semibold text-accent" onClick={() => setMode("signup")}>No account yet? Sign up here.</button>
+                <span aria-hidden className="text-muted-foreground">·</span>
+                <button type="button" className="font-semibold text-accent" onClick={() => setMode("forgot")}>Forgot password?</button>
+              </>
             ) : (
               <button type="button" className="font-semibold text-accent" onClick={() => setMode("login")}>Back to log in</button>
             )}
