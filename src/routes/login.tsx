@@ -116,7 +116,7 @@ function Login() {
           )}
           {mode === "login" && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">For safety, inactive sessions end after 30 minutes.</span>
+              <span className="text-muted-foreground">{"\n"}</span>
               <button type="button" className="font-semibold text-accent" onClick={() => setMode("forgot")}>Forgot password?</button>
             </div>
           )}
