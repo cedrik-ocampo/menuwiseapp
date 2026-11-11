@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] Build role-adaptive staff Home with expiry alerts, daily imports, team activity, and logging feedback.
+- [x] Test staff calculations and desktop/mobile presentation plus import review (owner data, simulated staff role; no writes).
+- [ ] Verify staff Home and importing end-to-end with a real employee account (current requesting account is an owner; employee session approval needed).
+
 - [x] Enforce owner/employee permissions in Cloud and offline entry controls.
 - [x] Limit employee edits to their own newest entry per operational log and prohibit deletion.
 - [ ] Verify real owner/employee flows with an employee account (rules tested).

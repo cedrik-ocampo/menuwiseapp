@@ -3,7 +3,7 @@ import { LayoutDashboard, Trash2, PackagePlus, LayoutGrid, Package, LogOut, Wifi
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import logo from "@/assets/mw-logo.png.asset.json";
-import { useDB, resetStore, currentWorkspace } from "@/lib/store";
+import { useDB, usePermissions, resetStore, currentWorkspace } from "@/lib/store";
 import { shortDate, todayISO } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,8 @@ function useActive() {
 export function NavBar() {
   const isActive = useActive();
   const db = useDB();
+  const perm = usePermissions();
+  const tabs = perm.isOwner ? TABS : TABS.filter((tab) => ["/", "/sales", "/log-production", "/log-waste"].includes(tab.to));
   return (
     <>
       {/* Mobile bottom tab bar */}
@@ -44,7 +46,7 @@ export function NavBar() {
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className="flex h-16 min-w-max">
-          {TABS.map((t, i) => {
+          {tabs.map((t, i) => {
             const active = isActive(t.to);
             const pending = t.pending?.some((c) => db.pendingCollections.has(c)) && !db.online;
             return (
@@ -54,7 +56,7 @@ export function NavBar() {
                   role="tab"
                   aria-selected={active}
                   aria-current={active ? "page" : undefined}
-                   aria-label={`${t.label}, tab, ${i + 1} of ${TABS.length}`}
+                   aria-label={`${t.label}, tab, ${i + 1} of ${tabs.length}`}
                   className={`relative flex min-h-12 w-full flex-col items-center justify-center gap-1 py-1.5 transition-transform duration-100 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${active ? "font-semibold text-primary" : "font-medium text-nav-inactive"}`}
                 >
                   {active && <span className="absolute top-0 h-[3px] w-8 rounded-full bg-primary" />}
@@ -77,7 +79,7 @@ export function NavBar() {
           <span className="text-lg font-bold text-primary">MenuWise</span>
         </div>
         <nav aria-label="Main" role="tablist" className="flex flex-col gap-1 px-3">
-          {TABS.map((t, i) => {
+          {tabs.map((t, i) => {
             const active = isActive(t.to);
             const pending = t.pending?.some((c) => db.pendingCollections.has(c)) && !db.online;
             return (
@@ -87,7 +89,7 @@ export function NavBar() {
                 role="tab"
                 aria-selected={active}
                 aria-current={active ? "page" : undefined}
-                 aria-label={`${t.label}, tab, ${i + 1} of ${TABS.length}`}
+                 aria-label={`${t.label}, tab, ${i + 1} of ${tabs.length}`}
                 className={`relative flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${active ? "bg-secondary font-semibold text-primary" : "font-medium text-nav-inactive hover:bg-muted"}`}
               >
                 {active && <span className="absolute left-0 h-6 w-[3px] rounded-full bg-primary" />}
@@ -104,6 +106,7 @@ export function NavBar() {
 }
 
 export function CafeName({ initial }: { initial: string }) {
+  const perm = usePermissions();
   const [name, setName] = useState(initial);
   const [draft, setDraft] = useState(initial);
   const [editing, setEditing] = useState(false);
@@ -132,6 +135,7 @@ export function CafeName({ initial }: { initial: string }) {
     if (error) toast.message("Saved on this device. It will update online when you're connected.");
     else toast.success("Café name updated");
   }
+  if (!perm.isOwner) return <p className="max-w-full truncate text-sm italic opacity-90">{name}</p>;
   if (editing) {
     return (
       <form className="mt-1 flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); void save(); }}>

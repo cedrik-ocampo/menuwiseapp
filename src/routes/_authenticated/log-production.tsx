@@ -11,8 +11,7 @@ import { consumeForProduction } from "@/lib/consume";
 import { addDays, fmtQty, shortDate, todayISO, timeOf } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
 import { ProductionTabs } from "@/components/mw/ProductionTabs";
-import { ImportButton, type ParsedRow } from "@/components/mw/ImportButton";
-import { parseProductionRows } from "@/lib/import-parsers";
+import { ProductionImport } from "@/components/mw/DailyImports";
 import type { Batch } from "@/lib/types";
 import { Field, Panel, SectionTitle, Stat, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 
@@ -105,12 +104,7 @@ function LogProduction() {
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Log Production" subtitle="Track every batch, from bake to expiry." />
       <ProductionTabs active="log" />
       <SectionTitle right={
-        <ImportButton what="production entries" columns={PROD_COLS} className="h-9 px-3" fields={{ menuitemid: { options: db.menuItems.map((m) => m.id), labels: Object.fromEntries(db.menuItems.map((m) => [m.id, m.name])) }, producedat: { type: "date" }, expirydate: { type: "date" }, quantity: { type: "number" } }} parse={(rows) => parseProductionRows(rows, db)} commit={(items) => items.forEach((b) => {
-          put("batches", b);
-          const m = db.menuItems.find((x) => x.id === b.menuItemId);
-          if (m) consumeForProduction(m, b.quantity, b.producedAt.slice(0, 10), b.id);
-        })}
-          template={{ filename: "production-template.csv", header: ["Menu_Item_ID", "quantity", "producedAt", "expiryDate", "Batch_ID", "Note"], rows: [[db.menuItems[0]?.id ?? "Spanish Latte", "12", todayISO(), addDays(todayISO(), 1), "EXAMPLE-BATCH", "Example batch"]] }} />
+        <ProductionImport />
       }>Production Log Form</SectionTitle>
       <p className="-mt-2 mb-3 text-xs text-muted-foreground">Import · Required Columns: {PROD_COLS}.</p>
       <Panel className="space-y-4">

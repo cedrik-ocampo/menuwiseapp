@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check, AlertTriangle } from "lucide-react";
 import { SetupWizard } from "@/components/mw/SetupWizard";
+import { StaffDashboard } from "@/components/mw/StaffDashboard";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { QuadrantLabel } from "@/components/mw/QuadrantLabel";
 import { useDB, usePermissions } from "@/lib/store";
@@ -51,6 +52,13 @@ function Trend({ pct, offset, prev, hidden, upIsGood }: { pct: number | null; of
 }
 
 function Dashboard() {
+  const perm = usePermissions();
+  const db = useDB();
+  if (!db.ready) return <p role="status" className="text-sm text-muted-foreground">Loading your café…</p>;
+  return perm.isOwner ? <OwnerDashboard /> : <StaffDashboard />;
+}
+
+function OwnerDashboard() {
   const perm = usePermissions();
   const db = useDB();
   const navigate = useNavigate();

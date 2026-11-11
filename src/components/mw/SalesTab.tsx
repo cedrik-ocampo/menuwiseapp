@@ -3,29 +3,14 @@ import { useNavigate } from "@tanstack/react-router";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { put, remove, useDB, usePermissions, type DBView } from "@/lib/store";
+import { remove, useDB, usePermissions } from "@/lib/store";
 import { saleRevenue, saleUnitPrice, salesTrend, weekStart, type TrendPoint } from "@/lib/calc";
-import { addDays, formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
-import { parseSales } from "@/lib/import-parsers";
-import { mergeSales } from "@/lib/import-review";
+import { addDays, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import type { Audit, Sale } from "@/lib/types";
 import { AuditCaption } from "./Audit";
-import { ImportButton, type ParsedRow } from "./ImportButton";
+import { SalesImport } from "./DailyImports";
 import { SaleDialog } from "./SaleDialog";
 import { Panel, SectionTitle, Stat, btnPrimary, btnSecondary } from "./ui";
-
-const SALES_COLS = "sale_date, menu_item_id, quantity (Optional: unit_price, notes)";
-
-function template(db: DBView) {
-  const t = todayISO();
-  const fallback = [["ML-001", "Spanish Latte", "180"], ["PS-002", "Almond Croissant", "145"], ["CK-003", "Matcha Cheesecake", "195"]];
-  const items = db.menuItems.length ? db.menuItems.slice(0, 3).map((m) => [m.id, m.name, String(m.retailPrice)]) : fallback;
-  return {
-    filename: "menuwise-sales-template.csv",
-    header: ["sale_date", "menu_item_id", "quantity", "unit_price", "notes"],
-    rows: items.map(([id, name, price], i) => [addDays(t, -i), id, String(12 - i * 4), price, i === 0 ? `Example: ${name}` : ""]),
-  };
-}
 
 export function SalesTab({ compactHeader = false }: { compactHeader?: boolean }) {
   const perm = usePermissions();
@@ -59,7 +44,7 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
           <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: sale_date, menu_item_id, quantity. Optional: unit_price, notes.</p>
         </div>
         <div className="flex gap-2">
-          <ImportButton what="sales" columns={SALES_COLS} template={template(db)} parse={(rows) => parseSales(rows, db)} allowMerge fields={{ menuitemid: { options: db.menuItems.map((m) => m.id), labels: Object.fromEntries(db.menuItems.map((m) => [m.id, m.name])) }, saledate: { type: "date" }, quantity: { type: "number" }, unitprice: { type: "number" } }} commit={(items, merges = []) => { const result = mergeSales(db.sales, items, merges); result.filter((sale) => !db.sales.includes(sale)).forEach((sale) => put("sales", sale)); }} />
+          <SalesImport />
           <button type="button" className={btnSecondary} onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Manual Entry</button>
         </div>
       </div>
