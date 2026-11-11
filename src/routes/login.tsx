@@ -126,7 +126,7 @@ function Login() {
           </button>
           <p className="text-center text-sm">
             {mode === "login" ? (
-              <button type="button" className="font-semibold text-accent" onClick={() => setMode("signup")}>Need access? Create a café account</button>
+              <button type="button" className="font-semibold text-accent" onClick={() => setMode("signup")}>No account yet? Sign up here.</button>
             ) : (
               <button type="button" className="font-semibold text-accent" onClick={() => setMode("login")}>Back to log in</button>
             )}
