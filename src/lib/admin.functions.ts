@@ -143,3 +143,39 @@ export const setBugStatus = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Admin setup: verifies the admin role, then adds or updates menu items in a café with café-visible admin change logs. */
+export const adminSaveMenuItems = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      workspaceId: z.string().uuid(),
+      items: z.array(z.object({ id: z.string().min(1).max(200), name: z.string().trim().min(1).max(120) }).passthrough()).min(1).max(500),
+      note: z.string().trim().max(300).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ws } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).maybeSingle();
+    if (!ws) throw new Error("Café not found");
+    const ids = data.items.map((i) => i.id);
+    const { data: existing } = await supabaseAdmin.from("records").select("id").eq("workspace_id", data.workspaceId).eq("collection", "menuItems").in("id", ids);
+    const known = new Set((existing ?? []).map((r) => r.id));
+    const now = new Date().toISOString();
+    const stamp = { updatedBy: context.userId, updatedByName: "MenuWise Admin", updatedAt: now };
+    const rows = data.items.map((item) => ({
+      id: item.id, collection: "menuItems", user_id: context.userId, workspace_id: data.workspaceId, deleted: false, updated_at: now,
+      data: { ...item, ...stamp, ...(known.has(item.id) ? {} : { createdBy: context.userId, createdByName: "MenuWise Admin", createdAt: now }) } as never,
+    }));
+    const { error } = await supabaseAdmin.from("records").upsert(rows, { onConflict: "workspace_id,collection,id" });
+    if (error) throw new Error("Could not save menu items");
+    const logs = data.items.map((item, i) => {
+      const id = `menuItems-${item.id}-${Date.now()}-${i}-admin`;
+      return { id, collection: "changeLogs", user_id: context.userId, workspace_id: data.workspaceId, updated_at: now,
+        data: { id, collection: "menuItems", recordId: item.id, action: known.has(item.id) ? "edited" : "created", at: now, by: context.userId, byName: "MenuWise Admin", changes: [{ field: "name", from: null, to: item.name }], adminEdit: true, note: data.note || undefined } as never };
+    });
+    const { error: e2 } = await supabaseAdmin.from("records").insert(logs);
+    if (e2) throw new Error("Saved, but the change log failed");
+    return { added: data.items.length - known.size, updated: known.size };
+  });

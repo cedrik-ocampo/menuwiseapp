@@ -4,7 +4,10 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Pencil, ShieldCheck } from "lucide-react";
-import { adminUpdateRecord, getCafe } from "@/lib/admin.functions";
+import { adminSaveMenuItems, adminUpdateRecord, getCafe } from "@/lib/admin.functions";
+import { MenuImport } from "@/components/mw/MenuImport";
+import type { DBView } from "@/lib/store";
+import type { MenuItem } from "@/lib/types";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Panel, SectionTitle, Segmented, Stat } from "@/components/mw/ui";
 import { formatPeso, fmtQty, shortDate, todayISO, addDays } from "@/lib/format";
@@ -66,6 +69,7 @@ function AdminCafe() {
           <Stat label="Production batches" value={String(by.batches?.length ?? 0)} />
         </div>
       )}
+      {tab === "Menu Items" && editMode && <AdminMenuSetup workspaceId={id} by={by} />}
       {tab === "Menu Items" && (editMode
         ? <EditTable workspaceId={id} collection="menuItems" records={by.menuItems ?? []} fields={[{ k: "name", label: "Name" }, { k: "category", label: "Category" }, { k: "retailPrice", label: "Retail (₱)", num: true }]} />
         : <Table head={["ID", "Name", "Category", "Type", "Retail", "Last edit"]} rows={(by.menuItems ?? []).map((m) => [m.id, m.name, m.category, m.type, formatPeso(m.retailPrice ?? 0), m.updatedByName ? `${m.updatedByName} · ${shortDate(m.updatedAt)}` : "—"])} />)}
@@ -164,5 +168,43 @@ function EditRow({ workspaceId, collection, rec, fields }: { workspaceId: string
         <button type="button" disabled={!dirty || busy} onClick={() => void submit()} className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-40">{busy ? "Saving…" : "Save"}</button>
       </div>
     </div>
+  );
+}
+
+function AdminMenuSetup({ workspaceId, by }: { workspaceId: string; by: Record<string, Rec[]> }) {
+  const save = useServerFn(adminSaveMenuItems);
+  const qc = useQueryClient();
+  const db = useMemo(() => ({ ready: true, ingredients: by.ingredients ?? [], purchases: by.purchases ?? [], usages: by.usages ?? [], menuItems: by.menuItems ?? [], batches: by.batches ?? [], sales: by.sales ?? [], wasteLogs: by.wasteLogs ?? [], changeLogs: [], insightResponses: [], pendingCollections: new Set(), online: true }) as unknown as DBView, [by]);
+  const [f, setF] = useState({ name: "", category: "", retailPrice: "", purchase: "", pieces: "1", shelf: "1" });
+  const [busy, setBusy] = useState(false);
+  async function persist(items: MenuItem[]) {
+    const res = await save({ data: { workspaceId, items: items as unknown as { id: string; name: string }[] } });
+    toast.success(`Saved for this café: ${res.added} added, ${res.updated} updated.`);
+    await qc.invalidateQueries({ queryKey: ["admin"] });
+  }
+  async function add() {
+    const name = f.name.trim(), price = Number(f.retailPrice), cost = Number(f.purchase), pieces = Number(f.pieces), shelf = Number(f.shelf);
+    if (!name || !f.category.trim()) { toast.error("Name and category are required"); return; }
+    if (db.menuItems.some((m) => m.name.trim().toLowerCase() === name.toLowerCase())) { toast.error("A menu item with this name already exists"); return; }
+    if (!(price > 0) || !(cost >= 0) || !(pieces > 0) || !(shelf >= 0)) { toast.error("Check the prices, pieces and shelf life"); return; }
+    const item: MenuItem = { id: `M-${Date.now().toString(36)}`, name, category: f.category.trim(), subcategory: "", description: "", available: true, tags: [], type: "Outsourced", batchCost: 0, yield: pieces, purchaseCost: cost, unit: "piece", retailPrice: price, supplier: "", shelfLifeDays: shelf, expiryRule: "After the shelf life", defaultBatchSize: 1, batchUnit: "pieces", defaultExpiryDays: shelf, defaultWasteStage: "Finished Product", defaultWasteType: "Unsold", allowQuickAdd: true, recipe: [] } as MenuItem;
+    setBusy(true);
+    try { await persist([item]); setF({ name: "", category: "", retailPrice: "", purchase: "", pieces: "1", shelf: "1" }); }
+    catch { toast.error("Couldn't add this item"); } finally { setBusy(false); }
+  }
+  const input = "mt-1 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground";
+  const fields: [keyof typeof f, string][] = [["name", "Name"], ["category", "Category"], ["retailPrice", "Selling price (₱)"], ["purchase", "Purchase price (₱)"], ["pieces", "Pieces per purchase"], ["shelf", "Shelf life (days)"]];
+  return (
+    <Panel className="mb-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <SectionTitle>Set up menu items for this café</SectionTitle>
+        <MenuImport db={db} save={persist} />
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">Quick add creates a ready-to-sell item without a recipe. For recipes, use Import. Everything is labeled as a MenuWise Admin change for the café.</p>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {fields.map(([k, label]) => <label key={k} className="text-xs font-medium text-muted-foreground">{label}<input value={f[k]} inputMode={k === "name" || k === "category" ? undefined : "decimal"} onChange={(e) => setF({ ...f, [k]: e.target.value })} className={input} /></label>)}
+      </div>
+      <button type="button" disabled={busy} onClick={() => void add()} className="mt-3 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-40">{busy ? "Adding…" : "Add item"}</button>
+    </Panel>
   );
 }

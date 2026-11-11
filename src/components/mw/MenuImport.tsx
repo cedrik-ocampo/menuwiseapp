@@ -1,12 +1,14 @@
 import { ImportButton } from './ImportButton';
-import { put, useDB } from '@/lib/store';
+import { put, useDB, type DBView } from '@/lib/store';
+import type { MenuItem } from '@/lib/types';
 import { CATS, EXPIRY_OPTIONS, parseMenuRows } from '@/lib/import-parsers';
 import { compatibleRecipeUnits, ITEM_TYPE_LABELS } from '@/lib/menu-costing';
 
-export function MenuImport() {
-  const db = useDB();
+export function MenuImport({ db: dbOverride, save }: { db?: DBView; save?: (items: MenuItem[]) => Promise<void> } = {}) {
+  const local = useDB();
+  const db = dbOverride ?? local;
   return <ImportButton what="menu items with recipes" columns="Menu_Item_Name, category, type, Selling_Price, Shelf_Life_Days, Expires_When"
-    parse={(rows) => parseMenuRows(rows, db)} commit={(items, merges = []) => { items.forEach((item) => put('menuItems', item)); merges.forEach((item) => { const old = db.menuItems.find((m) => m.id === item.id); put('menuItems', old ? { ...old, ...item, description: item.description || old.description, tags: item.tags.length ? item.tags : old.tags, supplier: item.supplier || old.supplier } : item); }); }}
+    parse={(rows) => parseMenuRows(rows, db)} commit={async (items, merges = []) => { const all = [...items, ...merges.map((item) => { const old = db.menuItems.find((m) => m.id === item.id); return old ? { ...old, ...item, description: item.description || old.description, tags: item.tags.length ? item.tags : old.tags, supplier: item.supplier || old.supplier } : item; })]; if (save) { await save(all); return; } items.forEach((item) => put('menuItems', item)); merges.forEach((item) => { const old = db.menuItems.find((m) => m.id === item.id); put('menuItems', old ? { ...old, ...item, description: item.description || old.description, tags: item.tags.length ? item.tags : old.tags, supplier: item.supplier || old.supplier } : item); }); }}
     allowMerge allowAddDuplicate={false} mergeLabel="Update existing item" mergeSummary="existing menu items to update"
     fields={{ ingredientname: { options: db.ingredients.map((i) => i.name) }, category: { options: Object.keys(CATS), allowCustom: true }, subcategory: { options: (row) => CATS[row.category] ?? [], allowCustom: true }, type: { options: Object.values(ITEM_TYPE_LABELS) }, unit: { options: (row) => compatibleRecipeUnits(db.ingredients.find((i) => i.name.toLowerCase() === (row.ingredientname || '').toLowerCase())?.unit) }, expireswhen: { options: EXPIRY_OPTIONS }, available: { options: ['true', 'false'] } }}
     template={{ filename: 'menu-items-with-recipes-template.csv', header: ['Menu_Item_Name', 'Category', 'Subcategory', 'Type', 'Selling_Price', 'Batch_Yield', 'Batch_Purchase_Price', 'Pieces_Per_Batch', 'Ingredient_Name', 'Amount', 'Unit', 'Shelf_Life_Days', 'Expires_When', 'Description', 'Tags', 'Supplier', 'Available'], rows: [
