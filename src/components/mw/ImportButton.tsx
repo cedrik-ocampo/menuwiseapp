@@ -11,10 +11,10 @@ import { inputCls } from "./ui";
 export interface ParsedRow<T> { line: number; label: string; item?: T; error?: string; flag?: string; duplicate?: boolean }
 export interface ImportTemplate { filename: string; header: string[]; rows: string[][] }
 export interface ImportField { options?: string[] | ((row: Row) => string[]); type?: 'text' | 'number' | 'date' | 'time'; allowCustom?: boolean; labels?: Record<string, string> }
-export function ImportButton<T>({ what, columns, parse, commit, className = "", template, fields = {}, allowMerge = false }: {
+export function ImportButton<T>({ what, columns, parse, commit, className = "", template, fields = {}, allowMerge = false, mergeLabel = 'Merge (same date, item and price)', mergeSummary = 'sales entries to combine', allowAddDuplicate = true }: {
   what: string; columns: string; parse: (rows: Row[]) => ParsedRow<T>[];
   commit: (items: T[], merges?: T[]) => void | Promise<void>; className?: string; template?: ImportTemplate;
-  fields?: Record<string, ImportField>; allowMerge?: boolean;
+  fields?: Record<string, ImportField>; allowMerge?: boolean; mergeLabel?: string; mergeSummary?: string; allowAddDuplicate?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [raw, setRaw] = useState<Row[] | null>(null);
@@ -62,10 +62,10 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
     </DropdownMenu>
     <Dialog open={raw !== null} onOpenChange={(open) => { if (!open && !saving) setRaw(null); }}><DialogContent className="flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col sm:max-w-6xl">
       <DialogHeader><DialogTitle>{confirm ? 'Confirm import' : 'Review import'}</DialogTitle><DialogDescription>{what} · {ready} ready · {corrected.size} rows corrected · {resolved.skipped.length} entries skipped · {entries.filter((e) => e.duplicate).length} possible duplicates</DialogDescription></DialogHeader>
-      {confirm ? <div className="space-y-3 py-4"><p className="text-sm text-foreground">{resolved.add.length} entries to add{allowMerge ? ` · ${resolved.merge.length} sales entries to combine` : ""}.</p><p className="text-sm text-muted-foreground">Only approved entries are saved. Unresolved or skipped entries are excluded.</p></div> : <div className="min-h-0 space-y-4 overflow-y-auto">
+      {confirm ? <div className="space-y-3 py-4"><p className="text-sm text-foreground">{resolved.add.length} entries to add{allowMerge ? ` · ${resolved.merge.length} ${mergeSummary}` : ""}.</p><p className="text-sm text-muted-foreground">Only approved entries are saved. Unresolved or skipped entries are excluded.</p></div> : <div className="min-h-0 space-y-4 overflow-y-auto">
         {entries.map((entry) => <div key={entry.line} className="space-y-2 border-b border-border py-3">
           <div className="flex flex-wrap items-center justify-between gap-2"><p className="min-w-0 break-words font-semibold text-primary">Row {entry.line}: {entry.label || 'Unnamed entry'}</p>
-            <select aria-label={`Decision for row ${entry.line}`} className={`${inputCls} w-auto`} value={decisions[entry.line] ?? (entry.duplicate ? 'skip' : 'add')} onChange={(e) => setDecisions({ ...decisions, [entry.line]: e.target.value as ImportDecision })}><option value="add">{entry.duplicate ? 'Add anyway' : 'Add'}</option><option value="skip">Skip</option>{allowMerge && entry.duplicate && <option value="merge">Merge (same date, item and price)</option>}</select></div>
+            <select aria-label={`Decision for row ${entry.line}`} className={`${inputCls} w-auto`} value={decisions[entry.line] ?? (entry.duplicate ? 'skip' : 'add')} onChange={(e) => setDecisions({ ...decisions, [entry.line]: e.target.value as ImportDecision })}>{(!entry.duplicate || allowAddDuplicate) && <option value="add">{entry.duplicate ? 'Add anyway' : 'Add'}</option>}<option value="skip">Skip</option>{allowMerge && entry.duplicate && <option value="merge">{mergeLabel}</option>}</select></div>
           {entry.error && <p role="alert" className="text-sm text-destructive">{entry.error}</p>}{entry.flag && <p className="text-sm text-warning">{entry.flag}</p>}{entry.duplicate && <p className="text-sm text-warning">Possible duplicate — skipped unless you choose otherwise.</p>}
         </div>)}
         <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">Row</th>{headers.map((key) => <th className="p-2" key={key}>{template?.header.find((h) => keyOf(h) === key)?.replace(/_/g, ' ') ?? key}</th>)}<th /></tr></thead><tbody>

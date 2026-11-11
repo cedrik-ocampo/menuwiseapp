@@ -23,3 +23,13 @@ describe('editable import rules', () => {
   it('imports waste attribution and allocation and validates time', () => { const row = { stage: 'Ingredient', date: '2026-10-01', time: '08:00', wastetype: 'Spill', quantity: '1', unit: 'kg', unitcost: '100', ingredientid: 'ING-1', attributedmenuitemid: menu?.id ?? '', allocationmethod: 'Manual' }; expect(parseWasteRows([row], cafe)[0].item).toMatchObject({ value: 100, attributedMenuItemId: menu?.id, allocation: 'Manual' }); expect(parseWasteRows([{ ...row, time: '25:99' }], cafe)[0].item).toBeUndefined(); });
   it('rejects impossible dates', () => { expect(normDate('2026-02-30')).toBe(''); });
 });
+
+describe('menu import updates existing items', () => {
+  it('flags a same-name item as a duplicate that keeps the existing ID', () => {
+    const existing = { ...menu!, id: 'MI-EXISTING' };
+    const r = parseMenuRows([outsourced], { ...db, menuItems: [existing] } as never)[0];
+    expect(r.error).toBeUndefined();
+    expect(r.duplicate).toBe(true);
+    expect(r.item?.id).toBe('MI-EXISTING');
+  });
+});

@@ -12,7 +12,7 @@ describe("Phase 1 account and guidance requirements", () => {
   });
 
   it("keeps the approved invitation copy and exposes support", () => {
-    expect(read("routes/_authenticated/profile.tsx")).toContain("You have been invited to join MenuWise Analytics for");
+    expect(read("routes/_authenticated/profile.tsx")).toContain("sign up at MenuWise with this email address");
     expect(read("routes/_authenticated/help.tsx")).toContain("menuwise.contact@gmail.com");
   });
 

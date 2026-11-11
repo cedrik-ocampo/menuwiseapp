@@ -27,7 +27,7 @@ export function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
     const row = first.row;
     const base = { line: first.line, label: `${group.name || "Unnamed item"} · ${group.rows.length} recipe row${group.rows.length === 1 ? "" : "s"}` };
     if (!group.name) return { ...base, error: "Menu Item Name is required" };
-    if (db.menuItems.some((item) => item.name.trim().toLowerCase() === group.name.toLowerCase())) return { ...base, error: "A menu item with this name already exists" };
+    const existing = db.menuItems.find((item) => item.name.trim().toLowerCase() === group.name.toLowerCase());
 
     const type = itemTypeFromLabel(row.type || "");
     if (!type) return { ...base, error: `Unknown item type "${row.type || ""}"` };
@@ -82,13 +82,14 @@ export function parseMenuRows(rows: Row[], db: DBView): ParsedRow<MenuItem>[] {
     const subcategories = CATS[category.value] ?? [];
     const subcategory = row.subcategory?.trim() ? normalizeCategory(row.subcategory, subcategories).value : "";
     const item: MenuItem = {
-      id: internalId(db.menuItems.length + groupIndex), name: group.name, category: category.value, subcategory,
+      id: existing?.id ?? internalId(db.menuItems.length + groupIndex), name: existing?.name ?? group.name, category: category.value, subcategory,
       description: (row.description || "").trim(), available: !["false", "no", "0"].includes((row.available || "true").toLowerCase()), tags: (row.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean), type, batchCost: 0, yield: type === "Outsourced" ? toNum(row.piecesperbatch) : yieldAmount,
       purchaseCost, unit: "piece", retailPrice: sellingPrice, supplier: (row.supplier || "").trim(), shelfLifeDays: shelfLife, expiryRule,
       defaultBatchSize: type === "In-house" ? yieldAmount : 1, batchUnit: "pieces", defaultExpiryDays: expiryRule === EXPIRY_OPTIONS[1] ? 0 : shelfLife,
       defaultWasteStage: "Finished Product", defaultWasteType: "Unsold", allowQuickAdd: true, recipe,
     };
     item.batchCost = type === "Outsourced" ? 0 : recipeCost(db, item);
+    if (existing) return { ...base, duplicate: true, flag: `Already in your menu — choose "Update existing item" to replace its type, prices and recipe. Its sales and waste history stay linked.`, item };
     return { ...base, flag: category.known ? undefined : `New category: "${category.value}"`, item };
   });
 }
