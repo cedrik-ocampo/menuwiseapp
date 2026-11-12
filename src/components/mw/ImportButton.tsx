@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { keyOf, readWorkbook, type Row, type SheetData } from "@/lib/import";
+import { chronologicalSheets, keyOf, normDate, readWorkbook, type Row, type SheetData } from "@/lib/import";
 import { resolveImport, type ImportDecision } from "@/lib/import-review";
 import { inputCls } from "./ui";
 import { applyMapping, guessMapping, matchesTemplate, type Mapping } from "@/lib/column-mapper";
@@ -28,6 +28,12 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
   const [mapRows, setMapRows] = useState<Row[] | null>(null);
   const [mapping, setMapping] = useState<Mapping>({});
   const [sheets, setSheets] = useState<SheetData[] | null>(null);
+  const [selectedSheets, setSelectedSheets] = useState<Set<string>>(new Set());
+  const [queue, setQueue] = useState<SheetData[]>([]);
+  const [activeSheet, setActiveSheet] = useState<SheetData | null>(null);
+  const [sheetProgress, setSheetProgress] = useState({ current: 1, total: 1 });
+  const selected = (sheets ?? []).filter((sheet) => selectedSheets.has(sheet.name));
+  const needsDates = selected.length > 1 && selected.some((sheet) => !normDate(sheet.date));
   const targetFields = (template?.header ?? requiredCols(columns)).map(keyOf);
   const targetLabel = (key: string) => template?.header.find((h) => keyOf(h) === key)?.replace(/_/g, ' ') ?? key;
   const fileCols = mapRows ? [...new Set(mapRows.flatMap(Object.keys))].filter((k) => k !== '__line') : [];
@@ -42,12 +48,16 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
     try {
       const book = await readWorkbook(file);
       if (!book.length) { toast.error('That file has no rows'); return; }
-      if (book.length > 1) { setSheets(book); return; }
+      setQueue([]); setActiveSheet(null);
+      if (book.length > 1) { setSelectedSheets(new Set()); setSheets(book); return; }
+      setSheetProgress({ current: 1, total: 1 });
       useSheet(book[0]);
     } catch { toast.error("Couldn't read that file. Use Excel (.xlsx) or CSV."); }
   }
   function useSheet(sheet: SheetData) {
     setSheets(null);
+    setActiveSheet(sheet);
+    setRaw(null); setMapRows(null);
     const rows = sheet.date ? sheet.rows.map((row) => ({ ...row, sheetdate: sheet.date })) : sheet.rows;
     const lined = rows.map((row, index) => ({ ...row, __line: String(index + 2) }));
     setDecisions({}); setCorrected(new Set()); setConfirm(false);
@@ -55,6 +65,15 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
     if (matchesTemplate(targetFields, cols)) setRaw(lined);
     else { setMapping(guessMapping(targetFields, cols)); setMapRows(lined); }
   }
+  function startSheets() {
+    const ordered = chronologicalSheets(selected);
+    const first = ordered[0];
+    if (!first) return;
+    setQueue(ordered.slice(1));
+    setSheetProgress({ current: 1, total: ordered.length });
+    useSheet(first);
+  }
+  function cancelImport() { setRaw(null); setMapRows(null); setQueue([]); setActiveSheet(null); }
   function edit(line: number, key: string, value: string) {
     setRaw((rows) => rows?.map((row) => Number(row.__line) === line ? { ...row, [key]: value } : row) ?? null);
     setCorrected((current) => new Set([...current, line])); setConfirm(false);
@@ -65,20 +84,28 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
       await commit(resolved.add, resolved.merge);
       toast.success(`Imported ${ready} ${what}. ${resolved.skipped.length} skipped.`);
       if (resolved.skipped.length) downloadCsv(`${what.replace(/\s+/g, '-')}-import-errors.csv`, [['row', 'reason', ...headers], ...resolved.skipped.map((entry) => { const row = raw?.find((r) => Number(r.__line) === entry.line); return [String(entry.line), entry.error ?? (entry.duplicate ? 'Possible duplicate — skipped' : 'Skipped by choice'), ...headers.map((key) => row?.[key] ?? '')]; })]);
-      setRaw(null);
+      const next = queue[0];
+      if (next) {
+        setQueue(queue.slice(1));
+        setSheetProgress((progress) => ({ ...progress, current: progress.current + 1 }));
+        useSheet(next);
+      } else cancelImport();
     } catch { toast.error('Import could not finish. Check the saved entries before trying again.'); }
     finally { setSaving(false); }
   }
   return <>
     <Dialog open={!!sheets} onOpenChange={(open) => { if (!open) setSheets(null); }}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Which sheet do you want to import?</DialogTitle>
-          <DialogDescription>This file has {sheets?.length} tabs. Pick one — usually the latest day. If the tab name is a date, it fills the date for you.</DialogDescription></DialogHeader>
-        <div className="max-h-[60vh] space-y-2 overflow-y-auto">{[...(sheets ?? [])].reverse().map((sheet, i) => (
-          <button key={sheet.name} type="button" onClick={() => useSheet(sheet)} className="flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted">
-            <span className="font-medium">{sheet.name}{i === 0 && <span className="ml-2 text-xs text-muted-foreground">(last tab)</span>}</span>
-            <span className="text-xs text-muted-foreground">{sheet.rows.length} rows{sheet.date ? ` · ${sheet.date}` : ''}</span>
-          </button>))}</div>
+        <DialogHeader><DialogTitle>Select sheets to import</DialogTitle>
+          <DialogDescription>{sheets?.length} sheets available.</DialogDescription></DialogHeader>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label="Select all sheets" checked={!!sheets?.length && selectedSheets.size === sheets.length} onChange={(event) => setSelectedSheets(new Set(event.target.checked ? sheets?.map((sheet) => sheet.name) : []))} />Select all</label>
+        <div className="max-h-[50vh] space-y-2 overflow-y-auto">{[...(sheets ?? [])].sort((a, b) => a.date.localeCompare(b.date)).map((sheet) => (
+          <div key={sheet.name} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm">
+            <label className="flex min-w-0 items-center gap-2"><input type="checkbox" aria-label={`Select sheet ${sheet.name}`} checked={selectedSheets.has(sheet.name)} onChange={(event) => setSelectedSheets((current) => { const next = new Set(current); if (event.target.checked) next.add(sheet.name); else next.delete(sheet.name); return next; })} /><span className="break-words font-medium">{sheet.name}</span><span className="text-xs text-muted-foreground">{sheet.rows.length} rows</span></label>
+            <input type="date" aria-label={`Date for sheet ${sheet.name}`} className={`${inputCls} w-auto`} value={sheet.date} onChange={(event) => setSheets((current) => current?.map((s) => s.name === sheet.name ? { ...s, date: event.target.value } : s) ?? null)} />
+          </div>))}</div>
+        {needsDates && <p role="alert" className="text-sm text-destructive">Set a date for every selected sheet.</p>}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3"><span className="text-xs text-muted-foreground">{selected.length} selected · Earliest → latest</span><Button disabled={!selected.length || needsDates} onClick={startSheets}>Continue</Button></div>
       </DialogContent>
     </Dialog>
     <input aria-label={`Import ${what} file`} ref={fileRef} type="file" accept={accept} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void onFile(file); }} />
@@ -89,18 +116,20 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
         <DropdownMenuItem onSelect={() => { toast.message('Download your Google Sheet as Excel or CSV, then choose that file.'); pick('.xlsx,.xls,.csv'); }}>Google Sheets</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <Dialog open={mapRows !== null} onOpenChange={(open) => { if (!open) setMapRows(null); }}><DialogContent className="flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col sm:max-w-3xl">
+    <Dialog open={mapRows !== null} onOpenChange={(open) => { if (!open) cancelImport(); }}><DialogContent className="flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col sm:max-w-3xl">
       <DialogHeader><DialogTitle>Match your columns</DialogTitle><DialogDescription>Your file doesn't use the MenuWise {what} template. Pick which of your columns fills each field, or type a value to use for every row. We guessed where we could.</DialogDescription></DialogHeader>
-      <div className="min-h-0 space-y-3 overflow-y-auto">{targetFields.map((key) => { const m = mapping[key] ?? {}; const sample = m.column ? mapRows?.slice(0, 3).map((r) => r[m.column!]).filter(Boolean).join(' · ') : '';
+      {sheetProgress.total > 1 && <p className="text-sm font-medium">Sheet {sheetProgress.current} of {sheetProgress.total}: {activeSheet?.name} · {activeSheet?.date}</p>}
+      <div className="min-h-0 space-y-3 overflow-y-auto">{targetFields.map((key) => { const m = mapping[key] ?? {}; const column = m.column; const sample = column ? mapRows?.slice(0, 3).map((r) => r[column]).filter(Boolean).join(' · ') : '';
         return <div key={key} className="grid gap-2 border-b border-border pb-3 sm:grid-cols-[180px_1fr_1fr] sm:items-center">
           <p className="text-sm font-semibold text-primary">{targetLabel(key)}</p>
           <div><select aria-label={`Column for ${targetLabel(key)}`} className={inputCls} value={m.column ?? ''} onChange={(e) => setMapping({ ...mapping, [key]: { ...m, column: e.target.value || undefined } })}><option value="">Not in my file</option>{fileCols.map((c) => <option key={c} value={c}>{c}</option>)}</select>{sample && <p className="mt-1 truncate text-xs text-muted-foreground">e.g. {sample}</p>}</div>
           <input aria-label={`Value for every row: ${targetLabel(key)}`} placeholder={m.column ? 'If blank, use…' : 'Use this for every row'} className={inputCls} type={fields[key]?.type === 'date' ? 'date' : 'text'} value={m.fixed ?? ''} onChange={(e) => setMapping({ ...mapping, [key]: { ...m, fixed: e.target.value } })} />
         </div>; })}</div>
-      <div className="flex justify-end gap-2 border-t border-border pt-3"><Button variant="outline" onClick={() => setMapRows(null)}>Cancel</Button><Button onClick={() => { setRaw(applyMapping(mapRows ?? [], mapping, numericFields)); setMapRows(null); }}>Convert &amp; review</Button></div>
+      <div className="flex justify-end gap-2 border-t border-border pt-3"><Button variant="outline" onClick={cancelImport}>Cancel</Button><Button onClick={() => { setRaw(applyMapping(mapRows ?? [], mapping, numericFields)); setMapRows(null); }}>Convert &amp; review</Button></div>
     </DialogContent></Dialog>
-    <Dialog open={raw !== null} onOpenChange={(open) => { if (!open && !saving) setRaw(null); }}><DialogContent className="flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col sm:max-w-6xl">
+    <Dialog open={raw !== null} onOpenChange={(open) => { if (!open && !saving) cancelImport(); }}><DialogContent className="flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col sm:max-w-6xl">
       <DialogHeader><DialogTitle>{confirm ? 'Confirm import' : 'Review import'}</DialogTitle><DialogDescription>{what} · {ready} ready · {corrected.size} rows corrected · {resolved.skipped.length} entries skipped · {entries.filter((e) => e.duplicate).length} possible duplicates</DialogDescription></DialogHeader>
+      {sheetProgress.total > 1 && <p className="text-sm font-medium">Sheet {sheetProgress.current} of {sheetProgress.total}: {activeSheet?.name} · {activeSheet?.date}</p>}
       {options && !confirm && <div className="shrink-0 rounded-md border border-border bg-muted/40 px-3 py-2">{options}</div>}
       {confirm ? <div className="space-y-3 py-4"><p className="text-sm text-foreground">{resolved.add.length} entries to add{allowMerge ? ` · ${resolved.merge.length} ${mergeSummary}` : ""}.</p><p className="text-sm text-muted-foreground">Only approved entries are saved. Unresolved or skipped entries are excluded.</p></div> : <div className="min-h-0 space-y-4 overflow-y-auto">
         {entries.map((entry) => <div key={entry.line} className="space-y-2 border-b border-border py-3">
@@ -117,7 +146,7 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
         </tbody></table></div>
         <Button variant="outline" onClick={() => { const line = Math.max(1, ...(raw ?? []).map((r) => Number(r.__line))) + 1; setRaw([...(raw ?? []), { __line: String(line) }]); }}><Plus /> Add row</Button>
       </div>}
-      <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-3"><Button variant="outline" onClick={dl}><Download /> Template</Button><div className="flex gap-2"><Button variant="outline" disabled={saving} onClick={() => confirm ? setConfirm(false) : setRaw(null)}>{confirm ? 'Back to review' : 'Cancel'}</Button><Button disabled={!ready || saving} onClick={() => confirm ? void save() : setConfirm(true)}>{saving ? 'Saving…' : confirm ? `Import ${ready}` : 'Review summary'}</Button></div></div>
+      <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-3"><Button variant="outline" onClick={dl}><Download /> Template</Button><div className="flex gap-2"><Button variant="outline" disabled={saving} onClick={() => confirm ? setConfirm(false) : cancelImport()}>{confirm ? 'Back to review' : 'Cancel'}</Button><Button disabled={!ready || saving} onClick={() => confirm ? void save() : setConfirm(true)}>{saving ? 'Saving…' : confirm ? `Import ${ready}` : 'Review summary'}</Button></div></div>
     </DialogContent></Dialog>
   </>;
 }

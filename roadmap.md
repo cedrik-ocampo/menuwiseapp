@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Add multi-sheet selection with earliest-to-latest sequential review and saving; test ordering and the live import flow.
+
 - [x] Build role-adaptive staff Home with expiry alerts, daily imports, team activity, and logging feedback.
 - [x] Test staff calculations and desktop/mobile presentation plus import review (owner data, simulated staff role; no writes).
 - [ ] Verify staff Home and importing end-to-end with a real employee account (current requesting account is an owner; employee session approval needed).

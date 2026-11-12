@@ -7,6 +7,14 @@ export const keyOf = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export interface SheetData { name: string; rows: Row[]; date: string }
 
+/** A multi-sheet import needs explicit dates; never guess an undated tab's position. */
+export function chronologicalSheets(sheets: SheetData[]): SheetData[] {
+  if (sheets.length > 1 && sheets.some((sheet) => !normDate(sheet.date))) {
+    throw new Error("Set a date for every selected sheet before importing multiple sheets.");
+  }
+  return [...sheets].sort((a, b) => a.date.localeCompare(b.date));
+}
+
 /** Turn a raw 2D sheet into rows: skips title banners above the header and blank/footer rows. */
 export function rowsFromGrid(grid: unknown[][]): Row[] {
   const cellText = (v: unknown) => v instanceof Date ? isoDate(v) : String(v ?? "").trim();
