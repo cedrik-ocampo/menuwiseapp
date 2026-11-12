@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { keyOf, readSheet, type Row } from "@/lib/import";
 import { resolveImport, type ImportDecision } from "@/lib/import-review";
 import { inputCls } from "./ui";
+import { applyMapping, guessMapping, matchesTemplate, type Mapping } from "@/lib/column-mapper";
 
 export interface ParsedRow<T> { line: number; label: string; item?: T; error?: string; flag?: string; duplicate?: boolean }
 export interface ImportTemplate { filename: string; header: string[]; rows: string[][] }
@@ -23,6 +24,12 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [accept, setAccept] = useState('.xlsx,.xls,.csv');
+  const [mapRows, setMapRows] = useState<Row[] | null>(null);
+  const [mapping, setMapping] = useState<Mapping>({});
+  const targetFields = (template?.header ?? requiredCols(columns)).map(keyOf);
+  const targetLabel = (key: string) => template?.header.find((h) => keyOf(h) === key)?.replace(/_/g, ' ') ?? key;
+  const fileCols = mapRows ? [...new Set(mapRows.flatMap(Object.keys))].filter((k) => k !== '__line') : [];
+  const numericFields = Object.entries(fields).filter(([, f]) => f.type === 'number').map(([k]) => k);
   const headers = [...new Set([...(template?.header ?? requiredCols(columns)).map(keyOf), ...(raw?.flatMap(Object.keys) ?? [])])].filter((key) => key !== '__line');
   const entries = raw ? parse(raw) : [];
   const resolved = resolveImport(entries, decisions);
@@ -33,8 +40,11 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
     try {
       const rows = await readSheet(file);
       if (!rows.length) { toast.error('That file has no rows'); return; }
-      setRaw(rows.map((row, index) => ({ ...row, __line: String(index + 2) })));
+      const lined = rows.map((row, index) => ({ ...row, __line: String(index + 2) }));
       setDecisions({}); setCorrected(new Set()); setConfirm(false);
+      const cols = [...new Set(rows.flatMap(Object.keys))];
+      if (matchesTemplate(targetFields, cols)) setRaw(lined);
+      else { setMapping(guessMapping(targetFields, cols)); setMapRows(lined); }
     } catch { toast.error("Couldn't read that file. Use Excel (.xlsx) or CSV."); }
   }
   function edit(line: number, key: string, value: string) {
@@ -60,6 +70,16 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
         <DropdownMenuItem onSelect={() => { toast.message('Download your Google Sheet as Excel or CSV, then choose that file.'); pick('.xlsx,.xls,.csv'); }}>Google Sheets</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <Dialog open={mapRows !== null} onOpenChange={(open) => { if (!open) setMapRows(null); }}><DialogContent className="flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col sm:max-w-3xl">
+      <DialogHeader><DialogTitle>Match your columns</DialogTitle><DialogDescription>Your file doesn't use the MenuWise {what} template. Pick which of your columns fills each field, or type a value to use for every row. We guessed where we could.</DialogDescription></DialogHeader>
+      <div className="min-h-0 space-y-3 overflow-y-auto">{targetFields.map((key) => { const m = mapping[key] ?? {}; const sample = m.column ? mapRows?.slice(0, 3).map((r) => r[m.column!]).filter(Boolean).join(' · ') : '';
+        return <div key={key} className="grid gap-2 border-b border-border pb-3 sm:grid-cols-[180px_1fr_1fr] sm:items-center">
+          <p className="text-sm font-semibold text-primary">{targetLabel(key)}</p>
+          <div><select aria-label={`Column for ${targetLabel(key)}`} className={inputCls} value={m.column ?? ''} onChange={(e) => setMapping({ ...mapping, [key]: { ...m, column: e.target.value || undefined } })}><option value="">Not in my file</option>{fileCols.map((c) => <option key={c} value={c}>{c}</option>)}</select>{sample && <p className="mt-1 truncate text-xs text-muted-foreground">e.g. {sample}</p>}</div>
+          <input aria-label={`Value for every row: ${targetLabel(key)}`} placeholder={m.column ? 'If blank, use…' : 'Use this for every row'} className={inputCls} type={fields[key]?.type === 'date' ? 'date' : 'text'} value={m.fixed ?? ''} onChange={(e) => setMapping({ ...mapping, [key]: { ...m, fixed: e.target.value } })} />
+        </div>; })}</div>
+      <div className="flex justify-end gap-2 border-t border-border pt-3"><Button variant="outline" onClick={() => setMapRows(null)}>Cancel</Button><Button onClick={() => { setRaw(applyMapping(mapRows ?? [], mapping, numericFields)); setMapRows(null); }}>Convert &amp; review</Button></div>
+    </DialogContent></Dialog>
     <Dialog open={raw !== null} onOpenChange={(open) => { if (!open && !saving) setRaw(null); }}><DialogContent className="flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col sm:max-w-6xl">
       <DialogHeader><DialogTitle>{confirm ? 'Confirm import' : 'Review import'}</DialogTitle><DialogDescription>{what} · {ready} ready · {corrected.size} rows corrected · {resolved.skipped.length} entries skipped · {entries.filter((e) => e.duplicate).length} possible duplicates</DialogDescription></DialogHeader>
       {confirm ? <div className="space-y-3 py-4"><p className="text-sm text-foreground">{resolved.add.length} entries to add{allowMerge ? ` · ${resolved.merge.length} ${mergeSummary}` : ""}.</p><p className="text-sm text-muted-foreground">Only approved entries are saved. Unresolved or skipped entries are excluded.</p></div> : <div className="min-h-0 space-y-4 overflow-y-auto">

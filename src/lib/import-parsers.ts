@@ -148,7 +148,8 @@ export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: I
   const ids = new Map(db.ingredients.map((i) => [i.id.toLowerCase(), i]));
   const seen = new Set(db.purchases.map((p) => `${p.ingredientId.toLowerCase()}|${p.purchaseDate}|${p.expiryDate}|${p.quantity}|${p.unitCost}`));
   return rows.map((r, index) => {
-    const id = (r.ingredientid || r.id || "").trim(), name = (r.ingredientname || r.name || "").trim();
+    const name = (r.ingredientname || r.name || "").trim();
+    const id = (r.ingredientid || r.id || "").trim() || (name ? (db.ingredients.find((i) => i.name.toLowerCase() === name.toLowerCase())?.id ?? `ING-${name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").slice(0, 16)}`) : "");
     const unit = r.unit || "", quantity = num(r.quantity), unitCost = num(r.unitcost);
     const purchaseDate = normDate(r.purchasedate), expiryDate = normDate(r.expirydate);
     const category = normalizeCategory(r.category || "", known);
