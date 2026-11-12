@@ -57,6 +57,13 @@
       "when": 1794461370019,
       "tag": "0007_admin_record_writes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794462300622,
+      "tag": "0008_admin_manage_invites",
+      "breakpoints": true
     }
   ]
 }

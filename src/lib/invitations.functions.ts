@@ -7,6 +7,8 @@ const InviteInput = WorkspaceInput.extend({ email: z.string().trim().email().max
 const CancelInput = WorkspaceInput.extend({ inviteId: z.string().uuid() });
 
 async function requireOwner(context: { supabase: any; userId: string }, workspaceId: string) {
+  const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+  if (isAdmin) return;
   const { data, error } = await context.supabase
     .from("workspace_members")
     .select("role")

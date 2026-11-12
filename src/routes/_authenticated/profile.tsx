@@ -6,7 +6,7 @@ import { Crown, Download, RefreshCw, Trash2, UserPlus, LogOut, Camera, Mail, X }
 import { toast } from "sonner";
 import { clear as idbClear } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
-import { currentUser, currentWorkspace, getView, useDB } from "@/lib/store";
+import { currentUser, currentWorkspace, getView, useDB, isWorkspaceOwner } from "@/lib/store";
 import { clearCafeData, loadSampleData } from "@/lib/sample-data";
 import { avatarDataUrl } from "@/lib/image";
 import { isDemoMode, setPrefs, usePrefs, type Currency, type Landing, type Theme } from "@/lib/prefs";
@@ -94,7 +94,7 @@ function Profile() {
   }, [ws]);
   useEffect(() => { void load(); }, [load]);
   const sole = members.length <= 1;
-  const isOwner = members.some((m) => m.user_id === myId && m.role === "owner");
+  const isOwner = isWorkspaceOwner() || members.some((m) => m.user_id === myId && m.role === "owner");
   const online = () => { if (!navigator.onLine) { toast.error(OFFLINE); return false; } return true; };
 
   async function saveName() {

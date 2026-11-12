@@ -1,0 +1,4 @@
+CREATE POLICY "admin creates invites" ON public.workspace_invites FOR INSERT TO authenticated WITH CHECK (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "admin deletes invites" ON public.workspace_invites FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "admin updates ws" ON public.workspaces FOR UPDATE TO authenticated USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "admin removes staff" ON public.workspace_members FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin') AND role = 'staff');
