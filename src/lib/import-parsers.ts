@@ -148,7 +148,8 @@ export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: I
   const ids = new Map(db.ingredients.map((i) => [i.id.toLowerCase(), i]));
   const seen = new Set(db.purchases.map((p) => `${p.ingredientId.toLowerCase()}|${p.purchaseDate}|${p.expiryDate}|${p.quantity}|${p.unitCost}`));
   return rows.map((r, index) => {
-    const name = (r.ingredientname || r.name || "").trim();
+    const split = splitSupplier(r.ingredientname || r.name || "", r.supplier || "");
+    const name = split.name; r = { ...r, supplier: split.supplier };
     const id = (r.ingredientid || r.id || "").trim() || (name ? (db.ingredients.find((i) => i.name.toLowerCase() === name.toLowerCase())?.id ?? `ING-${name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").slice(0, 16)}`) : "");
     const unit = r.unit || "", quantity = num(r.quantity), unitCost = num(r.unitcost);
     const purchaseDate = normDate(r.purchasedate), expiryDate = (r.expirydate || "").trim() ? normDate(r.expirydate) : purchaseDate ? addDays(purchaseDate, 30) : "";
@@ -174,7 +175,7 @@ export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: I
     ids.set(id.toLowerCase(), ing);
     const key = `${ing.id.toLowerCase()}|${purchaseDate}|${expiryDate}|${quantity}|${unitCost}`;
     const duplicate = seen.has(key); seen.add(key);
-    return { ...base, duplicate, flag: !category.known ? `New category: "${category.value}" — choose Add to approve` : expiryDefaulted ? "No expiry date — set to 30 days after purchase; edit it later on the ingredient page" : existing ? "Existing ingredient — adds a stock purchase, not another ingredient" : undefined,
+    return { ...base, duplicate, flag: !category.known ? `New category: "${category.value}" — choose Add to approve` : split.extracted ? `Supplier "${split.supplier}" taken from the name — edit if wrong` : expiryDefaulted ? "No expiry date — set to 30 days after purchase; edit it later on the ingredient page" : existing ? "Existing ingredient — adds a stock purchase, not another ingredient" : undefined,
       item: { ing, purchase: { id: uid("P-"), ingredientId: ing.id, purchaseDate, expiryDate, quantity, remaining: quantity, unitCost } } };
   });
 }
@@ -232,3 +233,11 @@ export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: I
     });
   }
 
+
+/** Moves a trailing "(Supplier)" out of an ingredient name when no supplier is given. */
+export function splitSupplier(rawName: string, rawSupplier: string): { name: string; supplier: string; extracted: boolean } {
+  const name = rawName.trim(), supplier = rawSupplier.trim();
+  const m = /^(.+?)\s*\(([^()]+)\)\s*$/.exec(name);
+  if (supplier || !m) return { name, supplier, extracted: false };
+  return { name: m[1].trim(), supplier: m[2].trim(), extracted: true };
+}
