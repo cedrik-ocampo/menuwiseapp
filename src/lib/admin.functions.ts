@@ -15,6 +15,18 @@ export const amIAdmin = createServerFn({ method: "POST" })
     return { admin: !!data };
   });
 
+/** Page through results; the database returns at most 1,000 rows per request. */
+async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>): Promise<{ data: T[] }> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) throw new Error("Could not load café records");
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < 1000) return { data: out };
+  }
+}
+
 export const listCafes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -24,7 +36,7 @@ export const listCafes = createServerFn({ method: "POST" })
       sb.from("workspaces").select("id,name,owner_id,created_at").order("created_at"),
       sb.from("workspace_members").select("workspace_id,role,email,display_name"),
       sb.from("workspace_invites").select("workspace_id,email,role"),
-      sb.from("records").select("workspace_id,collection,updated_at").eq("deleted", false).limit(50000),
+      fetchAll<{ workspace_id: string; collection: string; updated_at: string }>((a, b) => sb.from("records").select("workspace_id,collection,updated_at").eq("deleted", false).order("workspace_id").order("collection").order("id").range(a, b)),
     ]);
     return (ws ?? []).map((w) => {
       const m = (members ?? []).filter((x) => x.workspace_id === w.id);
@@ -51,7 +63,7 @@ export const getCafe = createServerFn({ method: "POST" })
       sb.from("workspaces").select("id,name,created_at").eq("id", data.id).maybeSingle(),
       sb.from("workspace_members").select("user_id,role,email,display_name,joined_at,inventory_access").eq("workspace_id", data.id),
       sb.from("workspace_invites").select("id,email,created_at").eq("workspace_id", data.id),
-      sb.from("records").select("id,collection,data,updated_at").eq("workspace_id", data.id).eq("deleted", false).limit(20000),
+      fetchAll<{ collection: string; data: unknown }>((a, b) => sb.from("records").select("id,collection,data").eq("workspace_id", data.id).eq("deleted", false).neq("collection", "changeLogs").order("collection").order("id").range(a, b)),
     ]);
     if (!ws) throw new Error("Café not found");
     return { cafe: ws, members: members ?? [], invites: invites ?? [], recordsJson: JSON.stringify((recs ?? []).map((r) => ({ collection: r.collection, data: r.data }))) };
