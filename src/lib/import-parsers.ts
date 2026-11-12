@@ -151,7 +151,8 @@ export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: I
     const name = (r.ingredientname || r.name || "").trim();
     const id = (r.ingredientid || r.id || "").trim() || (name ? (db.ingredients.find((i) => i.name.toLowerCase() === name.toLowerCase())?.id ?? `ING-${name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").slice(0, 16)}`) : "");
     const unit = r.unit || "", quantity = num(r.quantity), unitCost = num(r.unitcost);
-    const purchaseDate = normDate(r.purchasedate), expiryDate = normDate(r.expirydate);
+    const purchaseDate = normDate(r.purchasedate), expiryDate = (r.expirydate || "").trim() ? normDate(r.expirydate) : purchaseDate ? addDays(purchaseDate, 30) : "";
+    const expiryDefaulted = !(r.expirydate || "").trim();
     const category = normalizeCategory(r.category || "", known);
     const base = { line: sourceLine(r, index), label: name || id || "Unnamed ingredient" };
     const existing = ids.get(id.toLowerCase());
@@ -173,7 +174,7 @@ export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: I
     ids.set(id.toLowerCase(), ing);
     const key = `${ing.id.toLowerCase()}|${purchaseDate}|${expiryDate}|${quantity}|${unitCost}`;
     const duplicate = seen.has(key); seen.add(key);
-    return { ...base, duplicate, flag: !category.known ? `New category: "${category.value}" — choose Add to approve` : existing ? "Existing ingredient — adds a stock purchase, not another ingredient" : undefined,
+    return { ...base, duplicate, flag: !category.known ? `New category: "${category.value}" — choose Add to approve` : expiryDefaulted ? "No expiry date — set to 30 days after purchase; edit it later on the ingredient page" : existing ? "Existing ingredient — adds a stock purchase, not another ingredient" : undefined,
       item: { ing, purchase: { id: uid("P-"), ingredientId: ing.id, purchaseDate, expiryDate, quantity, remaining: quantity, unitCost } } };
   });
 }
