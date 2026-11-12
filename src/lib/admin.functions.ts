@@ -23,7 +23,7 @@ export const listCafes = createServerFn({ method: "POST" })
     const [{ data: ws }, { data: members }, { data: invites }, { data: recs }] = await Promise.all([
       sb.from("workspaces").select("id,name,owner_id,created_at").order("created_at"),
       sb.from("workspace_members").select("workspace_id,role,email,display_name"),
-      sb.from("workspace_invites").select("workspace_id"),
+      sb.from("workspace_invites").select("workspace_id,email,role"),
       sb.from("records").select("workspace_id,collection,updated_at").eq("deleted", false).limit(50000),
     ]);
     return (ws ?? []).map((w) => {
@@ -34,7 +34,7 @@ export const listCafes = createServerFn({ method: "POST" })
       return {
         id: w.id, name: w.name, createdAt: w.created_at,
         owner: owner?.display_name || owner?.email || "—", ownerEmail: owner?.email ?? "",
-        members: m.length, accounts: m.map((x) => ({ name: x.display_name || (x.email ?? "").split("@")[0] || "—", email: x.email ?? "", role: x.role as string })), pendingInvites: (invites ?? []).filter((x) => x.workspace_id === w.id).length,
+        members: m.length, accounts: m.map((x) => ({ name: x.display_name || (x.email ?? "").split("@")[0] || "—", email: x.email ?? "", role: x.role as string })), pendingInvites: (invites ?? []).filter((x) => x.workspace_id === w.id).length, pendingOwner: (invites ?? []).find((x) => x.workspace_id === w.id && x.role === "owner")?.email ?? null,
         lastActivity: r.map((x) => x.updated_at).sort().pop() ?? null,
         counts: { menuItems: count("menuItems"), ingredients: count("ingredients"), sales: count("sales"), batches: count("batches"), wasteLogs: count("wasteLogs") },
       };
@@ -178,4 +178,22 @@ export const adminSaveMenuItems = createServerFn({ method: "POST" })
     const { error: e2 } = await supabaseAdmin.from("records").insert(logs);
     if (e2) throw new Error("Saved, but the change log failed");
     return { added: data.items.length - known.size, updated: known.size };
+  });
+
+/** Admin pre-setup: creates a café that the given email claims as Owner when they sign up. */
+export const adminPresetCafe = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ name: z.string().trim().min(1).max(120), ownerEmail: z.string().trim().toLowerCase().email().max(255) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: taken } = await supabaseAdmin.from("workspace_members").select("workspace_id").ilike("email", data.ownerEmail).limit(1);
+    if (taken?.length) throw new Error("This email already belongs to a café account");
+    const { data: pending } = await supabaseAdmin.from("workspace_invites").select("id").ilike("email", data.ownerEmail).eq("role", "owner").limit(1);
+    if (pending?.length) throw new Error("A café is already waiting for this email");
+    const { data: ws, error } = await supabaseAdmin.from("workspaces").insert({ name: data.name, owner_id: context.userId }).select("id").single();
+    if (error || !ws) throw new Error("Could not create café");
+    const { error: e2 } = await supabaseAdmin.from("workspace_invites").insert({ workspace_id: ws.id, email: data.ownerEmail, invited_by: context.userId, role: "owner" });
+    if (e2) throw new Error("Café created, but the owner invite failed");
+    return { id: ws.id };
   });

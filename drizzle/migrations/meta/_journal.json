@@ -29,6 +29,13 @@
       "when": 1792734514789,
       "tag": "0003_staff_record_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794455070158,
+      "tag": "0004_owner_invites",
+      "breakpoints": true
     }
   ]
 }

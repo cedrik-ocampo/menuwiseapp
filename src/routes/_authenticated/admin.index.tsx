@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { Eye } from "lucide-react";
-import { listCafes } from "@/lib/admin.functions";
+import { adminPresetCafe, listCafes } from "@/lib/admin.functions";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Panel } from "@/components/mw/ui";
 import { shortDate } from "@/lib/format";
@@ -27,6 +29,7 @@ function AdminHome() {
   return (
     <div>
       <PageTitle title="Café Monitoring" subtitle="Every café using MenuWise. Open a café and turn on Edit mode to make logged changes." />
+      <PresetCafe />
       <Panel>
         {q.isLoading ? <p className="py-10 text-center text-muted-foreground">Loading cafés…</p>
           : q.error ? <p className="py-10 text-center text-destructive">You don’t have admin access.</p>
@@ -39,7 +42,7 @@ function AdminHome() {
               <tbody>
                 {q.data.map((c) => (
                   <tr key={c.id} className="border-t border-border align-top">
-                    <td className="py-2 font-semibold text-primary">{c.name}</td>
+                    <td className="py-2 font-semibold text-primary">{c.name}{c.pendingOwner && <span className="mt-1 block text-xs font-normal text-muted-foreground">Pending owner signup: {c.pendingOwner}</span>}</td>
                     <td><ul className="space-y-1">{c.accounts.map((a) => (<li key={a.email + a.role}><span className="block">{a.name} <span className="text-xs text-muted-foreground">({a.role === "owner" ? "Owner" : "Staff"})</span></span><span className="text-xs text-muted-foreground">{a.email}</span></li>))}</ul></td>
                     <td className="text-right">{c.members}</td><td className="text-right">{c.pendingInvites}</td>
                     <td className="text-right">{c.counts.menuItems}</td><td className="text-right">{c.counts.ingredients}</td>
@@ -54,5 +57,35 @@ function AdminHome() {
         )}
       </Panel>
     </div>
+  );
+}
+
+function PresetCafe() {
+  const fn = useServerFn(adminPresetCafe);
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await fn({ data: { name, ownerEmail: email } });
+      toast.success(`${name} is ready. Ask the owner to sign up with ${email}.`);
+      setName(""); setEmail("");
+      qc.invalidateQueries({ queryKey: ["admin", "cafes"] });
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Could not create café"); }
+    finally { setBusy(false); }
+  }
+  return (
+    <Panel className="mb-4">
+      <p className="mb-1 font-semibold text-primary">Pre-set a new café</p>
+      <p className="mb-3 text-sm text-muted-foreground">Create the café now and load its menu. When the owner signs up with this email, they become its Owner automatically.</p>
+      <form onSubmit={submit} className="flex flex-wrap gap-2">
+        <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Café name" className="h-10 min-w-[200px] flex-1 rounded-md border border-input bg-background px-3 text-sm" />
+        <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Owner email" className="h-10 min-w-[220px] flex-1 rounded-md border border-input bg-background px-3 text-sm" />
+        <button disabled={busy} className="h-10 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60">{busy ? "Creating…" : "Create café"}</button>
+      </form>
+    </Panel>
   );
 }
