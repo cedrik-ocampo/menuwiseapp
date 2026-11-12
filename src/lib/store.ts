@@ -118,11 +118,16 @@ async function resolveWorkspace(uid: string, display: string, cafe: string): Pro
   return localStorage.getItem(cacheKey);
 }
 
-export async function initStore(uid: string, display: string, cafe = "My Café") {
-  if (userId === uid && ready) return;
+let adminActing = false;
+export function isAdminActing() { return adminActing; }
+
+export async function initStore(uid: string, display: string, cafe = "My Café", adminWorkspace?: string | null) {
+  if (userId === uid && ready && (adminWorkspace ?? null) === (adminActing ? workspaceId : null)) return;
   userId = uid;
-  userName = display;
-  const ws = await resolveWorkspace(uid, display, cafe);
+  adminActing = !!adminWorkspace;
+  userName = adminActing ? "MenuWise Admin" : display;
+  ready = false;
+  const ws = adminWorkspace || await resolveWorkspace(uid, display, cafe);
   if (!ws) {
     // first sign-in offline: nothing to show yet
     workspaceId = null;
@@ -134,7 +139,9 @@ export async function initStore(uid: string, display: string, cafe = "My Café")
   const roleKey = `menuwise:role:${uid}:${ws}`;
   workspaceRole = null;
   inventoryAccess = false;
-  if (navigator.onLine) {
+  if (adminActing) {
+    workspaceRole = 'owner';
+  } else if (navigator.onLine) {
     const { data, error } = await supabase.from('workspace_members').select('role,inventory_access').eq('workspace_id', ws).eq('user_id', uid).maybeSingle();
     if (!error && data) {
       workspaceRole = data.role; inventoryAccess = !!data.inventory_access;
@@ -192,7 +199,8 @@ function logChange(collection: CollectionName, recordId: string, action: "create
     by: userId ?? "",
     byName: userName,
     changes,
-  });
+    ...(adminActing ? { adminEdit: true } : {}),
+  } as never);
 }
 
 const TRACKED: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs"];

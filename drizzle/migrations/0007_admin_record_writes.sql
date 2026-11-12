@@ -1,0 +1,3 @@
+CREATE POLICY "admin inserts records" ON public.records FOR INSERT TO authenticated WITH CHECK (public.has_role(auth.uid(), 'admin') AND user_id = auth.uid());
+CREATE POLICY "admin updates records" ON public.records FOR UPDATE TO authenticated USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "admin deletes records" ON public.records FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'));

@@ -1,3 +1,4 @@
+import { resetStore } from "@/lib/store";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ function AdminCafe() {
         </label>
       </div>
       <PageTitle back={{ to: "/admin", label: "Café Monitoring" }} title={q.data.cafe.name} subtitle={`Created ${shortDate(q.data.cafe.created_at)}`} />
+      <button type="button" onClick={() => { sessionStorage.setItem("menuwise:admin-acting-ws", id); resetStore(); window.location.href = "/"; }} className="mb-4 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Work in this café (full owner controls)</button>
       <div className="mb-4 overflow-x-auto"><Segmented value={tab} options={TABS} onChange={setTab} /></div>
 
       {tab === "Overview" && (
@@ -78,7 +80,7 @@ function AdminCafe() {
       {tab === "Ingredients" && (editMode
         ? <EditTable workspaceId={id} collection="ingredients" records={by.ingredients ?? []} fields={[{ k: "name", label: "Name" }, { k: "unit", label: "Unit" }, { k: "unitCost", label: "Unit cost (₱)", num: true }]} />
         : <Table head={["ID", "Name", "Unit", "Unit cost", "Last edit"]} rows={(by.ingredients ?? []).map((i) => [i.id, i.name, i.unit, formatPeso(i.unitCost ?? 0), i.updatedByName ? `${i.updatedByName} · ${shortDate(i.updatedAt)}` : "—"])} />)}
-      {editMode && tab !== "Menu Items" && tab !== "Ingredients" && <p className="mt-3 text-xs text-muted-foreground">Edit mode covers Menu Items and Ingredients. Other tabs stay read-only.</p>}
+      {editMode && tab !== "Menu Items" && tab !== "Ingredients" && <p className="mt-3 text-xs text-muted-foreground">For Sales, Production, Waste and everything else, use “Work in this café”.</p>}
       {tab === "Sales" && <Table head={["Date", "Menu item", "Qty", "Revenue"]} rows={[...sales].sort((a, b) => String(b.date).localeCompare(a.date)).map((s) => [shortDate(s.date), menuName(s.menuItemId), fmtQty(s.quantity), formatPeso(rev(s))])} />}
       {tab === "Production" && <Table head={["Batch", "Menu item", "Produced", "Qty", "Expiry"]} rows={[...(by.batches ?? [])].sort((a, b) => String(b.producedAt).localeCompare(a.producedAt)).map((b) => [b.id, menuName(b.menuItemId), shortDate(b.producedAt), fmtQty(b.quantity), shortDate(b.expiryDate)])} />}
       {tab === "Waste" && <Table head={["Date", "Stage", "Type", "Qty", "Value"]} rows={[...waste].sort((a, b) => String(b.at).localeCompare(a.at)).map((w) => [shortDate(w.at), w.stage, w.wasteType, `${fmtQty(w.quantity)} ${w.unit}`, formatPeso(w.value ?? 0)])} />}
