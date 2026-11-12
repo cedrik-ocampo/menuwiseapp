@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { keyOf, readSheet, type Row } from "@/lib/import";
+import { keyOf, readWorkbook, type Row, type SheetData } from "@/lib/import";
 import { resolveImport, type ImportDecision } from "@/lib/import-review";
 import { inputCls } from "./ui";
 import { applyMapping, guessMapping, matchesTemplate, type Mapping } from "@/lib/column-mapper";
@@ -26,6 +26,7 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
   const [accept, setAccept] = useState('.xlsx,.xls,.csv');
   const [mapRows, setMapRows] = useState<Row[] | null>(null);
   const [mapping, setMapping] = useState<Mapping>({});
+  const [sheets, setSheets] = useState<SheetData[] | null>(null);
   const targetFields = (template?.header ?? requiredCols(columns)).map(keyOf);
   const targetLabel = (key: string) => template?.header.find((h) => keyOf(h) === key)?.replace(/_/g, ' ') ?? key;
   const fileCols = mapRows ? [...new Set(mapRows.flatMap(Object.keys))].filter((k) => k !== '__line') : [];
@@ -38,14 +39,20 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
   function pick(ext: string) { setAccept(ext); setTimeout(() => fileRef.current?.click(), 0); }
   async function onFile(file: File) {
     try {
-      const rows = await readSheet(file);
-      if (!rows.length) { toast.error('That file has no rows'); return; }
-      const lined = rows.map((row, index) => ({ ...row, __line: String(index + 2) }));
-      setDecisions({}); setCorrected(new Set()); setConfirm(false);
-      const cols = [...new Set(rows.flatMap(Object.keys))];
-      if (matchesTemplate(targetFields, cols)) setRaw(lined);
-      else { setMapping(guessMapping(targetFields, cols)); setMapRows(lined); }
+      const book = await readWorkbook(file);
+      if (!book.length) { toast.error('That file has no rows'); return; }
+      if (book.length > 1) { setSheets(book); return; }
+      useSheet(book[0]);
     } catch { toast.error("Couldn't read that file. Use Excel (.xlsx) or CSV."); }
+  }
+  function useSheet(sheet: SheetData) {
+    setSheets(null);
+    const rows = sheet.date ? sheet.rows.map((row) => ({ ...row, sheetdate: sheet.date })) : sheet.rows;
+    const lined = rows.map((row, index) => ({ ...row, __line: String(index + 2) }));
+    setDecisions({}); setCorrected(new Set()); setConfirm(false);
+    const cols = [...new Set(rows.flatMap(Object.keys))];
+    if (matchesTemplate(targetFields, cols)) setRaw(lined);
+    else { setMapping(guessMapping(targetFields, cols)); setMapRows(lined); }
   }
   function edit(line: number, key: string, value: string) {
     setRaw((rows) => rows?.map((row) => Number(row.__line) === line ? { ...row, [key]: value } : row) ?? null);
@@ -62,6 +69,17 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
     finally { setSaving(false); }
   }
   return <>
+    <Dialog open={!!sheets} onOpenChange={(open) => { if (!open) setSheets(null); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Which sheet do you want to import?</DialogTitle>
+          <DialogDescription>This file has {sheets?.length} tabs. Pick one — usually the latest day. If the tab name is a date, it fills the date for you.</DialogDescription></DialogHeader>
+        <div className="max-h-[60vh] space-y-2 overflow-y-auto">{[...(sheets ?? [])].reverse().map((sheet, i) => (
+          <button key={sheet.name} type="button" onClick={() => useSheet(sheet)} className="flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted">
+            <span className="font-medium">{sheet.name}{i === 0 && <span className="ml-2 text-xs text-muted-foreground">(last tab)</span>}</span>
+            <span className="text-xs text-muted-foreground">{sheet.rows.length} rows{sheet.date ? ` · ${sheet.date}` : ''}</span>
+          </button>))}</div>
+      </DialogContent>
+    </Dialog>
     <input aria-label={`Import ${what} file`} ref={fileRef} type="file" accept={accept} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void onFile(file); }} />
     <DropdownMenu><DropdownMenuTrigger asChild><Button className={className}><Upload /> Import</Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end"><DropdownMenuItem onSelect={dl}><Download /> Download template (CSV)</DropdownMenuItem><DropdownMenuSeparator />

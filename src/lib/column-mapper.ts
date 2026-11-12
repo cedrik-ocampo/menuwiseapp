@@ -12,7 +12,7 @@ export const SYNONYMS: Record<string, string[]> = {
   supplier: ["vendor", "source", "suppliername", "seller"],
   purchasedate: ["date", "datepurchased", "received", "datereceived", "deliverydate", "orderdate"],
   expirydate: ["expiry", "expiration", "expirationdate", "bestbefore", "useby", "exp", "expdate"],
-  quantity: ["qty", "count", "stock", "onhand", "instock", "pieces", "pcs", "sold", "qtysold", "amount"],
+  quantity: ["qty", "count", "stock", "onhand", "instock", "pieces", "pcs", "sold", "qtysold", "amount", "closing", "closingstock", "closingcount", "endingstock", "ending", "endingcount", "physicalcount", "actualstock"],
   unitcost: ["cost", "price", "costperunit", "unitprice", "purchaseprice", "cost/unit"],
   sellingprice: ["price", "srp", "retailprice", "sellingprice", "unitprice"],
   unitprice: ["price", "srp", "unitprice", "sellingprice"],
@@ -31,7 +31,9 @@ export function guessMapping(fields: string[], columns: string[]): Mapping {
   for (const f of fields) {
     if (out[f]) continue;
     const c = (SYNONYMS[f] ?? []).map((s) => byKey.get(keyOf(s))).find((c) => c && !used.has(c));
-    if (c) { out[f] = { column: c }; used.add(c); } else out[f] = {};
+    if (c) { out[f] = { column: c }; used.add(c); }
+    else if (f.endsWith("date") && f !== "expirydate" && byKey.has("sheetdate")) out[f] = { column: byKey.get("sheetdate") };
+    else out[f] = {};
   }
   return out;
 }
