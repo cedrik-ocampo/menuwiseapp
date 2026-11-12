@@ -30,3 +30,4 @@
 - [x] Sales chart oldest → newest; fix label overlap/doubling.
 - [x] Simplify menu-item costing, recipe setup, and recipe-based file imports.
 - [x] Reorder the seven main tabs, separate Menu Items from Menu Map, and support an unselected subcategory.
+- [x] Notification bell for MenuWise Admin activity (owners and staff)

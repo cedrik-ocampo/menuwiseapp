@@ -130,7 +130,7 @@ export interface ChangeLog {
   id: string;
   collection: string;
   recordId: string;
-  action: "created" | "edited" | "deleted";
+  action: "created" | "edited" | "deleted" | "viewed";
   at: string;
   by: string;
   byName: string;

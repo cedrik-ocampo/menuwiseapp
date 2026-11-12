@@ -66,6 +66,11 @@ export const getCafe = createServerFn({ method: "POST" })
       fetchAll<{ collection: string; data: unknown }>((a, b) => sb.from("records").select("id,collection,data").eq("workspace_id", data.id).eq("deleted", false).neq("collection", "changeLogs").order("collection").order("id").range(a, b)),
     ]);
     if (!ws) throw new Error("Café not found");
+    // Café-visible notice that an admin viewed its records (one per day).
+    const now = new Date().toISOString(); const viewId = `view-${data.id}-${now.slice(0, 10)}`;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("records").upsert({ id: viewId, collection: "changeLogs", user_id: context.userId, workspace_id: data.id, updated_at: now, deleted: false,
+      data: { id: viewId, collection: "workspace", recordId: data.id, action: "viewed", at: now, by: context.userId, byName: "MenuWise Admin", changes: [], adminEdit: true } as never }, { onConflict: "workspace_id,collection,id" });
     return { cafe: ws, members: members ?? [], invites: invites ?? [], recordsJson: JSON.stringify((recs ?? []).map((r) => ({ collection: r.collection, data: r.data }))) };
   });
 
@@ -127,7 +132,7 @@ export const listAdminEdits = createServerFn({ method: "POST" })
     const sb = context.supabase;
     await assertAdmin(sb, context.userId);
     const [{ data: logs }, { data: ws }] = await Promise.all([
-      sb.from("records").select("workspace_id,data").eq("collection", "changeLogs").eq("data->>adminEdit", "true").eq("data->>by", context.userId).order("updated_at", { ascending: false }).limit(1000),
+      sb.from("records").select("workspace_id,data").eq("collection", "changeLogs").eq("data->>adminEdit", "true").eq("data->>by", context.userId).neq("data->>action", "viewed").order("updated_at", { ascending: false }).limit(1000),
       sb.from("workspaces").select("id,name"),
     ]);
     const names = new Map((ws ?? []).map((w) => [w.id, w.name]));

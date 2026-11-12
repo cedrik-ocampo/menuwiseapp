@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserMenu } from "./UserMenu";
+import { NotificationBell } from "./NotificationBell";
 import type { CollectionName } from "@/lib/types";
 
 const TABS: { to: string; label: string; mobileLabel: string; icon: typeof Trash2; pending?: CollectionName[] }[] = [
@@ -168,6 +169,7 @@ export function AppHeader({ cafeName }: { cafeName: string }) {
               <WifiOff className="h-3 w-3" /> Offline
             </span>
           )}
+          <NotificationBell />
           <UserMenu />
           <img src={logo.url} alt="" className="h-12 w-12 object-contain md:hidden" />
         </div>
