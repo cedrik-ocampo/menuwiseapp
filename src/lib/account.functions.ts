@@ -38,12 +38,22 @@ export const leaveWorkspace = createServerFn({ method: "POST" })
 
 export const deleteAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => Input.parse(d))
+  .inputValidator((d) => Input.extend({ successorUserId: z.string().uuid().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const ids = await membership(context, data.workspaceId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const ws = data.workspaceId;
+    if (ids.length > 1) {
+      const { data: me } = await admin.from("workspace_members").select("role").eq("workspace_id", ws).eq("user_id", context.userId).maybeSingle();
+      if (me?.role === "owner") {
+        const succ = data.successorUserId;
+        if (!succ || succ === context.userId || !ids.includes(succ)) throw new Error("Choose a team member to inherit the café before deleting your account.");
+        const { error: e1 } = await admin.from("workspace_members").update({ role: "owner" }).eq("workspace_id", ws).eq("user_id", succ);
+        if (e1) throw new Error("Couldn't transfer café ownership. Please try again.");
+        await admin.from("workspaces").update({ owner_id: succ }).eq("id", ws);
+      }
+    }
     if (ids.length <= 1) {
       await admin.from("records").delete().eq("workspace_id", ws);
       await admin.from("workspace_invites").delete().eq("workspace_id", ws);

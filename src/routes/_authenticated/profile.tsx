@@ -278,7 +278,7 @@ function Profile() {
 
       {modal === "email" && <EmailModal onClose={() => setModal(null)} />}
       {modal === "password" && <PasswordModal onClose={() => setModal(null)} />}
-      {modal === "delete" && <DeleteModal sole={sole} onClose={() => setModal(null)} onDone={() => signOut({ clearCache: true })} />}
+      {modal === "delete" && <DeleteModal sole={sole} heirs={isOwner ? members.filter((m) => m.user_id !== myId) : null} onClose={() => setModal(null)} onDone={() => signOut({ clearCache: true })} />}
     </div>
   );
 }
@@ -326,8 +326,10 @@ function PasswordModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function DeleteModal({ sole, onClose, onDone }: { sole: boolean; onClose: () => void; onDone: () => Promise<void> }) {
+function DeleteModal({ sole, heirs, onClose, onDone }: { sole: boolean; heirs: Member[] | null; onClose: () => void; onDone: () => Promise<void> }) {
   const [txt, setTxt] = useState("");
+  const [heir, setHeir] = useState("");
+  const needHeir = !!heirs && heirs.length > 0;
   const [busy, setBusy] = useState(false);
   const msg = sole
     ? "This will permanently delete your account and all data in this workspace. This cannot be undone."
@@ -335,8 +337,17 @@ function DeleteModal({ sole, onClose, onDone }: { sole: boolean; onClose: () => 
   return (
     <Modal title="Delete account" desc={msg} onClose={onClose}>
       <div className="space-y-3">
+        {needHeir && (
+          <Field label="New café owner (required)">
+            <select className={inputCls} value={heir} onChange={(e) => setHeir(e.target.value)}>
+              <option value="">Choose who inherits the café…</option>
+              {heirs!.map((m) => <option key={m.user_id} value={m.user_id}>{m.display_name || m.email?.split("@")[0] || "Member"}{m.email ? ` (${m.email})` : ""}</option>)}
+            </select>
+          </Field>
+        )}
+        {needHeir && <p className="text-xs text-muted-foreground">They become the owner with full control of the café and its data.</p>}
         <Field label="Type DELETE to confirm"><input className={inputCls} value={txt} onChange={(e) => setTxt(e.target.value)} autoFocus /></Field>
-        <button type="button" disabled={txt !== "DELETE" || busy || isDemoMode()}
+        <button type="button" disabled={txt !== "DELETE" || (needHeir && !heir) || busy || isDemoMode()}
           className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-50"
           onClick={async () => {
             if (!navigator.onLine) return void toast.error(OFFLINE);
@@ -344,7 +355,7 @@ function DeleteModal({ sole, onClose, onDone }: { sole: boolean; onClose: () => 
             if (!ws) return void toast.error("Couldn't find your café");
             setBusy(true);
             try {
-              await deleteAccount({ data: { workspaceId: ws } });
+              await deleteAccount({ data: { workspaceId: ws, successorUserId: needHeir ? heir : undefined } });
               localStorage.removeItem("menuwise:cafe_name");
               await onDone();
               toast.success("Your account was deleted");
