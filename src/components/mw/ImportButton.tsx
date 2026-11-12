@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Download, FileSpreadsheet, FileText, Upload, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,11 @@ import { applyMapping, guessMapping, matchesTemplate, type Mapping } from "@/lib
 export interface ParsedRow<T> { line: number; label: string; item?: T; error?: string; flag?: string; duplicate?: boolean }
 export interface ImportTemplate { filename: string; header: string[]; rows: string[][] }
 export interface ImportField { options?: string[] | ((row: Row) => string[]); type?: 'text' | 'number' | 'date' | 'time'; allowCustom?: boolean; labels?: Record<string, string> }
-export function ImportButton<T>({ what, columns, parse, commit, className = "", template, fields = {}, allowMerge = false, mergeLabel = 'Merge (same date, item and price)', mergeSummary = 'sales entries to combine', allowAddDuplicate = true }: {
+export function ImportButton<T>({ what, columns, parse, commit, className = "", template, fields = {}, allowMerge = false, mergeLabel = 'Merge (same date, item and price)', mergeSummary = 'sales entries to combine', allowAddDuplicate = true, options }: {
   what: string; columns: string; parse: (rows: Row[]) => ParsedRow<T>[];
   commit: (items: T[], merges?: T[]) => void | Promise<void>; className?: string; template?: ImportTemplate;
   fields?: Record<string, ImportField>; allowMerge?: boolean; mergeLabel?: string; mergeSummary?: string; allowAddDuplicate?: boolean;
+  options?: ReactNode;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [raw, setRaw] = useState<Row[] | null>(null);
@@ -100,6 +101,7 @@ export function ImportButton<T>({ what, columns, parse, commit, className = "", 
     </DialogContent></Dialog>
     <Dialog open={raw !== null} onOpenChange={(open) => { if (!open && !saving) setRaw(null); }}><DialogContent className="flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col sm:max-w-6xl">
       <DialogHeader><DialogTitle>{confirm ? 'Confirm import' : 'Review import'}</DialogTitle><DialogDescription>{what} · {ready} ready · {corrected.size} rows corrected · {resolved.skipped.length} entries skipped · {entries.filter((e) => e.duplicate).length} possible duplicates</DialogDescription></DialogHeader>
+      {options && !confirm && <div className="shrink-0 rounded-md border border-border bg-muted/40 px-3 py-2">{options}</div>}
       {confirm ? <div className="space-y-3 py-4"><p className="text-sm text-foreground">{resolved.add.length} entries to add{allowMerge ? ` · ${resolved.merge.length} ${mergeSummary}` : ""}.</p><p className="text-sm text-muted-foreground">Only approved entries are saved. Unresolved or skipped entries are excluded.</p></div> : <div className="min-h-0 space-y-4 overflow-y-auto">
         {entries.map((entry) => <div key={entry.line} className="space-y-2 border-b border-border py-3">
           <div className="flex flex-wrap items-center justify-between gap-2"><p className="min-w-0 break-words font-semibold text-primary">Row {entry.line}: {entry.label || 'Unnamed entry'}</p>
