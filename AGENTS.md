@@ -26,3 +26,4 @@
 - Staff Home uses a dedicated operational dashboard and shared daily-import components; owner Home retains its financial dashboard. Why: shift tasks need their own presentation without duplicating import or permission logic.
 
 - Staff may insert (never edit or delete) menu items from the shift quick-add, tagged `needs-review`; the `enforce_record_role` trigger and `mayAdd` both allow this. Why: incomplete menus must not block shift logging while catalog control stays with owners.
+- Staff inventory access is a per-member `workspace_members.inventory_access` flag set only via the `set_member_inventory_access` RPC (owner or admin); it lets that staff add/edit ingredients, purchases and usages but never delete. Why: some cafés put a barista in charge of stock without making them owner.

@@ -35,7 +35,7 @@ export function NavBar() {
   const isActive = useActive();
   const db = useDB();
   const perm = usePermissions();
-  const tabs = perm.isOwner ? TABS : TABS.filter((tab) => ["/", "/sales", "/log-production", "/log-waste"].includes(tab.to));
+  const tabs = perm.isOwner ? TABS : TABS.filter((tab) => ["/", "/sales", "/log-production", "/log-waste", ...(perm.canInventory ? ["/ingredients"] : [])].includes(tab.to));
   return (
     <>
       {/* Mobile bottom tab bar */}

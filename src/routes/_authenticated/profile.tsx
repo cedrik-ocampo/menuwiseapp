@@ -16,6 +16,7 @@ import { downloadCsv } from "@/components/mw/ImportButton";
 import { PageTitle, CafeName } from "@/components/mw/AppShell";
 import { Avatar, useMe, useSignOut } from "@/components/mw/UserMenu";
 import { Field, Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
+import { InventoryAccessToggle } from "@/components/mw/InventoryAccessToggle";
 import { leaveWorkspace, deleteAccount } from "@/lib/account.functions";
 import { cancelWorkspaceInvite, createWorkspaceInvite } from "@/lib/invitations.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -35,7 +36,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
 });
 
 const OFFLINE = "You're offline. Reconnect to save this change.";
-interface Member { user_id: string; role: "owner" | "staff"; email: string | null; display_name: string | null }
+interface Member { user_id: string; role: "owner" | "staff"; email: string | null; display_name: string | null; inventory_access: boolean }
 interface PendingInvite { id: string; email: string; invited_by: string; created_at: string }
 
 function Choice<T extends string | number>({ label, value, options, onChange }: { label: string; value: T; options: { v: T; l: string }[]; onChange: (v: T) => void }) {
@@ -85,7 +86,7 @@ function Profile() {
   const load = useCallback(async () => {
     if (!ws || !navigator.onLine) return;
     const [{ data }, { data: pending }] = await Promise.all([
-      supabase.from("workspace_members").select("user_id,role,email,display_name").eq("workspace_id", ws).order("joined_at"),
+      supabase.from("workspace_members").select("user_id,role,email,display_name,inventory_access").eq("workspace_id", ws).order("joined_at"),
       supabase.from("workspace_invites").select("id,email,invited_by,created_at").eq("workspace_id", ws).order("created_at", { ascending: false }),
     ]);
     if (data) setMembers(data as Member[]);
@@ -191,8 +192,10 @@ function Profile() {
                   <div className="min-w-0">
                     <p className="flex items-center gap-1 font-semibold text-primary">{m.display_name || m.email?.split("@")[0] || "Member"}{m.user_id === myId && " (you)"}{m.role === "owner" && <Crown className="h-3.5 w-3.5 text-warning" />}</p>
                     <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+                    {isOwner && m.role === "staff" && ws && <InventoryAccessToggle workspaceId={ws} userId={m.user_id} name={m.display_name || m.email?.split("@")[0] || "This member"} initial={m.inventory_access} />}
+                    {!isOwner && m.role === "staff" && m.inventory_access && <p className="mt-0.5 text-xs text-muted-foreground">Manages inventory</p>}
                   </div>
-                  <span className="text-xs text-muted-foreground">{m.role === "owner" ? "Owner" : "Staff"}</span>
+                  <span className="self-start text-xs text-muted-foreground">{m.role === "owner" ? "Owner" : "Staff"}</span>
                 </li>
               ))}
             </ul>

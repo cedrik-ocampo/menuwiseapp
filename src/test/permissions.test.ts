@@ -24,3 +24,11 @@ describe("owner/employee permissions", () => {
     expect(mayEdit("staff", "u1", "sales", "c", rows)).toBe(false);
   });
 });
+
+import { mayAdd as mayAddInv, mayEdit as mayEditInv } from "@/lib/permissions";
+describe("staff inventory access toggle", () => {
+  it("staff without access cannot add stock", () => expect(mayAddInv("staff", "purchases")).toBe(false));
+  it("staff with access can add stock", () => expect(mayAddInv("staff", "purchases", true)).toBe(true));
+  it("staff with access can edit any ingredient", () => expect(mayEditInv("staff", "u1", "ingredients", "ING-1", [], true)).toBe(true));
+  it("access does not unlock menu item edits", () => expect(mayEditInv("staff", "u1", "menuItems", "M-1", [], true)).toBe(false));
+});

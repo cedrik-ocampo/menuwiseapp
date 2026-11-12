@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Pencil, ShieldCheck } from "lucide-react";
 import { adminSaveMenuItems, adminUpdateRecord, getCafe } from "@/lib/admin.functions";
+import { InventoryAccessToggle } from "@/components/mw/InventoryAccessToggle";
 import { MenuImport } from "@/components/mw/MenuImport";
 import type { DBView } from "@/lib/store";
 import type { MenuItem } from "@/lib/types";
@@ -32,6 +33,7 @@ const TABS = ["Overview", "Menu Items", "Ingredients", "Sales", "Production", "W
 function AdminCafe() {
   const { id } = Route.useParams();
   const fn = useServerFn(getCafe);
+  const qc = useQueryClient();
   const q = useQuery({ queryKey: ["admin", "cafe", id], queryFn: () => fn({ data: { id } }), retry: false });
   const [tab, setTab] = useState<(typeof TABS)[number]>("Overview");
   const [editMode, setEditMode] = useState(false);
@@ -82,7 +84,18 @@ function AdminCafe() {
       {tab === "Waste" && <Table head={["Date", "Stage", "Type", "Qty", "Value"]} rows={[...waste].sort((a, b) => String(b.at).localeCompare(a.at)).map((w) => [shortDate(w.at), w.stage, w.wasteType, `${fmtQty(w.quantity)} ${w.unit}`, formatPeso(w.value ?? 0)])} />}
       {tab === "Members" && (
         <div className="space-y-4">
-          <Table head={["Name", "Email", "Role", "Joined"]} rows={q.data.members.map((m) => [m.display_name ?? "—", m.email ?? "—", m.role, shortDate(m.joined_at)])} />
+          <Panel><SectionTitle>Members</SectionTitle>
+            <ul className="divide-y divide-border text-sm">{q.data.members.map((m) => (
+              <li key={m.user_id} className="flex items-start justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-primary">{m.display_name ?? "—"}</p>
+                  <p className="truncate text-xs text-muted-foreground">{m.email ?? "—"} · joined {shortDate(m.joined_at)}</p>
+                  {m.role === "staff" && <InventoryAccessToggle workspaceId={id} userId={m.user_id} name={m.display_name || m.email?.split("@")[0] || "This member"} initial={m.inventory_access} onChanged={() => void qc.invalidateQueries()} />}
+                </div>
+                <span className="text-xs text-muted-foreground">{m.role === "owner" ? "Owner" : "Staff"}</span>
+              </li>
+            ))}</ul>
+          </Panel>
           <Panel><SectionTitle>Pending invitations</SectionTitle>
             {q.data.invites.length === 0 ? <p className="text-sm text-muted-foreground">No pending invitations.</p>
               : <ul className="text-sm">{q.data.invites.map((i) => <li key={i.id} className="border-t border-border py-2">{i.email} · invited {shortDate(i.created_at)}</li>)}</ul>}

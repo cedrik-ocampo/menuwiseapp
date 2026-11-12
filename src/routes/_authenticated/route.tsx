@@ -64,7 +64,7 @@ function CafeLayout() {
         <AppHeader cafeName={cafe} />
         <main className="mx-auto max-w-6xl px-5 py-6 md:px-8">
           {db.ready && <AdminEditNotice />}
-          {db.ready && ownerOnly && !perm.isOwner ? <p className="py-20 text-center text-muted-foreground">Only the café owner can add ingredients and menu items. You can log production, waste, and sales.</p> : db.ready ? <Outlet /> : <p className="py-20 text-center text-muted-foreground">Loading your café data…</p>}
+          {db.ready && ownerOnly && !(perm.isOwner || (path === "/ingredients/new" && perm.canInventory)) ? <p className="py-20 text-center text-muted-foreground">Only the café owner can add ingredients and menu items. You can log production, waste, and sales.</p> : db.ready ? <Outlet /> : <p className="py-20 text-center text-muted-foreground">Loading your café data…</p>}
         </main>
         <footer className="px-5 pb-4 text-center text-xs text-muted-foreground md:px-8">Need help or have concerns? Contact <a href="mailto:menuwise.contact@gmail.com" className="font-semibold text-accent">menuwise.contact@gmail.com</a></footer>
       </div>

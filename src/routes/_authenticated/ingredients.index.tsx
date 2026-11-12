@@ -75,7 +75,7 @@ function Inventory() {
       <PageTitle back={{ to: "/", label: "Dashboard / Summary" }} title="Ingredient Inventory List" subtitle="Keep stock visible. Use the soonest-expiring ingredients first." />
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
-          {perm.isOwner && <><div>
+          {perm.canInventory && <><div>
             <p className="mb-2 text-sm font-semibold text-muted-foreground">Import your ingredient inventory</p>
             <ImportButton
               what="ingredients"

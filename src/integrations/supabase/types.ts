@@ -143,6 +143,7 @@ export type Database = {
         Row: {
           display_name: string | null
           email: string | null
+          inventory_access: boolean
           joined_at: string
           role: Database["public"]["Enums"]["workspace_role"]
           user_id: string
@@ -151,6 +152,7 @@ export type Database = {
         Insert: {
           display_name?: string | null
           email?: string | null
+          inventory_access?: boolean
           joined_at?: string
           role?: Database["public"]["Enums"]["workspace_role"]
           user_id: string
@@ -159,6 +161,7 @@ export type Database = {
         Update: {
           display_name?: string | null
           email?: string | null
+          inventory_access?: boolean
           joined_at?: string
           role?: Database["public"]["Enums"]["workspace_role"]
           user_id?: string
@@ -218,6 +221,10 @@ export type Database = {
       is_workspace_owner: {
         Args: { _uid: string; _ws: string }
         Returns: boolean
+      }
+      set_member_inventory_access: {
+        Args: { _on: boolean; _user: string; _ws: string }
+        Returns: undefined
       }
     }
     Enums: {

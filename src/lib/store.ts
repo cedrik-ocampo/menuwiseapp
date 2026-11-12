@@ -46,6 +46,7 @@ let userId: string | null = null;
 let userName = "";
 let workspaceId: string | null = null;
 let workspaceRole: WorkspaceRole = null;
+let inventoryAccess = false;
 let state: Persisted = { tables: emptyTables(), pending: [], lastPull: null, seeded: false };
 let ready = false;
 let online = typeof navigator !== "undefined" ? navigator.onLine : true;
@@ -87,7 +88,7 @@ export function useDB(): DBView {
 /** Permission helpers for the UI; re-render with the store. */
 export function usePermissions() {
   useDB();
-  return { isOwner: workspaceRole === 'owner', canEdit: (c: CollectionName, id: string) => canEditRecord(c, id) };
+  return { isOwner: workspaceRole === 'owner', canInventory: workspaceRole === 'owner' || inventoryAccess, canEdit: (c: CollectionName, id: string) => canEditRecord(c, id) };
 }
 
 export function currentWorkspace() {
@@ -98,8 +99,9 @@ export function currentUser() {
 }
 
 export function isWorkspaceOwner() { return workspaceRole === 'owner'; }
+export function canManageInventory() { return workspaceRole === 'owner' || inventoryAccess; }
 export function canEditRecord(collection: CollectionName, id: string) {
-  return mayEdit(workspaceRole, userId, collection, id, view[collection] as (Audit & { id: string })[]);
+  return mayEdit(workspaceRole, userId, collection, id, view[collection] as (Audit & { id: string })[], inventoryAccess);
 }
 
 /** Resolve (or create / join via invite) the user's café workspace. Cached for offline use. */
@@ -131,12 +133,17 @@ export async function initStore(uid: string, display: string, cafe = "My Café")
   workspaceId = ws;
   const roleKey = `menuwise:role:${uid}:${ws}`;
   workspaceRole = null;
+  inventoryAccess = false;
   if (navigator.onLine) {
-    const { data, error } = await supabase.from('workspace_members').select('role').eq('workspace_id', ws).eq('user_id', uid).maybeSingle();
-    if (!error && data) { workspaceRole = data.role; localStorage.setItem(roleKey, data.role); }
+    const { data, error } = await supabase.from('workspace_members').select('role,inventory_access').eq('workspace_id', ws).eq('user_id', uid).maybeSingle();
+    if (!error && data) {
+      workspaceRole = data.role; inventoryAccess = !!data.inventory_access;
+      localStorage.setItem(roleKey, data.role); localStorage.setItem(`${roleKey}:inv`, inventoryAccess ? '1' : '0');
+    }
   } else {
     const cached = localStorage.getItem(roleKey);
     workspaceRole = cached === 'owner' || cached === 'staff' ? cached : null;
+    inventoryAccess = localStorage.getItem(`${roleKey}:inv`) === '1';
   }
   const saved = await idbGet<Persisted>(storeKey());
   state = saved ?? { tables: emptyTables(), pending: [], lastPull: null, seeded: false };
@@ -150,6 +157,7 @@ export function resetStore() {
   userId = null;
   workspaceId = null;
   workspaceRole = null;
+  inventoryAccess = false;
   ready = false;
   state = { tables: emptyTables(), pending: [], lastPull: null, seeded: false };
   emit();
@@ -192,7 +200,7 @@ const TRACKED: CollectionName[] = ["ingredients", "purchases", "usages", "menuIt
 export function put<K extends CollectionName>(collection: K, item: Collections[K] & { id: string }) {
   const prev = state.tables[collection][item.id];
   const existing = prev && !prev.deleted ? (prev.data as unknown as Record<string, unknown> & Audit) : undefined;
-  if (existing ? !canEditRecord(collection, item.id) : !mayAdd(workspaceRole, collection)) {
+  if (existing ? !canEditRecord(collection, item.id) : !mayAdd(workspaceRole, collection, inventoryAccess)) {
     throw new Error('Only the owner can change café setup. Employees can edit only their own latest entry in each log.');
   }
   const now = new Date().toISOString();
@@ -286,7 +294,7 @@ export async function sync(): Promise<void> {
     state.seeded = true;
 
     if (state.pending.length) {
-      const batch = state.pending.filter((key) => workspaceRole === 'owner' || ['batches', 'sales', 'wasteLogs'].includes(key.split('|')[0]));
+      const batch = state.pending.filter((key) => workspaceRole === 'owner' || ['batches', 'sales', 'wasteLogs'].includes(key.split('|')[0]) || (inventoryAccess && ['ingredients', 'purchases', 'usages'].includes(key.split('|')[0])));
       const payload = batch.map((key) => {
         const [c, id] = key.split("|") as [CollectionName, string];
         const r = state.tables[c][id];

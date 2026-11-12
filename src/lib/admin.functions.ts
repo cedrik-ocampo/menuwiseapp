@@ -49,7 +49,7 @@ export const getCafe = createServerFn({ method: "POST" })
     await assertAdmin(sb, context.userId);
     const [{ data: ws }, { data: members }, { data: invites }, { data: recs }] = await Promise.all([
       sb.from("workspaces").select("id,name,created_at").eq("id", data.id).maybeSingle(),
-      sb.from("workspace_members").select("user_id,role,email,display_name,joined_at").eq("workspace_id", data.id),
+      sb.from("workspace_members").select("user_id,role,email,display_name,joined_at,inventory_access").eq("workspace_id", data.id),
       sb.from("workspace_invites").select("id,email,created_at").eq("workspace_id", data.id),
       sb.from("records").select("id,collection,data,updated_at").eq("workspace_id", data.id).eq("deleted", false).limit(20000),
     ]);

@@ -32,7 +32,7 @@ export function PurchaseEntries({ db, ingredientId }: { db: DBView; ingredientId
                 <p className="font-semibold text-primary">Bought {shortDate(p.purchaseDate)} · {fmtQty(p.quantity)} {ing?.unit}</p>
                 <p className="text-muted-foreground">{fmtQty(p.remaining)} left · Expiry {shortDate(p.expiryDate)} · {formatPeso(p.unitCost)}/{ing?.unit}</p>
               </div>
-              {perm.isOwner && <EditButton label="Edit ingredient entry" onClick={() => setEdit(p)} />}
+              {perm.canInventory && <EditButton label="Edit ingredient entry" onClick={() => setEdit(p)} />}
             </div>
             <AuditCaption collection="purchases" record={p} />
           </li>
