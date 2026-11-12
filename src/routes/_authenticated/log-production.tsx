@@ -1,3 +1,4 @@
+import { QuickAddItem } from "@/components/mw/QuickAddItem";
 import { ProductionHistory } from "@/components/mw/History";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -113,6 +114,7 @@ function LogProduction() {
             <option value="">Select a menu item</option>
             {db.menuItems.map((m) => <option key={m.id} value={m.id}>{m.id} · {m.name}</option>)}
           </select>
+          <QuickAddItem onCreated={(id) => onItemChange(id)} />
         </Field>
         <Field label="Production date">
           <input type="date" className={inputCls} value={date} onChange={(e) => onDateChange(e.target.value)} />

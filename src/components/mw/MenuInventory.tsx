@@ -1,3 +1,4 @@
+import { NEEDS_REVIEW_TAG } from "@/lib/permissions";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Pencil, Trash2, X, ExternalLink } from "lucide-react";
@@ -90,6 +91,7 @@ export function MenuInventory({ db, rows, focusId, onFocusDone }: { db: DBView; 
                 )}
                 <span className="line-clamp-2 text-sm font-bold text-primary">{r.item.name}</span>
                 <span className="text-xs text-muted-foreground">{r.item.category}</span>
+                {r.item.tags?.includes(NEEDS_REVIEW_TAG) && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-semibold text-warning">Needs cost / recipe</span>}
                 <span className="text-xs font-semibold text-primary">{formatPeso(r.item.retailPrice)}</span>
                 {r.waste > 0 && (
                   <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: wasteColor(r.intensity), color: "white" }}>

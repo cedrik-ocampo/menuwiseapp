@@ -1,3 +1,4 @@
+import { QuickAddItem } from "./QuickAddItem";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -58,6 +59,7 @@ export function SaleDialog({ sale, menuItemId, onClose }: { sale?: Sale; menuIte
               {!db.menuItems.length && <option value="">No menu items yet</option>}
               {options.map((m) => <option key={m.id} value={m.id}>{m.id} · {m.name}</option>)}
             </select>
+            {!sale && <QuickAddItem onCreated={(id, p) => { setItemId(id); setSearch(""); setPrice(String(p)); }} />}
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Quantity" required error={err.qty}><input inputMode="numeric" className={inputCls} value={qty} onChange={(e) => setQty(e.target.value)} /></Field>

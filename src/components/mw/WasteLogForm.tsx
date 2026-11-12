@@ -1,3 +1,4 @@
+import { QuickAddItem } from "./QuickAddItem";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { Check, Calculator, Trash2, Pencil } from "lucide-react";
@@ -157,6 +158,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
                 <option key={m.id} value={m.id}>{m.id} · {m.name}</option>
               ))}
             </select>
+            {!menuFixed && <QuickAddItem onCreated={(id) => { setMenuItemId(id); setBatchId(""); }} />}
           </Field>
           <Field label="Batch ID · optional" hint={stage === "WIP" ? "For WIP, select the batch it came from." : "For Finished Product, select the batch, if any."}>
             <select className={inputCls} value={batchId} onChange={(e) => setBatchId(e.target.value)}>

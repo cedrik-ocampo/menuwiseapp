@@ -3,8 +3,12 @@ import type { Audit, CollectionName } from './types';
 export type WorkspaceRole = 'owner' | 'staff' | null;
 export const DAILY_COLLECTIONS: CollectionName[] = ['batches', 'sales', 'wasteLogs'];
 
+/** Tag on menu items added by staff on shift, so owners know to add costs or a recipe. */
+export const NEEDS_REVIEW_TAG = 'needs-review';
+
 export function mayAdd(role: WorkspaceRole, collection: CollectionName) {
-  return role === 'owner' || (role === 'staff' && DAILY_COLLECTIONS.includes(collection));
+  // Staff may also add (never edit) a missing menu item during a shift.
+  return role === 'owner' || (role === 'staff' && (DAILY_COLLECTIONS.includes(collection) || collection === 'menuItems'));
 }
 
 export function mayEdit(role: WorkspaceRole, userId: string | null, collection: CollectionName, id: string, rows: (Audit & { id: string })[]) {

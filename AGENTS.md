@@ -24,3 +24,5 @@
 
 - Spreadsheet validation lives in browser-safe import-parsers, and all imports use the shared editable ImportButton review with explicit decisions; only sales support merging by date, item, and unit price. Why: bulk entry needs consistent safeguards and testable rules without bypassing audited workspace writes.
 - Staff Home uses a dedicated operational dashboard and shared daily-import components; owner Home retains its financial dashboard. Why: shift tasks need their own presentation without duplicating import or permission logic.
+
+- Staff may insert (never edit or delete) menu items from the shift quick-add, tagged `needs-review`; the `enforce_record_role` trigger and `mayAdd` both allow this. Why: incomplete menus must not block shift logging while catalog control stays with owners.

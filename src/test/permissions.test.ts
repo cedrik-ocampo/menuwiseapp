@@ -15,7 +15,8 @@ describe("owner/employee permissions", () => {
     expect(mayAdd("staff", "sales")).toBe(true);
     expect(mayAdd("staff", "batches")).toBe(true);
     expect(mayAdd("staff", "ingredients")).toBe(false);
-    expect(mayAdd("staff", "menuItems")).toBe(false);
+    expect(mayAdd("staff", "menuItems")).toBe(true);
+    expect(mayEdit("staff", "u1", "menuItems", "a", rows)).toBe(false);
   });
   it("employee edits only their own latest entry", () => {
     expect(mayEdit("staff", "u1", "sales", "b", rows)).toBe(true);
