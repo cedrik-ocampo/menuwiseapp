@@ -40,6 +40,8 @@ function Inventory() {
   const [asc, setAsc] = useState(true);
   const [view, setView] = useState<"Grid" | "List">("Grid");
   const [threshold] = useThreshold();
+  const [splitOn, setSplitOn] = useState(false);
+  const [delim, setDelim] = useState("()");
 
   const rows = useMemo(() => {
     const r = db.ingredients.map((i) => {
@@ -81,11 +83,25 @@ function Inventory() {
               what="ingredients"
               columns={COLS}
               className="h-12 w-full"
-              parse={(rows) => parseIngredientRows(rows, db)}
+              parse={(rows) => parseIngredientRows(rows, db, splitOn && delim ? delim : undefined)}
               fields={{ category: { options: knownCats, allowCustom: true }, unit: { options: INGREDIENT_UNITS }, storage: { options: INGREDIENT_STORAGE }, purchasedate: { type: "date" }, expirydate: { type: "date" }, quantity: { type: "number" }, unitcost: { type: "number" } }}
               template={{ filename: "ingredients-template.csv", header: ["Ingredient_ID", "Ingredient_Name", "Category", "Storage", "Unit", "Supplier", "Purchase_Date", "Expiry_Date", "Quantity", "Unit_Cost", "Notes"], rows: [["ING-EXAMPLE", "Fresh milk", "Dairy", "Refrigerated", "L", "Example supplier", todayISO(), todayISO(), "10", "80", "Example starting stock"]] }}
               commit={(items) => items.forEach(({ ing, purchase }) => { if (!db.ingredients.some((i) => i.id === ing.id)) put("ingredients", ing); put("purchases", purchase); })}
             />
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={splitOn} onChange={(e) => setSplitOn(e.target.checked)} /> Supplier is in the item name</label>
+              {splitOn && <>
+                <select aria-label="Supplier separator" className={`${inputCls} w-auto`} value={["()", " - ", "/", "|", ","].includes(delim) ? delim : "custom"} onChange={(e) => setDelim(e.target.value === "custom" ? "" : e.target.value)}>
+                  <option value="()">In brackets: Beans (Supplier)</option>
+                  <option value=" - ">Dash: Beans - Supplier</option>
+                  <option value="/">Slash: Beans / Supplier</option>
+                  <option value="|">Bar: Beans | Supplier</option>
+                  <option value=",">Comma: Beans, Supplier</option>
+                  <option value="custom">Custom…</option>
+                </select>
+                {!["()", " - ", "/", "|", ","].includes(delim) && <input aria-label="Custom separator" placeholder="Type separator" className={`${inputCls} w-32`} value={delim} onChange={(e) => setDelim(e.target.value)} />}
+              </>}
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">Import · Required Columns: {COLS}.</p>
           </div>
 

@@ -143,12 +143,12 @@ export function parseSales(rows: Row[], db: DBView): ParsedRow<Sale>[] {
 
 export const INGREDIENT_UNITS = ["L", "ml", "kg", "g", "pc", "pack", "box"];
 export const INGREDIENT_STORAGE = ["Refrigerated", "Frozen", "Pantry"];
-export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: Ingredient; purchase: Purchase }>[] {
+export function parseIngredientRows(rows: Row[], db: DBView, supplierDelimiter?: string): ParsedRow<{ ing: Ingredient; purchase: Purchase }>[] {
   const known = [...new Set(["Dairy", "Produce", "Dry goods", "Beverage", "Packaging", "Other", ...db.ingredients.map((i) => i.category)])];
   const ids = new Map(db.ingredients.map((i) => [i.id.toLowerCase(), i]));
   const seen = new Set(db.purchases.map((p) => `${p.ingredientId.toLowerCase()}|${p.purchaseDate}|${p.expiryDate}|${p.quantity}|${p.unitCost}`));
   return rows.map((r, index) => {
-    const split = splitSupplier(r.ingredientname || r.name || "", r.supplier || "");
+    const split = splitSupplier(r.ingredientname || r.name || "", r.supplier || "", supplierDelimiter);
     const name = split.name; r = { ...r, supplier: split.supplier };
     const id = (r.ingredientid || r.id || "").trim() || (name ? (db.ingredients.find((i) => i.name.toLowerCase() === name.toLowerCase())?.id ?? `ING-${name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").slice(0, 16)}`) : "");
     const unit = r.unit || "", quantity = num(r.quantity), unitCost = num(r.unitcost);
@@ -234,10 +234,17 @@ export function parseIngredientRows(rows: Row[], db: DBView): ParsedRow<{ ing: I
   }
 
 
-/** Moves a trailing "(Supplier)" out of an ingredient name when no supplier is given. */
-export function splitSupplier(rawName: string, rawSupplier: string): { name: string; supplier: string; extracted: boolean } {
+/** Splits a supplier out of an ingredient name when no supplier is given. Off unless a delimiter is set; "()" means a trailing "(Supplier)". */
+export function splitSupplier(rawName: string, rawSupplier: string, delimiter?: string): { name: string; supplier: string; extracted: boolean } {
   const name = rawName.trim(), supplier = rawSupplier.trim();
-  const m = /^(.+?)\s*\(([^()]+)\)\s*$/.exec(name);
-  if (supplier || !m) return { name, supplier, extracted: false };
-  return { name: m[1].trim(), supplier: m[2].trim(), extracted: true };
+  const none = { name, supplier, extracted: false };
+  if (!delimiter || supplier) return none;
+  if (delimiter === "()") {
+    const m = /^(.+?)\s*\(([^()]+)\)\s*$/.exec(name);
+    return m ? { name: m[1].trim(), supplier: m[2].trim(), extracted: true } : none;
+  }
+  const at = name.lastIndexOf(delimiter);
+  if (at <= 0) return none;
+  const left = name.slice(0, at).trim(), right = name.slice(at + delimiter.length).trim();
+  return left && right ? { name: left, supplier: right, extracted: true } : none;
 }
