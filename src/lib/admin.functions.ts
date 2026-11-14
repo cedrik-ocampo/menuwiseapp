@@ -4,20 +4,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { summarizeCafe, type CafeRecordInput } from "./admin-privacy";
 import type { ChangeLog } from "./types";
 
-/** Read-only MenuWise admin monitoring. All reads go through RLS as the caller; admin-only SELECT policies grant cross-café visibility. */
+/** Admin monitoring verifies the caller's role, then returns only aggregate projections. */
 async function assertAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (error || !data) {
-    console.error("Admin role check failed", userId, error?.message ?? "role not granted");
-    throw new Error("Forbidden");
-  }
+  if (error || !data) throw new Error("Forbidden");
 }
 
 export const amIAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
-    console.log("Admin role check", context.userId, !!data);
     return { admin: !!data };
   });
 

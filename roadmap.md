@@ -1,6 +1,6 @@
 # Roadmap
 
-- [~] Protect café confidentiality in MenuWise Admin: return only aggregate computation outputs, remove raw financial/quantity records from admin responses and views, and close full-owner access that bypasses the privacy boundary. Database policies applied; app verification remains.
+- [x] Protect café confidentiality in MenuWise Admin: return only aggregate computation outputs, remove raw financial/quantity records from admin responses and views, and close full-owner access that bypasses the privacy boundary. Database policies, calculations, admin tabs, direct-read blocking, and edit-log redaction verified.
 
 - [x] Add multi-sheet selection with earliest-to-latest sequential review and saving; test ordering and the live import flow.
 
