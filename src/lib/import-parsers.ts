@@ -181,7 +181,7 @@ export function parseIngredientRows(rows: Row[], db: DBView, supplierDelimiter?:
 }
 
   export function parseWasteRows(rows: Row[], db: DBView): ParsedRow<WasteLog>[] {
-    const seen = new Set(db.wasteLogs.map((w) => `${w.at}|${w.stage}|${w.ingredientId ?? w.menuItemId ?? ""}|${w.quantity}`));
+    const seen = new Set(db.wasteLogs.map((w) => `${w.at}|${w.stage}|${w.ingredientId ?? w.menuItemId ?? (w.customName ?? "").trim().toLowerCase()}|${w.quantity}`));
     return rows.map((r, k) => {
       const line = sourceLine(r, k);
       const stage = STAGES.find((s) => s.toLowerCase().replace(/\s/g, "") === (r.stage ?? "").toLowerCase().replace(/[\s_-]/g, "")) as Stage | undefined;
@@ -205,31 +205,32 @@ export function parseIngredientRows(rows: Row[], db: DBView, supplierDelimiter?:
         : !(Number.isFinite(q) && q > 0) ? "Quantity must be more than 0"
         : !unit ? "Unit is required"
         : !(Number.isFinite(c) && c >= 0) ? "Unit cost must be 0 or more"
-        : stage === "Ingredient" && !ing ? `Unknown Ingredient_ID "${ingRaw}"`
-        : stage === "Finished Product" && !menu ? `Unknown Menu_Item_ID "${menuRaw}"`
-        : stage === "WIP" && menuRaw && !menu ? `Unknown Menu_Item_ID "${menuRaw}"`
-        : stage === "WIP" && !menu && !batchId ? "WIP needs a Menu_Item_ID or Batch_ID"
+        : stage === "Ingredient" && !ing && !ingRaw.trim() ? "Ingredient_ID or name is required"
+        : stage === "Finished Product" && !menu && !menuRaw.trim() ? "Menu_Item_ID or name is required"
+        : stage === "WIP" && !menu && !batchId && !menuRaw.trim() ? "WIP needs a Menu_Item_ID, name or Batch_ID"
         : batchId && !batch ? `Unknown Batch_ID "${batchId}"`
         : batch && menu && batch.menuItemId !== menu.id ? "Batch_ID belongs to a different menu item"
         : attributedRaw && !attributed ? "Choose a known attributed menu item"
         : !allocation ? "Choose a valid allocation method"
         : "";
       if (err) return { line, label, error: err };
-      if (!stage || !wt || !allocation || (stage === "Ingredient" && !ing)) return { line, label, error: "Complete the required fields" };
+      if (!stage || !wt || !allocation) return { line, label, error: "Complete the required fields" };
       const at = new Date(`${date}T${time}`).toISOString();
       const linkId = stage === "Ingredient" ? ing?.id : menu?.id ?? batch?.menuItemId;
-      const key = `${at}|${stage}|${linkId ?? ""}|${q}`;
+      const customName = !linkId ? (stage === "Ingredient" ? ingRaw : menuRaw).trim().replace(/\s+/g, " ") || undefined : undefined;
+      const key = `${at}|${stage}|${linkId ?? customName?.toLowerCase() ?? ""}|${q}`;
       const duplicate = seen.has(key);
       seen.add(key);
       const item: WasteLog = {
         id: uid("W-"), at, stage, wasteType: wt, quantity: q, unit, unitCost: c, value: +(q * c).toFixed(2),
         ingredientId: stage === "Ingredient" ? ing?.id : undefined,
         menuItemId: stage !== "Ingredient" ? linkId : undefined,
+        customName,
         batchId: batchId || undefined,
         allocation, attributedMenuItemId: attributed?.id,
         retailValue: stage === "Finished Product" && menu ? q * menu.retailPrice : undefined,
       };
-      return { line, label, item, duplicate };
+      return { line, label, item, duplicate, flag: customName ? `"${customName}" isn't in your list — saved as a custom item` : undefined };
     });
   }
 

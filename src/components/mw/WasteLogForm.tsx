@@ -9,6 +9,7 @@ import { useDB, put, remove, usePermissions } from "@/lib/store";
 import { costPerUnit } from "@/lib/calc";
 import { ALLOCATIONS, STAGES, WASTE_TYPES, type Allocation, type Stage, type WasteLog, type WasteType } from "@/lib/types";
 import { formatPeso, fmtQty, shortDate, todayISO, uid } from "@/lib/format";
+import { normName, resolveWasteName, wasteItemLabel, wasteSuggestions } from "@/lib/waste-suggestions";
 import { Field, Segmented, btnPrimary, inputCls } from "./ui";
 
 const schema = z.object({
@@ -41,6 +42,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
   const [ingredientId, setIngredientId] = useState(ingFixed ?? "");
   const [menuItemId, setMenuItemId] = useState(menuFixed ?? "");
   const [batchId, setBatchId] = useState("");
+  const [itemText, setItemText] = useState("");
   const [wasteType, setWasteType] = useState<WasteType>("Spoilage");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
@@ -48,6 +50,17 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
   const [attributed, setAttributed] = useState("");
   const [allocation, setAllocation] = useState<Allocation>("Direct");
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const suggestions = useMemo(() => wasteSuggestions(db, stage), [db, stage]);
+  const customName = !ingFixed && !menuFixed && itemText.trim() && !(stage === "Ingredient" ? ingredientId : menuItemId) ? itemText.trim().replace(/\s+/g, " ") : "";
+  function pickItem(text: string) {
+    setItemText(text);
+    const hit = resolveWasteName(text, suggestions);
+    if (stage === "Ingredient") setIngredientId(hit?.kind === "Ingredient" ? hit.id! : "");
+    else { setMenuItemId(hit?.kind === "Menu item" ? hit.id! : ""); setBatchId(""); }
+    if (hit?.kind === "Previously logged") { setUnit(hit.unit ?? ""); setUnitCost(String(hit.unitCost ?? "")); }
+  }
+  useEffect(() => { if (!ingFixed && !menuFixed) pickItem(""); }, [stage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ing = db.ingredients.find((i) => i.id === ingredientId);
   const menu = db.menuItems.find((m) => m.id === menuItemId);
@@ -83,9 +96,10 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
     const errs: Record<string, string> = {};
     const r = schema.safeParse({ date, time, quantity: q, unit, unitCost: c });
     if (!r.success) r.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
-    if (stage === "Ingredient" && !ingredientId) errs.link = "Choose the ingredient that was lost";
-    if (stage === "Finished Product" && !menuItemId) errs.link = "Choose the menu item that was lost";
-    if (stage === "WIP" && !menuItemId && !batchId) errs.link = "Link a batch or menu item if known";
+    if (customName.length > 80) errs.link = "Keep the item name under 80 characters";
+    if (stage === "Ingredient" && !ingredientId && !customName) errs.link = "Pick or type the ingredient that was lost";
+    if (stage === "Finished Product" && !menuItemId && !customName) errs.link = "Pick or type the item that was lost";
+    if (stage === "WIP" && !menuItemId && !batchId && !customName) errs.link = "Type the item, or link a batch";
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
@@ -95,6 +109,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
       stage,
       ingredientId: stage === "Ingredient" ? ingredientId : undefined,
       menuItemId: stage !== "Ingredient" ? menuItemId || undefined : undefined,
+      customName: customName || undefined,
       batchId: batchId || undefined,
       wasteType,
       quantity: q,
@@ -107,7 +122,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
     };
     put("wasteLogs", log);
     // Ingredient waste reduces stock from the soonest-expiring lot first
-    if (stage === "Ingredient") {
+    if (stage === "Ingredient" && ingredientId) {
       let left = q;
       for (const lot of db.purchases.filter((p) => p.ingredientId === ingredientId && p.remaining > 0).sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))) {
         if (left <= 0) break;
@@ -118,6 +133,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
     }
     toast.success(`Waste logged: ${formatPeso(log.value)}`);
     setQuantity("");
+    if (customName) pickItem("");
     onSaved?.(log);
   }
 
@@ -141,25 +157,14 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
       )}
 
       {stage === "Ingredient" ? (
-        <Field label="Ingredient ID" error={errors.link}>
-          <select className={inputCls} value={ingredientId} disabled={!!ingFixed} onChange={(e) => setIngredientId(e.target.value)}>
-            <option value="">Select ingredient</option>
-            {db.ingredients.map((i) => (
-              <option key={i.id} value={i.id}>{i.id} · {i.name}</option>
-            ))}
-          </select>
-        </Field>
+        ingFixed ? (
+          <p className="text-sm font-semibold text-primary">Ingredient: <span className="font-normal">{ing?.name ?? ingFixed}</span></p>
+        ) : <ItemBox label="Ingredient" value={itemText} onChange={pickItem} suggestions={suggestions} custom={!!customName} error={errors.link} />
       ) : (
         <>
-          <Field label={stage === "WIP" ? "Menu Item ID · if known" : "Menu Item ID"} error={errors.link}>
-            <select className={inputCls} value={menuItemId} disabled={!!menuFixed} onChange={(e) => { setMenuItemId(e.target.value); setBatchId(""); }}>
-              <option value="">Select menu item</option>
-              {db.menuItems.map((m) => (
-                <option key={m.id} value={m.id}>{m.id} · {m.name}</option>
-              ))}
-            </select>
-            {!menuFixed && <QuickAddItem onCreated={(id) => { setMenuItemId(id); setBatchId(""); }} />}
-          </Field>
+          {menuFixed ? (
+            <p className="text-sm font-semibold text-primary">Menu item: <span className="font-normal">{menu?.name ?? menuFixed}</span></p>
+          ) : <ItemBox label={stage === "WIP" ? "Item · if known" : "Item"} value={itemText} onChange={pickItem} suggestions={suggestions} custom={!!customName} error={errors.link} />}
           <Field label="Batch ID · optional" hint={stage === "WIP" ? "For WIP, select the batch it came from." : "For Finished Product, select the batch, if any."}>
             <select className={inputCls} value={batchId} onChange={(e) => setBatchId(e.target.value)}>
               <option value="">Not linked</option>
@@ -232,8 +237,21 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
   );
 }
 
+function ItemBox({ label, value, onChange, suggestions, custom, error }: { label: string; value: string; onChange: (v: string) => void; suggestions: ReturnType<typeof wasteSuggestions>; custom: boolean; error?: string }) {
+  const listId = `waste-items-${label.replace(/\W/g, "")}`;
+  return (
+    <Field label={label} error={error} hint={custom ? "Not in your list yet — it will be saved as a custom item and suggested next time." : "Pick from the list or type any name."}>
+      <input className={inputCls} list={listId} value={value} onChange={(e) => onChange(e.target.value)} placeholder="Start typing, e.g. Ube cake" />
+      <datalist id={listId}>
+        {suggestions.map((s) => <option key={`${s.kind}-${s.name}`} value={s.name}>{s.kind}</option>)}
+      </datalist>
+    </Field>
+  );
+}
+
 export function WasteList({ logs, empty = "No waste history yet." }: { logs: WasteLog[]; empty?: string }) {
   const perm = usePermissions();
+  const db = useDB();
   const [editing, setEditing] = useState<WasteLog | null>(null);
   if (!logs.length) return <p className="py-4 text-center text-sm text-muted-foreground">{empty}</p>;
   return (
@@ -245,8 +263,11 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
       {logs.map((w) => (
         <div key={w.id} className="grid grid-cols-[1fr_1fr_4rem] items-center border-t border-border px-4 py-3 text-sm">
           <div>
-            <p className="font-semibold text-primary">{shortDate(w.at)}</p>
-            <p className="text-muted-foreground">{w.wasteType}</p>
+            <p className="font-semibold text-primary">{wasteItemLabel(w, db)}{isCustom(w) && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">Custom</span>}</p>
+            <p className="text-muted-foreground">{shortDate(w.at)} · {w.wasteType}</p>
+            {isCustom(w) && w.stage !== "Ingredient" && perm.isOwner && (
+              <QuickAddItem label="Add to Menu" defaultName={w.customName!} defaultCost={w.unitCost} onCreated={(id) => linkCustom(db.wasteLogs, w.customName!, id)} />
+            )}
           </div>
           <div className="text-right">
             <p className="text-muted-foreground">{fmtQty(w.quantity)} {w.unit}</p>
@@ -274,4 +295,12 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
       ))}
     </div>
   );
+}
+
+const isCustom = (w: WasteLog) => !!w.customName && !w.ingredientId && !w.menuItemId;
+
+/** Link every past custom waste entry with this name to the newly created menu item. */
+function linkCustom(logs: WasteLog[], name: string, menuItemId: string) {
+  const n = normName(name);
+  for (const w of logs) if (isCustom(w) && w.stage !== "Ingredient" && normName(w.customName!) === n) put("wasteLogs", { ...w, menuItemId });
 }

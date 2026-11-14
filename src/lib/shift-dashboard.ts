@@ -32,8 +32,8 @@ export function shiftDashboard(db: DBView, today: string) {
   const activity = [
     ...db.sales.filter((r) => operationalDate(r.date) === today).map((r) => ({ record: r as typeof r & Audit, kind: 'Sales', itemId: r.menuItemId, quantity: r.quantity, unit: db.menuItems.find((m) => m.id === r.menuItemId)?.unit ?? 'units', fallbackAt: undefined })),
     ...db.batches.filter((r) => operationalDate(r.producedAt) === today).map((r) => ({ record: r as typeof r & Audit, kind: 'Production', itemId: r.menuItemId, quantity: r.quantity, unit: db.menuItems.find((m) => m.id === r.menuItemId)?.batchUnit ?? 'units', fallbackAt: r.producedAt })),
-    ...db.wasteLogs.filter((r) => operationalDate(r.at) === today).map((r) => ({ record: r as typeof r & Audit, kind: 'Waste', itemId: r.menuItemId ?? r.ingredientId, quantity: r.quantity, unit: r.unit, fallbackAt: r.at })),
-  ].map((a) => ({ ...a, at: a.record.createdAt ?? a.fallbackAt, name: db.menuItems.find((m) => m.id === a.itemId)?.name ?? db.ingredients.find((i) => i.id === a.itemId)?.name ?? 'Unlinked item' }))
+    ...db.wasteLogs.filter((r) => operationalDate(r.at) === today).map((r) => ({ record: r as typeof r & Audit, kind: 'Waste', itemId: r.menuItemId ?? r.ingredientId ?? r.customName, quantity: r.quantity, unit: r.unit, fallbackAt: r.at })),
+  ].map((a) => ({ ...a, at: a.record.createdAt ?? a.fallbackAt, name: db.menuItems.find((m) => m.id === a.itemId)?.name ?? db.ingredients.find((i) => i.id === a.itemId)?.name ?? (a.itemId ? `${a.itemId} (custom)` : 'Unlinked item') }))
     .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''));
   const loggedDates = new Set([
     ...db.sales.map((r) => operationalDate(r.date)),

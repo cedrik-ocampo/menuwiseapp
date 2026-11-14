@@ -28,3 +28,4 @@
 
 - Staff may insert (never edit or delete) menu items from the shift quick-add, tagged `needs-review`; the `enforce_record_role` trigger and `mayAdd` both allow this. Why: incomplete menus must not block shift logging while catalog control stays with owners.
 - Staff inventory access is a per-member `workspace_members.inventory_access` flag set only via the `set_member_inventory_access` RPC (owner or admin); it lets that staff add/edit ingredients, purchases and usages but never delete. Why: some cafés put a barista in charge of stock without making them owner.
+- Waste logs may carry a free-text `customName` instead of a catalog item; suggestions match names case/space-insensitively, and owners can promote one to a menu item, relinking past logs. Why: cafés that withhold full menus still need accurate waste tracking.

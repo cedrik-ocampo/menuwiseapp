@@ -99,6 +99,8 @@ export interface WasteLog {
   stage: Stage;
   ingredientId?: string;
   menuItemId?: string;
+  /** Free-text item name when the item is not in the catalog. */
+  customName?: string;
   batchId?: string;
   wasteType: WasteType;
   quantity: number;
