@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { listAdminEdits } from "@/lib/admin.functions";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Panel } from "@/components/mw/ui";
-import { formatPeso, shortDate } from "@/lib/format";
+import { shortDate } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin/logs")({
   head: () => ({
@@ -20,16 +20,15 @@ export const Route = createFileRoute("/_authenticated/admin/logs")({
   component: AdminLogs,
 });
 
-type Log = { id: string; cafeId: string; cafe: string; collection: string; recordId: string; at: string; note?: string; changes: { field: string; from: unknown; to: unknown }[] };
-const MONEY = new Set(["retailPrice", "unitCost"]);
-const fmt = (f: string, v: unknown) => (v === undefined || v === null || v === "" ? "—" : MONEY.has(f) && typeof v === "number" ? formatPeso(v) : String(v));
+type Log = { id: string; cafeId: string; cafe: string; collection: string; recordId: string; at: string; note?: string; changes: { field: string }[] };
+const FIELD: Record<string, string> = { retailPrice: "Selling price", unitCost: "Unit cost", name: "Name", category: "Category", unit: "Unit", available: "Availability" };
 
 function AdminLogs() {
   const fn = useServerFn(listAdminEdits);
   const q = useQuery({ queryKey: ["admin", "logs"], queryFn: async () => JSON.parse(await fn()) as Log[], retry: false });
   return (
     <div>
-      <PageTitle title="My Edit Logs" subtitle="Every change you made as MenuWise Admin. Each café also sees these edits." />
+      <PageTitle title="My Edit Logs" subtitle="Your admin activity across cafés. Confidential prices, costs and previous values are not shown." />
       <Panel>
         {q.isLoading ? <p className="py-10 text-center text-muted-foreground">Loading…</p>
           : q.error ? <p className="py-10 text-center text-destructive">Couldn’t load your edit logs.</p>
@@ -43,7 +42,7 @@ function AdminLogs() {
                     <td className="py-2 pr-3 whitespace-nowrap">{shortDate(l.at)} {new Date(l.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</td>
                     <td className="pr-3"><Link to="/admin/$id" params={{ id: l.cafeId }} className="font-semibold text-accent">{l.cafe}</Link></td>
                     <td className="pr-3">{l.collection === "menuItems" ? "Menu item" : "Ingredient"} · {l.recordId}</td>
-                    <td className="pr-3">{l.changes.map((c) => `${c.field}: ${fmt(c.field, c.from)} → ${fmt(c.field, c.to)}`).join("; ")}</td>
+                    <td className="pr-3">{l.changes.map((c) => `${FIELD[c.field] ?? c.field} updated`).join("; ")}</td>
                     <td className="text-muted-foreground">{l.note ?? "—"}</td>
                   </tr>
                 ))}

@@ -1,17 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { summarizeCafe, type CafeRecordInput } from "./admin-privacy";
+import type { ChangeLog } from "./types";
 
 /** Read-only MenuWise admin monitoring. All reads go through RLS as the caller; admin-only SELECT policies grant cross-café visibility. */
 async function assertAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (error || !data) throw new Error("Forbidden");
+  if (error || !data) {
+    console.error("Admin role check failed", userId, error?.message ?? "role not granted");
+    throw new Error("Forbidden");
+  }
 }
 
 export const amIAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    console.log("Admin role check", context.userId, !!data);
     return { admin: !!data };
   });
 
@@ -30,8 +36,9 @@ async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ dat
 export const listCafes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const sb = context.supabase;
-    await assertAdmin(sb, context.userId);
+    await assertAdmin(context.supabase, context.userId);
+    // Only the verified server may read raw rows; the browser receives counts.
+    const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
     const [{ data: ws }, { data: members }, { data: invites }, { data: recs }] = await Promise.all([
       sb.from("workspaces").select("id,name,owner_id,created_at").order("created_at"),
       sb.from("workspace_members").select("workspace_id,role,email,display_name"),
@@ -57,13 +64,14 @@ export const getCafe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase;
-    await assertAdmin(sb, context.userId);
+    await assertAdmin(context.supabase, context.userId);
+    // Raw records are aggregated here and never cross the server boundary.
+    const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
     const [{ data: ws }, { data: members }, { data: invites }, { data: recs }] = await Promise.all([
       sb.from("workspaces").select("id,name,created_at").eq("id", data.id).maybeSingle(),
       sb.from("workspace_members").select("user_id,role,email,display_name,joined_at,inventory_access").eq("workspace_id", data.id),
       sb.from("workspace_invites").select("id,email,created_at").eq("workspace_id", data.id),
-      fetchAll<{ collection: string; data: unknown }>((a, b) => sb.from("records").select("id,collection,data").eq("workspace_id", data.id).eq("deleted", false).neq("collection", "changeLogs").order("collection").order("id").range(a, b)),
+      fetchAll<{ collection: string; data: unknown }>((a, b) => sb.from("records").select("id,collection,data").eq("workspace_id", data.id).eq("deleted", false).in("collection", ["ingredients", "menuItems", "sales", "batches", "wasteLogs"]).order("collection").order("id").range(a, b)),
     ]);
     if (!ws) throw new Error("Café not found");
     // Café-visible notice that an admin viewed its records (one per day).
@@ -71,7 +79,16 @@ export const getCafe = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("records").upsert({ id: viewId, collection: "changeLogs", user_id: context.userId, workspace_id: data.id, updated_at: now, deleted: false,
       data: { id: viewId, collection: "workspace", recordId: data.id, action: "viewed", at: now, by: context.userId, byName: "MenuWise Admin", changes: [], adminEdit: true } as never }, { onConflict: "workspace_id,collection,id" });
-    return { cafe: ws, members: members ?? [], invites: invites ?? [], recordsJson: JSON.stringify((recs ?? []).map((r) => ({ collection: r.collection, data: r.data }))) };
+    const collection = <K extends keyof CafeRecordInput>(name: K) =>
+      (recs ?? []).filter((r) => r.collection === name).map((r) => r.data) as NonNullable<CafeRecordInput[K]>;
+    const summary = summarizeCafe({
+      ingredients: collection("ingredients"),
+      menuItems: collection("menuItems"),
+      sales: collection("sales"),
+      batches: collection("batches"),
+      wasteLogs: collection("wasteLogs"),
+    }, new Date().toISOString().slice(0, 10));
+    return { cafe: ws, members: members ?? [], invites: invites ?? [], summary };
   });
 
 const EDITABLE = {
@@ -129,14 +146,28 @@ export const adminUpdateRecord = createServerFn({ method: "POST" })
 export const listAdminEdits = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const sb = context.supabase;
-    await assertAdmin(sb, context.userId);
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
     const [{ data: logs }, { data: ws }] = await Promise.all([
       sb.from("records").select("workspace_id,data").eq("collection", "changeLogs").eq("data->>adminEdit", "true").eq("data->>by", context.userId).neq("data->>action", "viewed").order("updated_at", { ascending: false }).limit(1000),
       sb.from("workspaces").select("id,name"),
     ]);
     const names = new Map((ws ?? []).map((w) => [w.id, w.name]));
-    return JSON.stringify((logs ?? []).map((l) => ({ cafeId: l.workspace_id, cafe: names.get(l.workspace_id) ?? "—", ...(l.data as object) })));
+    return JSON.stringify((logs ?? []).map((l) => {
+      const log = l.data as unknown as ChangeLog;
+      return {
+        cafeId: l.workspace_id,
+        cafe: names.get(l.workspace_id) ?? "—",
+        id: log.id,
+        collection: log.collection,
+        recordId: log.recordId,
+        action: log.action,
+        at: log.at,
+        note: log.note,
+        // Admin logs identify fields, never reveal old/new confidential values.
+        changes: (log.changes ?? []).map((change) => ({ field: change.field })),
+      };
+    }));
   });
 
 export const listBugReports = createServerFn({ method: "POST" })

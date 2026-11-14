@@ -9,6 +9,9 @@ describe("admin notices", () => {
     expect(n[0].text).toBe("MenuWise Admin added 3 menu items");
   });
   it("ignores non-admin changes", () => { expect(adminNotices([log({ adminEdit: false })])).toHaveLength(0); });
+  it("describes admin views as privacy-safe summaries", () => {
+    expect(adminNotices([log({ action: "viewed" })])[0].text).toBe("MenuWise Admin viewed your café's privacy-safe summary");
+  });
   it("counts only notices after last seen", () => {
     const n = adminNotices([log({ at: "2026-11-10T00:00:00Z" }), log({ at: "2026-11-12T00:00:00Z", action: "viewed" })]);
     expect(unreadCount(n, "2026-11-11T00:00:00Z")).toBe(1);

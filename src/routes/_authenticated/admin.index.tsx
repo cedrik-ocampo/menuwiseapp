@@ -28,7 +28,7 @@ function AdminHome() {
   const q = useQuery({ queryKey: ["admin", "cafes"], queryFn: () => fn(), retry: false });
   return (
     <div>
-      <PageTitle title="Café Monitoring" subtitle="Every café using MenuWise. Open a café and turn on Edit mode to make logged changes." />
+      <PageTitle title="Café Monitoring" subtitle="Privacy-safe computation outputs for every café. Sales values, prices, costs and transaction details stay with the café." />
       <PresetCafe />
       <Panel>
         {q.isLoading ? <p className="py-10 text-center text-muted-foreground">Loading cafés…</p>
@@ -37,7 +37,7 @@ function AdminHome() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left text-sm [&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2.5 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
               <thead className="text-xs uppercase text-muted-foreground">
-                <tr><th className="py-2">Café</th><th>Accounts</th><th className="text-right">Members</th><th className="text-right">Invites</th><th className="text-right">Menu items</th><th className="text-right">Ingredients</th><th className="text-right">Sales</th><th className="text-right">Batches</th><th className="text-right">Waste logs</th><th>Last activity</th><th /></tr>
+                <tr><th className="py-2">Café</th><th>Accounts</th><th className="text-right">Members</th><th className="text-right">Invites</th><th className="text-right">Menu items</th><th className="text-right">Ingredients</th><th className="text-right">Sales logs</th><th className="text-right">Batches</th><th className="text-right">Waste logs</th><th>Last activity</th><th /></tr>
               </thead>
               <tbody>
                 {q.data.map((c) => (
@@ -80,7 +80,7 @@ function PresetCafe() {
   return (
     <Panel className="mb-4">
       <p className="mb-1 font-semibold text-primary">Pre-set a new café</p>
-      <p className="mb-3 text-sm text-muted-foreground">Create the café now and load its menu. When the owner signs up with this email, they become its Owner automatically.</p>
+      <p className="mb-3 text-sm text-muted-foreground">Create the café now. When the owner signs up with this email, they become its Owner automatically and can complete their private setup.</p>
       <form onSubmit={submit} className="flex flex-wrap gap-2">
         <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Café name" className="h-10 min-w-[200px] flex-1 rounded-md border border-input bg-background px-3 text-sm" />
         <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Owner email" className="h-10 min-w-[220px] flex-1 rounded-md border border-input bg-background px-3 text-sm" />

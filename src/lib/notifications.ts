@@ -16,7 +16,7 @@ export function adminNotices(logs: ChangeLog[]): AdminNotice[] {
   return [...groups.entries()].map(([key, g]) => {
     const l = g[0];
     let text: string;
-    if (l.action === "viewed") text = "MenuWise Admin viewed your café's records";
+    if (l.action === "viewed") text = "MenuWise Admin viewed your café's privacy-safe summary";
     else if (g.length > 1) text = `MenuWise Admin ${l.action === "created" ? "added" : l.action} ${plural(l.collection, g.length)}`;
     else {
       const name = l.changes.find((c) => c.field === "name")?.to;
