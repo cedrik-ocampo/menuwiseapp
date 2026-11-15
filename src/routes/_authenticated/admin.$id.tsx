@@ -86,7 +86,7 @@ function AdminCafe() {
       {tab === "Menu Items" && (
         <Panel>
           <SectionTitle>Catalog setup status</SectionTitle>
-          <Table head={["Name", "Category", "Type", "Costing setup"]} rows={s.menuItems.map((m) => [m.name, m.category, m.type, m.recipeStatus])} empty="No menu items yet." />
+          <Table head={["Hashed ID", "Category", "Type", "Costing setup"]} rows={s.menuItems.map((m) => [m.id, m.category, m.type, m.recipeStatus])} empty="No menu items yet." />
           <PrivacyNote />
         </Panel>
       )}
@@ -94,7 +94,7 @@ function AdminCafe() {
       {tab === "Ingredients" && (
         <Panel>
           <SectionTitle>Ingredient readiness</SectionTitle>
-          <Table head={["Name", "Unit", "Cost status"]} rows={s.ingredients.map((i) => [i.name, i.unit, i.costStatus])} empty="No ingredients yet." />
+          <Table head={["Hashed ID", "Unit", "Cost status"]} rows={s.ingredients.map((i) => [i.id, i.unit, i.costStatus])} empty="No ingredients yet." />
           <PrivacyNote />
         </Panel>
       )}
@@ -171,7 +171,7 @@ function StageBars({ shares }: { shares: Record<"Ingredient" | "WIP" | "Finished
 }
 
 function PrivacyNote() {
-  return <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground"><LockKeyhole className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Names and setup status are visible for support. Prices, costs, recipes and edit values are confidential.</p>;
+  return <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground"><LockKeyhole className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Item and ingredient names are one-way hashed on the server and cannot be reversed. Prices, costs, recipes and edit values are confidential.</p>;
 }
 
 function Table({ head, rows, empty }: { head: string[]; rows: string[][]; empty: string }) {

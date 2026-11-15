@@ -19,6 +19,13 @@ const sum = <T,>(rows: T[], value: (row: T) => number) => rows.reduce((total, ro
  * Computes the only café metrics an admin may receive. Raw prices, costs,
  * revenue, transaction quantities and recipes stay inside the server handler.
  */
+/** One-way pseudonym (FNV-1a 64-bit) so admins can reference rows without seeing names. */
+export function pseudonym(prefix: string, value: string) {
+  let h = 0xcbf29ce484222325n;
+  for (const ch of `menuwise:${prefix}:${value}`) h = BigInt.asUintN(64, (h ^ BigInt(ch.codePointAt(0)!)) * 0x100000001b3n);
+  return `${prefix}_${h.toString(16).padStart(16, "0").slice(0, 10)}`;
+}
+
 export function summarizeCafe(records: CafeRecordInput, today: string) {
   const ingredients = records.ingredients ?? [];
   const menuItems = records.menuItems ?? [];
@@ -92,15 +99,13 @@ export function summarizeCafe(records: CafeRecordInput, today: string) {
       productionBatches: batches.length,
     },
     menuItems: menuItems.map((m) => ({
-      id: m.id,
-      name: m.name,
+      id: pseudonym("item", m.id),
       category: m.category,
       type: m.type,
       recipeStatus: m.type === "Outsourced" ? "Outsourced" : (m.recipe?.length ?? 0) > 0 ? "Recipe linked" : "No recipe",
     })),
     ingredients: ingredients.map((i) => ({
-      id: i.id,
-      name: i.name,
+      id: pseudonym("ing", i.id),
       unit: i.unit,
       costStatus: i.unitCost > 0 ? "Priced" : "Missing cost",
     })),

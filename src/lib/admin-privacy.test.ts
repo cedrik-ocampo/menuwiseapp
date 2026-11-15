@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeCafe } from "./admin-privacy";
+import { summarizeCafe, pseudonym } from "./admin-privacy";
 import type { CafeRecordInput } from "./admin-privacy";
 
 const records: CafeRecordInput = {
@@ -47,10 +47,10 @@ describe("privacy-safe café summaries", () => {
   it("exposes catalog readiness while redacting every item price and ingredient cost", () => {
     const result = summarizeCafe(records, "2026-11-14");
     expect(result.catalog).toEqual({ menuItems: 2, recipeReady: 2, ingredients: 2, pricedIngredients: 1, productionBatches: 1 });
-    expect(result.menuItems[0]).toEqual({ id: "m1", name: "Latte", category: "Coffee", type: "In-house", recipeStatus: "Recipe linked" });
+    expect(result.menuItems[0]).toEqual({ id: pseudonym("item", "m1"), category: "Coffee", type: "In-house", recipeStatus: "Recipe linked" });
     expect(result.menuItems[0]).not.toHaveProperty("retailPrice");
     expect(result.menuItems[0]).not.toHaveProperty("recipe");
-    expect(result.ingredients[0]).toEqual({ id: "i1", name: "Milk", unit: "ml", costStatus: "Priced" });
+    expect(result.ingredients[0]).toEqual({ id: pseudonym("ing", "i1"), unit: "ml", costStatus: "Priced" });
     expect(result.ingredients[0]).not.toHaveProperty("unitCost");
   });
 
@@ -60,5 +60,15 @@ describe("privacy-safe café summaries", () => {
     expect(result.waste.trendPct).toBeNull();
     expect(result.sales.volumeTrendPct).toBeNull();
     expect(result.logging.activeDays30).toBe(0);
+  });
+});
+
+describe("admin pseudonyms", () => {
+  it("hides names and is deterministic", () => {
+    const r = summarizeCafe(records, "2026-11-15");
+    expect(JSON.stringify(r)).not.toMatch(/Latte|Cookie|Milk|Mystery/);
+    expect(pseudonym("item", "m1")).toBe(pseudonym("item", "m1"));
+    expect(pseudonym("item", "m1")).toMatch(/^item_[0-9a-f]{10}$/);
+    expect(pseudonym("item", "m1")).not.toBe(pseudonym("item", "m2"));
   });
 });
