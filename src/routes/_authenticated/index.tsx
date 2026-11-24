@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check, AlertTriangle } from "lucide-react";
 import { SetupWizard } from "@/components/mw/SetupWizard";
+import { SetupModal } from "@/components/mw/SetupModal";
 import { StaffDashboard } from "@/components/mw/StaffDashboard";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { QuadrantLabel } from "@/components/mw/QuadrantLabel";
@@ -91,6 +92,7 @@ function OwnerDashboard() {
   return (
     <div className="space-y-6">
       <SetupWizard />
+      <SetupModal />
       <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3">
