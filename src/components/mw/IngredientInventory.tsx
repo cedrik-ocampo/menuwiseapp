@@ -47,7 +47,7 @@ export function IngredientInventory({ db, rows, threshold }: { db: DBView; rows:
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {rows.map((r) => {
-            const d = r.lot ? daysFromToday(r.lot.expiryDate) : null;
+            const d = r.lot?.expiryDate ? daysFromToday(r.lot.expiryDate) : null;
             const tone = expiryTone(d, threshold);
             const Icon = STORAGE_ICON[r.i.storage] ?? Package;
             return (
@@ -81,7 +81,7 @@ export function IngredientInventory({ db, rows, threshold }: { db: DBView; rows:
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelected(null)}>
           <div
             className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border-2 bg-card p-5 shadow-xl"
-            style={{ borderColor: expiryTone(live.lot ? daysFromToday(live.lot.expiryDate) : null, threshold).ring }}
+            style={{ borderColor: expiryTone(live.lot?.expiryDate ? daysFromToday(live.lot.expiryDate) : null, threshold).ring }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
@@ -113,7 +113,7 @@ export function IngredientInventory({ db, rows, threshold }: { db: DBView; rows:
                   <div className="rounded-lg bg-secondary p-3">
                     <p className="text-xs text-muted-foreground">Next expiry</p>
                     <p className="font-bold text-primary">{shortDate(live.lot?.expiryDate)}</p>
-                    {live.lot && <p className="text-xs font-semibold text-muted-foreground">{expiryTone(daysFromToday(live.lot.expiryDate), threshold).label}</p>}
+                    {live.lot?.expiryDate && <p className="text-xs font-semibold text-muted-foreground">{expiryTone(daysFromToday(live.lot.expiryDate), threshold).label}</p>}
                   </div>
                   <div className="rounded-lg bg-secondary p-3">
                     <p className="text-xs text-muted-foreground">Unit cost</p>

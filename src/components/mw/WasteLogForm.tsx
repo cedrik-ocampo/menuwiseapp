@@ -124,7 +124,7 @@ export function WasteLogForm({ fixedStage, ingredientId: ingFixed, menuItemId: m
     // Ingredient waste reduces stock from the soonest-expiring lot first
     if (stage === "Ingredient" && ingredientId) {
       let left = q;
-      for (const lot of db.purchases.filter((p) => p.ingredientId === ingredientId && p.remaining > 0).sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))) {
+      for (const lot of db.purchases.filter((p) => p.ingredientId === ingredientId && p.remaining > 0).sort((a, b) => (a.expiryDate || "9999-12-31").localeCompare(b.expiryDate || "9999-12-31"))) {
         if (left <= 0) break;
         const take = Math.min(lot.remaining, left);
         put("purchases", { ...lot, remaining: +(lot.remaining - take).toFixed(3) });

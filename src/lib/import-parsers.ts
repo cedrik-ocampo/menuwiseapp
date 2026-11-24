@@ -142,6 +142,10 @@ export function parseSales(rows: Row[], db: DBView): ParsedRow<Sale>[] {
   }
 
 export const INGREDIENT_UNITS = ["L", "ml", "kg", "g", "pc", "pack", "box"];
+/** Blank, "N/A", "None", "-" etc. mean the item has no expiry (blank only counts for Packaging). */
+export function isNoExpiryValue(v: string) {
+  return ["", "n/a", "na", "none", "-", "no expiry", "non-perishable"].includes(v.trim().toLowerCase());
+}
 export const INGREDIENT_STORAGE = ["Refrigerated", "Frozen", "Pantry"];
 export function parseIngredientRows(rows: Row[], db: DBView, supplierDelimiter?: string): ParsedRow<{ ing: Ingredient; purchase: Purchase }>[] {
   const known = [...new Set(["Dairy", "Produce", "Dry goods", "Beverage", "Packaging", "Other", ...db.ingredients.map((i) => i.category)])];
@@ -152,9 +156,11 @@ export function parseIngredientRows(rows: Row[], db: DBView, supplierDelimiter?:
     const name = split.name; r = { ...r, supplier: split.supplier };
     const id = (r.ingredientid || r.id || "").trim() || (name ? (db.ingredients.find((i) => i.name.toLowerCase() === name.toLowerCase())?.id ?? `ING-${name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").slice(0, 16)}`) : "");
     const unit = r.unit || "", quantity = num(r.quantity), unitCost = num(r.unitcost);
-    const purchaseDate = normDate(r.purchasedate), expiryDate = (r.expirydate || "").trim() ? normDate(r.expirydate) : purchaseDate ? addDays(purchaseDate, 30) : "";
-    const expiryDefaulted = !(r.expirydate || "").trim();
     const category = normalizeCategory(r.category || "", known);
+    const rawExpiry = (r.expirydate || "").trim();
+    const nonPerishable = isNoExpiryValue(rawExpiry) && (!rawExpiry ? category.value.toLowerCase() === "packaging" : true);
+    const purchaseDate = normDate(r.purchasedate), expiryDate = nonPerishable ? "" : rawExpiry ? normDate(r.expirydate) : purchaseDate ? addDays(purchaseDate, 30) : "";
+    const expiryDefaulted = !rawExpiry && !nonPerishable;
     const base = { line: sourceLine(r, index), label: name || id || "Unnamed ingredient" };
     const existing = ids.get(id.toLowerCase());
     const error = !id || id.length > 20 ? "Ingredient ID is required (maximum 20 characters)"
@@ -164,8 +170,8 @@ export function parseIngredientRows(rows: Row[], db: DBView, supplierDelimiter?:
       : r.storage && !INGREDIENT_STORAGE.includes(r.storage) ? "Choose a valid storage option"
       : !(Number.isFinite(quantity) && quantity > 0) ? "Quantity must be more than 0"
       : !(Number.isFinite(unitCost) && unitCost >= 0) ? "Unit cost must be 0 or more"
-      : !purchaseDate ? "Invalid purchase date" : !expiryDate ? "Invalid expiry date"
-      : expiryDate < purchaseDate ? "Expiry is before purchase date"
+      : !purchaseDate ? "Invalid purchase date" : !nonPerishable && !expiryDate ? "Invalid expiry date"
+      : expiryDate && expiryDate < purchaseDate ? "Expiry is before purchase date"
       : (r.supplier || "").length > 80 ? "Supplier must be 80 characters or fewer"
       : (r.notes || "").length > 300 ? "Notes must be 300 characters or fewer"
       : existing && (existing.name.toLowerCase() !== name.toLowerCase() || existing.unit !== unit) ? "This ingredient ID belongs to a different name or unit. Match it or use a new ID."

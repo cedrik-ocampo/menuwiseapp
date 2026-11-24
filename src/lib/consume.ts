@@ -26,7 +26,7 @@ export function consumeForProduction(menu: MenuItem, piecesMade: number, date: s
     const need = +toIngredientUnit(line.quantity * factor, line.unit, ing.unit).toFixed(3);
     if (!(need > 0)) return;
     let left = need;
-    for (const lot of db.purchases.filter((p) => p.ingredientId === ing.id && p.remaining > 0).sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))) {
+    for (const lot of db.purchases.filter((p) => p.ingredientId === ing.id && p.remaining > 0).sort((a, b) => (a.expiryDate || "9999-12-31").localeCompare(b.expiryDate || "9999-12-31"))) {
       if (left <= 0) break;
       const take = Math.min(lot.remaining, left);
       put("purchases", { ...lot, remaining: +(lot.remaining - take).toFixed(3) });

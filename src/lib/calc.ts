@@ -13,11 +13,13 @@ export function stockOf(db: DBView, ingredientId: string) {
 export function stockValueOf(db: DBView, ingredientId: string) {
   return lotsOf(db, ingredientId).reduce((a, p) => a + p.remaining * p.unitCost, 0);
 }
+/** Sort key for lots: lots without an expiry date go last. */
+export const expiryKey = (p: { expiryDate: string }) => p.expiryDate || "9999-12-31";
 /** Soonest-expiring lot that still has stock. */
 export function nextLot(db: DBView, ingredientId: string) {
   return lotsOf(db, ingredientId)
     .filter((p) => p.remaining > 0)
-    .sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))[0];
+    .sort((a, b) => expiryKey(a).localeCompare(expiryKey(b)))[0];
 }
 export function lastPurchase(db: DBView, ingredientId: string) {
   return lotsOf(db, ingredientId).sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate))[0];
@@ -192,7 +194,7 @@ export function expiringWithin(db: DBView, days: number) {
   const limit = addDays(todayISO(), days);
   return db.ingredients
     .map((i) => ({ ingredient: i, lot: nextLot(db, i.id) }))
-    .filter((x): x is { ingredient: Ingredient; lot: NonNullable<typeof x.lot> } => !!x.lot && x.lot.expiryDate <= limit)
+    .filter((x): x is { ingredient: Ingredient; lot: NonNullable<typeof x.lot> } => !!x.lot && !!x.lot.expiryDate && x.lot.expiryDate <= limit)
     .sort((a, b) => a.lot.expiryDate.localeCompare(b.lot.expiryDate));
 }
 
