@@ -5,6 +5,7 @@ import { SetupWizard } from "@/components/mw/SetupWizard";
 import { SetupModal } from "@/components/mw/SetupModal";
 import { StaffDashboard } from "@/components/mw/StaffDashboard";
 import { InsightActions } from "@/components/mw/InsightActions";
+import { BatchResolveDialog } from "@/components/mw/BatchResolveDialog";
 import { QuadrantLabel } from "@/components/mw/QuadrantLabel";
 import { useDB, usePermissions } from "@/lib/store";
 import { batchesExpiringWithin, compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
@@ -67,6 +68,7 @@ function OwnerDashboard() {
   const [salesWeek, setSalesWeek] = useState(0);
   const [selectedWasteStage, setSelectedWasteStage] = useState<Stage | null>(null);
   const [threshold, setThreshold] = useThreshold();
+  const [resolveId, setResolveId] = useState<string | null>(null);
   const t = todayISO();
 
   const wc = compareWeeks((f, to) => totalWaste(db, f, to).total, wasteWeek, t);
@@ -87,6 +89,7 @@ function OwnerDashboard() {
     const r = resp.get(`exp:batch:${batch.id}`);
     return !r || (r.status === "snoozed" && (r.until ?? "") <= nowIso);
   });
+  const resolving = expiringBatches.find((b) => b.batch.id === resolveId);
   const actioned = db.insightResponses.filter((r) => r.status === "accepted").sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
   const map = useMemo(() => menuMap(db, false), [db]);
   const salesTotal = sc.cur;
@@ -207,7 +210,7 @@ function OwnerDashboard() {
                         {d < 0 ? "Expired" : d === 0 ? "Expires today" : d === 1 ? "1 day left" : `${d} days left`}
                       </span>
                     </Link>
-                    <InsightActions id={key} label={label} />
+                    <InsightActions id={key} label={label} onAccept={() => setResolveId(batch.id)} />
                   </li>
                 );
               })}
@@ -233,6 +236,10 @@ function OwnerDashboard() {
                 );
               })}
             </ul>
+          )}
+          {resolving && (
+            <BatchResolveDialog open onOpenChange={(o) => !o && setResolveId(null)} batch={resolving.batch} item={resolving.item} left={resolving.left}
+              insightId={`exp:batch:${resolving.batch.id}`} label={`${resolving.item.name} batch ${resolving.batch.id} · expiry ${shortDate(resolving.batch.expiryDate)}`} />
           )}
           {actioned.length > 0 && (
             <details className="mt-3 text-sm">

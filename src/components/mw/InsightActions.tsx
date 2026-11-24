@@ -13,13 +13,13 @@ const SNOOZE = [
 
 const btn = "inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-md text-xs font-semibold transition-colors";
 
-export function InsightActions({ id, label }: { id: string; label: string }) {
+export function InsightActions({ id, label, onAccept }: { id: string; label: string; onAccept?: () => void }) {
   function respond(status: InsightResponse["status"], until?: string) {
     put("insightResponses", { id, status, until, at: new Date().toISOString(), byName: currentUser().name, label });
   }
   return (
     <div className="flex gap-1 border-t border-border/60 p-1.5">
-      <button type="button" className={`${btn} text-success hover:bg-success/10`} onClick={() => { respond("accepted"); toast.success("Marked as done"); }}>
+      <button type="button" className={`${btn} text-success hover:bg-success/10`} onClick={() => { if (onAccept) return onAccept(); respond("accepted"); toast.success("Marked as done"); }}>
         <Check className="h-3.5 w-3.5" /> Accept
       </button>
       <Popover>
