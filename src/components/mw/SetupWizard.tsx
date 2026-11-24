@@ -13,7 +13,7 @@ const DEFAULT_NAME = "My Café";
 
 const HIDE_KEY = "mw-setup-wizard-hidden";
 
-export function SetupWizard({ alwaysShow = false }: { alwaysShow?: boolean }) {
+export function SetupWizard({ alwaysShow = false, onProgress }: { alwaysShow?: boolean; onProgress?: () => void }) {
   const db = useDB();
   const [hidden, setHidden] = useState(true);
   const hideKey = `${HIDE_KEY}:${currentWorkspace() ?? "none"}`;
@@ -53,7 +53,7 @@ export function SetupWizard({ alwaysShow = false }: { alwaysShow?: boolean }) {
     const { error } = await supabase.from("workspaces").update({ name: v }).eq("id", ws);
     if (error) return void toast.error("Couldn't save the café name");
     localStorage.setItem("menuwise:cafe_name", v);
-    setCafe(v); toast.success("Café name saved");
+    setCafe(v); toast.success("Café name saved"); onProgress?.();
   }
   async function addMember() {
     const r = z.string().trim().email("Enter a valid email").max(255).safeParse(email);
@@ -63,7 +63,7 @@ export function SetupWizard({ alwaysShow = false }: { alwaysShow?: boolean }) {
     try {
       await invite({ data: { workspaceId: ws, email: r.data } });
       setEmail(""); toast.success(`Invitation saved for ${r.data}. They join when they sign up with this email.`);
-      void loadCafe();
+      void loadCafe(); onProgress?.();
     } catch (e) { toast.error((e as Error).message); }
   }
 
