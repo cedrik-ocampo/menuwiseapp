@@ -7,7 +7,7 @@ import { StaffDashboard } from "@/components/mw/StaffDashboard";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { QuadrantLabel } from "@/components/mw/QuadrantLabel";
 import { useDB, usePermissions } from "@/lib/store";
-import { compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
+import { batchesExpiringWithin, compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
 import { addDays, daysFromToday, formatPeso, fmtQty, shortDate, todayISO } from "@/lib/format";
 import { THRESHOLD_OPTIONS, thresholdLabel, useThreshold } from "@/lib/settings";
 import { Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
@@ -81,6 +81,10 @@ function OwnerDashboard() {
   const resp = new Map(db.insightResponses.map((r) => [r.id, r]));
   const visible = expiring.filter(({ lot }) => {
     const r = resp.get(`exp:${lot.id}`);
+    return !r || (r.status === "snoozed" && (r.until ?? "") <= nowIso);
+  });
+  const expiringBatches = batchesExpiringWithin(db, threshold, t).filter(({ batch }) => {
+    const r = resp.get(`exp:batch:${batch.id}`);
     return !r || (r.status === "snoozed" && (r.until ?? "") <= nowIso);
   });
   const actioned = db.insightResponses.filter((r) => r.status === "accepted").sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
@@ -182,10 +186,31 @@ function OwnerDashboard() {
             <Link to="/ingredients" className="inline-flex items-center gap-1 hover:underline">Ongoing Insights <ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>
           </SectionTitle>
           <p className="-mt-2 mb-3 text-xs text-muted-foreground">Time-sensitive stock and waste actions based on your selected expiry threshold.</p>
-          {visible.length === 0 ? (
-            <p className="py-4 text-sm text-muted-foreground">{db.ingredients.length > 0 && expiring.length === 0 ? `No ingredients expiring in ${thresholdLabel(threshold)}.` : "No ongoing insights."}</p>
+          {visible.length === 0 && expiringBatches.length === 0 ? (
+            <p className="py-4 text-sm text-muted-foreground">{db.ingredients.length > 0 || db.batches.length > 0 ? `No pastries, menu items or ingredients expiring in ${thresholdLabel(threshold)}.` : "No ongoing insights."}</p>
           ) : (
             <ul className="space-y-2">
+              {expiringBatches.map(({ batch, item, left }) => {
+                const d = daysFromToday(batch.expiryDate);
+                const red = d <= 1;
+                const key = `exp:batch:${batch.id}`;
+                const label = `${item.name} batch ${batch.id} · expiry ${shortDate(batch.expiryDate)}`;
+                return (
+                  <li key={key} className={`rounded-xl border ${red ? "border-destructive/30 bg-destructive/5" : "border-warning-border bg-warning-soft"}`}>
+                    <Link to="/menu/$id" params={{ id: item.id }} className="flex items-center justify-between p-3 pb-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-primary">{item.name} <span className="text-xs font-normal text-muted-foreground">· Menu item batch</span></p>
+                        <p className="text-xs font-medium text-accent">{d < 0 ? "Expired — log it as waste and remove from display." : "Sell first, consider a bundle or discount, or log as waste if unsold."}</p>
+                        <p className="text-xs text-muted-foreground">Up to {fmtQty(left)} {item.batchUnit} · Batch {batch.id} · Expiry {shortDate(batch.expiryDate)}</p>
+                      </div>
+                      <span className={`shrink-0 text-xs font-bold ${red ? "text-destructive" : "text-warning"}`}>
+                        {d < 0 ? "Expired" : d === 0 ? "Expires today" : d === 1 ? "1 day left" : `${d} days left`}
+                      </span>
+                    </Link>
+                    <InsightActions id={key} label={label} />
+                  </li>
+                );
+              })}
               {visible.map(({ ingredient, lot }) => {
                 const d = daysFromToday(lot.expiryDate);
                 const red = d <= 1;

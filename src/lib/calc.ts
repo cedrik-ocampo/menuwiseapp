@@ -198,6 +198,19 @@ export function expiringWithin(db: DBView, days: number) {
     .sort((a, b) => a.lot.expiryDate.localeCompare(b.lot.expiryDate));
 }
 
+/** Recorded finished-product batches (in-house or outsourced) expiring within `days`, excluding fully discarded batches and future production. */
+export function batchesExpiringWithin(db: DBView, days: number, today = todayISO()) {
+  const limit = addDays(today, days);
+  return db.batches.flatMap((batch) => {
+    const item = db.menuItems.find((m) => m.id === batch.menuItemId);
+    if (!item || !batch.expiryDate || batch.expiryDate > limit || batch.expiryDate < addDays(today, -3) || batch.producedAt.slice(0, 10) > today) return [];
+    const discarded = db.wasteLogs.filter((w) => w.batchId === batch.id && w.unit === item.batchUnit).reduce((a, w) => a + w.quantity, 0);
+    const left = batch.quantity - discarded;
+    if (left <= 0) return [];
+    return [{ batch, item, left }];
+  }).sort((a, b) => a.batch.expiryDate.localeCompare(b.batch.expiryDate));
+}
+
 export interface WeekBucket { key: string; label: string; start: string; end: string; revenue: number; current: boolean }
 /** Last 8 Monday–Sunday weeks, newest first. This Week runs Monday→today; future-dated sales are ignored. */
 export function weeklyRevenue(sales: { date: string }[], revenueOf: (s: any) => number, today = todayISO()): WeekBucket[] {
