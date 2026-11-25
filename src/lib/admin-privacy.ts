@@ -453,6 +453,13 @@ export function summarizeCafe(input: CafeRecordInput, selection: PeriodSelection
   const previousSalesUnits = previousSales.length ? sum(previousSales, (sale) => Number.isFinite(sale.quantity) ? sale.quantity : 0) : null;
   const wasteRatio = compare(ratioForRange(records, period.from, period.to), ratioForRange(records, period.previousFrom, period.previousTo), "percentage", "lower");
   const salesVolume = compare(salesUnits, previousSalesUnits, "number", "neutral", "units");
+  const currentOperatingDays = expectedOperatingDates(period.from, period.to, configuration.operatingDays).length;
+  const previousOperatingDays = expectedOperatingDates(period.previousFrom, period.previousTo, configuration.operatingDays).length;
+  const averageUnitsPerOperatingDay = compare(
+    salesUnits !== null && currentOperatingDays > 0 ? salesUnits / currentOperatingDays : null,
+    previousSalesUnits !== null && previousOperatingDays > 0 ? previousSalesUnits / previousOperatingDays : null,
+    "number", "neutral", "units",
+  );
   const loggingCurrent = coverage(records, period.from, period.to, configuration.operatingDays);
   const loggingPrevious = coverage(records, period.previousFrom, period.previousTo, configuration.operatingDays);
   const flows = inventoryFlows(records, period, today);
@@ -541,6 +548,8 @@ export function summarizeCafe(input: CafeRecordInput, selection: PeriodSelection
     comparisonPeriod: { from: period.previousFrom, to: period.previousTo, equivalentDays: period.previousDays },
     sales: {
       volume: salesVolume,
+      averageUnitsPerOperatingDay,
+      operatingDays: { current: currentOperatingDays, previous: previousOperatingDays },
       weekly: salesVolumeTrend(records, period),
     },
     kpis: {

@@ -39,6 +39,7 @@ export const Route = createFileRoute("/_authenticated/admin/$id")({
 const TABS = ["Overview", "Sales", "Waste", "Inventory", "Data Quality", "Research", "Menu Items", "Ingredients", "Members"] as const;
 const pct = (value: number | null | undefined) => value === null || value === undefined ? "Insufficient Data" : `${value.toFixed(1)}%`;
 const qty = (value: number | null | undefined) => value === null || value === undefined ? "Insufficient Data" : `${fmtQty(value)} units`;
+const dailyQty = (value: number | null | undefined) => value === null || value === undefined ? "Insufficient Data" : `${fmtQty(value)} units/day`;
 const range = (from: string, to: string) => `${shortDate(from)}–${shortDate(to)}`;
 
 function AdminCafe() {
@@ -133,6 +134,7 @@ function AdminCafe() {
             <MetricCard label="Waste-to-Sales Ratio" metric={s.kpis.wasteToSales} compare={compare} format={pct} formula="Calculated waste value ÷ sales revenue × 100. Peso amounts stay on the server." />
             <MetricCard label="Waste Rate" metric={usableWasteRates.length === 1 ? usableWasteRates[0]!.comparison : { ...s.kpis.wasteToSales, current: null, previous: null }} compare={compare} format={pct} formula="Wasted units ÷ (opening units + received/produced units) × 100, calculated separately for compatible unit groups." customValue={usableWasteRates.length > 1 ? `${usableWasteRates.length} unit groups` : undefined} emptyText="See Waste tab" />
             <MetricCard label="Sales Volume" metric={s.kpis.salesVolume} compare={compare} format={qty} formula="Aggregated units sold during the selected event dates. Revenue is not returned." />
+            <MetricCard label="Average Units Sold per Day" metric={s.sales.averageUnitsPerOperatingDay} compare={compare} format={dailyQty} formula={`Total units sold ÷ ${s.sales.operatingDays.current} scheduled operating days in the selected period. Closed days are excluded from the denominator.`} />
             <MetricCard label="Overall Daily Record Completion" metric={s.kpis.logging.overall} compare={compare} format={pct} formula="Expected operating days with sales + inventory/production + waste checks ÷ expected operating days × 100." />
             <MetricCard label="Inventory Sell-through Rate" metric={usableSellThrough.length === 1 ? usableSellThrough[0]!.comparison : { ...s.kpis.salesVolume, current: null, previous: null }} compare={compare} format={pct} formula="Sold finished-product units ÷ available finished-product units × 100, by compatible unit group." customValue={usableSellThrough.length > 1 ? `${usableSellThrough.length} unit groups` : undefined} emptyText="See Inventory tab" />
             <MetricCard label="Inventory Reconciliation Rate" metric={s.kpis.reconciliation} compare={compare} format={pct} formula="Eligible current ingredient lots where opening + received − usage − waste equals recorded closing stock." />
@@ -159,10 +161,12 @@ function AdminCafe() {
 
       {tab === "Sales" && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <MetricCard label="Units sold · selected period" metric={s.sales.volume} compare={compare} format={qty} formula="Sum of sale quantities by sale_date. Individual transactions and revenue are excluded." />
+            <MetricCard label="Average units sold per day" metric={s.sales.averageUnitsPerOperatingDay} compare={compare} format={dailyQty} formula="Total units sold ÷ scheduled operating days in the selected period. Closed days are excluded; missing sales remain insufficient data." />
             <Stat label="Revenue" value="Confidential" sub="No peso sales values are returned to MenuWise Admin" />
           </div>
+          <p className="text-xs text-muted-foreground">Daily average uses {s.sales.operatingDays.current} scheduled operating {s.sales.operatingDays.current === 1 ? "day" : "days"}; the equivalent previous period uses {s.sales.operatingDays.previous}.</p>
           <TrendChart title="Eight-week sales volume" points={s.sales.weekly} compare={compare} unit="units" kind="bar" />
         </div>
       )}

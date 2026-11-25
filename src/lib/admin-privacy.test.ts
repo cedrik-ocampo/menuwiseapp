@@ -45,6 +45,16 @@ describe("privacy-safe admin analytics", () => {
     expect(result.kpis.salesVolume.status).toBe("Increased");
   });
 
+  it("averages units sold over scheduled operating days with an equivalent previous-period comparison", () => {
+    const result = summarize();
+    expect(result.sales.operatingDays).toEqual({ current: 2, previous: 2 });
+    expect(result.sales.averageUnitsPerOperatingDay.current).toBe(5);
+    expect(result.sales.averageUnitsPerOperatingDay.previous).toBe(2.5);
+    expect(result.sales.averageUnitsPerOperatingDay.difference).toBe(2.5);
+    expect(result.sales.averageUnitsPerOperatingDay.changePct).toBe(100);
+    expect(result.sales.averageUnitsPerOperatingDay.status).toBe("Increased");
+  });
+
   it("counts a waste-free day only after explicit confirmation", () => {
     const confirmed = summarize();
     expect(confirmed.kpis.logging.days.waste).toBe(2);

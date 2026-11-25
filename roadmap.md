@@ -1,5 +1,6 @@
 # Roadmap
 
+- [x] Add admin average units sold per scheduled operating day, with equivalent previous-period comparison and verified calculations.
 - [x] Make admin closing stock follow the global reporting period and simplify its layout; verify period behavior and presentation.
 - [x] Enhance Café Monitoring with global Manila-time reporting periods, equivalent comparisons, privacy-safe operational analytics, research findings, and data-quality states.
 - [x] Add owner-controlled operating days, research consent, and explicit no-waste/closeout records without exposing raw café data to admins.
