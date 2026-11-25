@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { manilaToday } from "@/lib/admin-periods";
-import { todayISO } from "@/lib/format";
 import { currentUser, put, useDB, usePermissions } from "@/lib/store";
 import type { DailyCheck } from "@/lib/types";
 import { Field, Panel, SectionTitle, btnPrimary, inputCls } from "./ui";
@@ -12,7 +11,7 @@ export function DailyCloseout() {
   const db = useDB();
   const permissions = usePermissions();
   const user = currentUser();
-  const [date, setDate] = useState(todayISO());
+  const [date, setDate] = useState(manilaToday());
   const id = `DC-${date}-${user.id ?? "unknown"}`;
   const existing = db.dailyChecks.find((check) => check.id === id);
   const [noWaste, setNoWaste] = useState(false);
@@ -48,7 +47,7 @@ export function DailyCloseout() {
       <SectionTitle>Daily waste check & closeout</SectionTitle>
       <p className="mb-4 text-sm text-muted-foreground">An empty day is not counted as waste-free unless someone explicitly confirms it. Closeout completion is also recorded separately.</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Check date"><input type="date" className={inputCls} value={date} max={todayISO()} onChange={(event) => setDate(event.target.value)} /></Field>
+        <Field label="Check date"><input type="date" className={inputCls} value={date} max={manilaToday()} onChange={(event) => setDate(event.target.value)} /></Field>
         <Field label="Notes · optional"><input className={inputCls} value={notes} maxLength={300} onChange={(event) => setNotes(event.target.value)} placeholder="Closing check notes" /></Field>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">

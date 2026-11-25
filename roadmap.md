@@ -2,7 +2,7 @@
 
 - [x] Enhance Café Monitoring with global Manila-time reporting periods, equivalent comparisons, privacy-safe operational analytics, research findings, and data-quality states.
 - [x] Add owner-controlled operating days, research consent, and explicit no-waste/closeout records without exposing raw café data to admins.
-- [ ] Test analytics formulas, permissions, build output, and the admin dashboard flow.
+- [x] Test analytics formulas, permissions, build output, and the admin dashboard flow.
 
 - [x] Protect café confidentiality in MenuWise Admin: return only aggregate computation outputs, remove raw financial/quantity records from admin responses and views, and close full-owner access that bypasses the privacy boundary. Database policies, calculations, admin tabs, direct-read blocking, and edit-log redaction verified.
 
