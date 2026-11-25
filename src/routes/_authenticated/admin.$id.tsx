@@ -125,7 +125,7 @@ function AdminCafe() {
         {compare && <p className="mt-1 text-xs text-muted-foreground">Compared with {range(s.comparisonPeriod.from, s.comparisonPeriod.to)} · {s.comparisonPeriod.equivalentDays} equivalent days. Missing data is never treated as zero.</p>}
       </Panel>
 
-      <div className="mb-4 overflow-x-auto"><Segmented value={tab} options={TABS} onChange={setTab} /></div>
+      <div className="mb-4 overflow-x-auto"><div className="min-w-[980px]"><Segmented value={tab} options={TABS} onChange={setTab} /></div></div>
 
       {tab === "Overview" && (
         <div className="space-y-4">
