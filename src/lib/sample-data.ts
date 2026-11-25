@@ -1,7 +1,7 @@
 import type { CollectionName, Ingredient, MenuItem, Purchase, Usage, Batch, Sale, WasteLog, RecipeLine } from "./types";
 import { clearCollections, putMany } from "./store";
 
-const DATA_COLLECTIONS: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs", "insightResponses"];
+const DATA_COLLECTIONS: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs", "dailyChecks", "insightResponses"];
 
 const day = (offset: number) => {
   const d = new Date();

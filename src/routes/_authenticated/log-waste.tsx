@@ -5,6 +5,7 @@ import { PageTitle } from "@/components/mw/AppShell";
 import { Callout } from "@/components/mw/ui";
 import { WasteList, WasteLogForm } from "@/components/mw/WasteLogForm";
 import { WasteImport } from "@/components/mw/WasteImport";
+import { DailyCloseout } from "@/components/mw/DailyCloseout";
 import { useDB } from "@/lib/store";
 import { byNewest } from "@/lib/calc";
 
@@ -51,6 +52,7 @@ function LogWaste() {
         </Callout>
 
         <div className="flex justify-end"><WasteImport /></div>
+        <DailyCloseout />
         <Section title="Waste Log Form" open>
           <WasteLogForm />
         </Section>

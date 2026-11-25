@@ -151,6 +151,15 @@ export interface InsightResponse {
   label: string;
 }
 
+/** Explicit daily confirmation; an empty day is never assumed to be waste-free. */
+export interface DailyCheck {
+  id: string;
+  date: string; // yyyy-mm-dd in the café's reporting timezone
+  noWaste: boolean;
+  closeout: boolean;
+  notes?: string;
+}
+
 export interface Collections {
   ingredients: Ingredient;
   purchases: Purchase;
@@ -159,8 +168,9 @@ export interface Collections {
   batches: Batch;
   sales: Sale;
   wasteLogs: WasteLog;
+  dailyChecks: DailyCheck;
   changeLogs: ChangeLog;
   insightResponses: InsightResponse;
 }
 export type CollectionName = keyof Collections;
-export const COLLECTIONS: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs", "changeLogs", "insightResponses"];
+export const COLLECTIONS: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs", "dailyChecks", "changeLogs", "insightResponses"];

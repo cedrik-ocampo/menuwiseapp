@@ -1,7 +1,7 @@
 import type { Audit, CollectionName } from './types';
 
 export type WorkspaceRole = 'owner' | 'staff' | null;
-export const DAILY_COLLECTIONS: CollectionName[] = ['batches', 'sales', 'wasteLogs'];
+export const DAILY_COLLECTIONS: CollectionName[] = ['batches', 'sales', 'wasteLogs', 'dailyChecks'];
 
 /** Tag on menu items added by staff on shift, so owners know to add costs or a recipe. */
 export const NEEDS_REVIEW_TAG = 'needs-review';

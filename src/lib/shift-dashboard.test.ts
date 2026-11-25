@@ -4,7 +4,7 @@ import type { DBView } from './store';
 import type { Batch, MenuItem, WasteLog } from './types';
 
 function fixture(): DBView {
-  return { ready: true, online: true, pendingCollections: new Set(), ingredients: [{ id: 'milk', name: 'Milk', category: '', storage: '', unit: 'L', unitCost: 80 }], menuItems: [{ id: 'latte', name: 'Latte', unit: 'cups', batchUnit: 'pc', retailPrice: 100 } as MenuItem], purchases: [], usages: [], batches: [], sales: [], wasteLogs: [], changeLogs: [], insightResponses: [] };
+  return { ready: true, online: true, pendingCollections: new Set(), ingredients: [{ id: 'milk', name: 'Milk', category: '', storage: '', unit: 'L', unitCost: 80 }], menuItems: [{ id: 'latte', name: 'Latte', unit: 'cups', batchUnit: 'pc', retailPrice: 100 } as MenuItem], purchases: [], usages: [], batches: [], sales: [], wasteLogs: [], dailyChecks: [], changeLogs: [], insightResponses: [] };
 }
 describe('staff shift feedback', () => {
   it('includes every positive-stock lot overdue or expiring within two days, not future purchases or empty lots', () => {

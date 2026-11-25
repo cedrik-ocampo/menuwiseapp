@@ -182,19 +182,28 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          operating_days: number[]
           owner_id: string
+          research_consent: boolean
+          research_consent_updated_at: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           name?: string
+          operating_days?: number[]
           owner_id: string
+          research_consent?: boolean
+          research_consent_updated_at?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          operating_days?: number[]
           owner_id?: string
+          research_consent?: boolean
+          research_consent_updated_at?: string | null
         }
         Relationships: []
       }

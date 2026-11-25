@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { summarizeCafe, type CafeRecordInput } from "./admin-privacy";
+import { manilaToday } from "./admin-periods";
 import type { ChangeLog } from "./types";
 
 /** Admin monitoring verifies the caller's role, then returns only aggregate projections. */
@@ -58,32 +59,45 @@ export const listCafes = createServerFn({ method: "POST" })
 
 export const getCafe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => z.object({
+    id: z.string().uuid(),
+    period: z.object({
+      key: z.enum(["this-week", "last-week", "2-weeks", "3-weeks", "4-weeks", "5-weeks", "6-weeks", "7-weeks", "last-30", "custom"]),
+      customFrom: z.string().optional(),
+      customTo: z.string().optional(),
+    }),
+  }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     // Raw records are aggregated here and never cross the server boundary.
     const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
     const [{ data: ws }, { data: members }, { data: invites }, { data: recs }] = await Promise.all([
-      sb.from("workspaces").select("id,name,created_at").eq("id", data.id).maybeSingle(),
+      sb.from("workspaces").select("id,name,created_at,operating_days,research_consent,research_consent_updated_at").eq("id", data.id).maybeSingle(),
       sb.from("workspace_members").select("user_id,role,email,display_name,joined_at,inventory_access").eq("workspace_id", data.id),
       sb.from("workspace_invites").select("id,email,created_at").eq("workspace_id", data.id),
-      fetchAll<{ collection: string; data: unknown }>((a, b) => sb.from("records").select("id,collection,data").eq("workspace_id", data.id).eq("deleted", false).in("collection", ["ingredients", "menuItems", "sales", "batches", "wasteLogs"]).order("collection").order("id").range(a, b)),
+      fetchAll<{ id: string; collection: string; data: unknown; updated_at: string }>((a, b) => sb.from("records").select("id,collection,data,updated_at").eq("workspace_id", data.id).eq("deleted", false).in("collection", ["ingredients", "menuItems", "sales", "batches", "wasteLogs", "purchases", "usages", "dailyChecks"]).order("collection").order("id").range(a, b)),
     ]);
     if (!ws) throw new Error("Café not found");
-    // Café-visible notice that an admin viewed its records (one per day).
+    // Café-visible notice that an admin viewed its privacy-safe summary (one per day).
     const now = new Date().toISOString(); const viewId = `view-${data.id}-${now.slice(0, 10)}`;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.from("records").upsert({ id: viewId, collection: "changeLogs", user_id: context.userId, workspace_id: data.id, updated_at: now, deleted: false,
+    await sb.from("records").upsert({ id: viewId, collection: "changeLogs", user_id: context.userId, workspace_id: data.id, updated_at: now, deleted: false,
       data: { id: viewId, collection: "workspace", recordId: data.id, action: "viewed", at: now, by: context.userId, byName: "MenuWise Admin", changes: [], adminEdit: true } as never }, { onConflict: "workspace_id,collection,id" });
     const collection = <K extends keyof CafeRecordInput>(name: K) =>
-      (recs ?? []).filter((r) => r.collection === name).map((r) => r.data) as NonNullable<CafeRecordInput[K]>;
+      recs.filter((r) => r.collection === name).map((r) => r.data) as NonNullable<CafeRecordInput[K]>;
     const summary = summarizeCafe({
       ingredients: collection("ingredients"),
       menuItems: collection("menuItems"),
       sales: collection("sales"),
       batches: collection("batches"),
       wasteLogs: collection("wasteLogs"),
-    }, new Date().toISOString().slice(0, 10));
+      purchases: collection("purchases"),
+      usages: collection("usages"),
+      dailyChecks: collection("dailyChecks"),
+      recordMeta: recs.map(({ id, collection, updated_at }) => ({ id, collection, updated_at })),
+    }, data.period, manilaToday(), {
+      operatingDays: ws.operating_days ?? [0, 1, 2, 3, 4, 5, 6],
+      researchConsent: ws.research_consent ?? true,
+    });
     return { cafe: ws, members: members ?? [], invites: invites ?? [], summary };
   });
 

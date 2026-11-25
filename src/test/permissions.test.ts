@@ -14,6 +14,7 @@ describe("owner/employee permissions", () => {
     expect(mayAdd("staff", "wasteLogs")).toBe(true);
     expect(mayAdd("staff", "sales")).toBe(true);
     expect(mayAdd("staff", "batches")).toBe(true);
+    expect(mayAdd("staff", "dailyChecks")).toBe(true);
     expect(mayAdd("staff", "ingredients")).toBe(false);
     expect(mayAdd("staff", "menuItems")).toBe(true);
     expect(mayEdit("staff", "u1", "menuItems", "a", rows)).toBe(false);
@@ -22,6 +23,8 @@ describe("owner/employee permissions", () => {
     expect(mayEdit("staff", "u1", "sales", "b", rows)).toBe(true);
     expect(mayEdit("staff", "u1", "sales", "a", rows)).toBe(false);
     expect(mayEdit("staff", "u1", "sales", "c", rows)).toBe(false);
+    expect(mayEdit("staff", "u1", "dailyChecks", "b", rows)).toBe(true);
+    expect(mayEdit("staff", "u1", "dailyChecks", "a", rows)).toBe(false);
   });
 });
 

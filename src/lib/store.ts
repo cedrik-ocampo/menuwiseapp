@@ -33,6 +33,7 @@ export interface DBView {
   batches: Collections["batches"][];
   sales: Collections["sales"][];
   wasteLogs: Collections["wasteLogs"][];
+  dailyChecks: Collections["dailyChecks"][];
   changeLogs: Collections["changeLogs"][];
   insightResponses: Collections["insightResponses"][];
   pendingCollections: Set<CollectionName>;
@@ -196,7 +197,7 @@ function logChange(collection: CollectionName, recordId: string, action: "create
   } as never);
 }
 
-const TRACKED: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs"];
+const TRACKED: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs", "dailyChecks"];
 
 export function put<K extends CollectionName>(collection: K, item: Collections[K] & { id: string }) {
   const prev = state.tables[collection][item.id];
@@ -295,7 +296,7 @@ export async function sync(): Promise<void> {
     state.seeded = true;
 
     if (state.pending.length) {
-      const batch = state.pending.filter((key) => workspaceRole === 'owner' || ['batches', 'sales', 'wasteLogs'].includes(key.split('|')[0]) || (inventoryAccess && ['ingredients', 'purchases', 'usages'].includes(key.split('|')[0])));
+      const batch = state.pending.filter((key) => workspaceRole === 'owner' || ['batches', 'sales', 'wasteLogs', 'dailyChecks'].includes(key.split('|')[0]) || (inventoryAccess && ['ingredients', 'purchases', 'usages'].includes(key.split('|')[0])));
       const payload = batch.map((key) => {
         const [c, id] = key.split("|") as [CollectionName, string];
         const r = state.tables[c][id];

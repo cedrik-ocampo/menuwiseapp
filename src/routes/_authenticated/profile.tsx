@@ -17,6 +17,7 @@ import { PageTitle, CafeName } from "@/components/mw/AppShell";
 import { Avatar, useMe, useSignOut } from "@/components/mw/UserMenu";
 import { Field, Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 import { InventoryAccessToggle } from "@/components/mw/InventoryAccessToggle";
+import { ReportingSettings } from "@/components/mw/ReportingSettings";
 import { leaveWorkspace, deleteAccount } from "@/lib/account.functions";
 import { cancelWorkspaceInvite, createWorkspaceInvite } from "@/lib/invitations.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -230,6 +231,8 @@ function Profile() {
         </div>
         {!sole && <button type="button" className={btnSecondary} onClick={() => void leave()}><LogOut className="h-4 w-4" /> Leave workspace</button>}
       </Panel>
+
+      <ReportingSettings isOwner={isOwner} />
 
       <Panel className="space-y-4">
         <SectionTitle>Preferences</SectionTitle>
