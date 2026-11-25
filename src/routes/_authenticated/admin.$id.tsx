@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { AlertTriangle, CheckCircle2, Info, LockKeyhole, ShieldCheck } from "lucide-react";
@@ -363,13 +363,47 @@ function Table({ head, rows, empty }: { head: string[]; rows: string[][]; empty:
   return <div className="overflow-x-auto"><table className="w-full min-w-[520px] text-left text-sm [&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2.5 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0"><thead className="text-xs uppercase text-muted-foreground"><tr>{head.map((heading) => <th key={heading}>{heading}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={index} className="border-t border-border">{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>;
 }
 
+type WeekdayRow = CafeSummary["waste"]["byWeekday"][number];
+const CHART_VIEW_KEY = "menuwise:admin-weekday-chart";
+const CHART_VIEWS = ["Bar", "Line"] as const;
+type ChartView = (typeof CHART_VIEWS)[number];
+
+/** Chart style is a device preference: it survives tab switches and page reloads. */
+function useChartView() {
+  const [view, setView] = useState<ChartView>("Bar");
+  useEffect(() => {
+    const stored = localStorage.getItem(CHART_VIEW_KEY);
+    if (stored === "Bar" || stored === "Line") setView(stored);
+  }, []);
+  const change = (next: ChartView) => {
+    setView(next);
+    try { localStorage.setItem(CHART_VIEW_KEY, next); } catch { /* device storage unavailable */ }
+  };
+  return [view, change] as const;
+}
+
+function WeekdayTooltip({ active, payload, compare }: { active?: boolean; payload?: { payload: WeekdayRow }[]; compare: boolean }) {
+  const row = payload?.[0]?.payload;
+  if (!active || !row) return null;
+  const quantity = Object.entries(row.quantities).map(([unit, value]) => `${fmtQty(value)} ${unit}`).join(" · ");
+  return (
+    <div className="rounded-lg border border-border bg-card p-3 text-xs shadow">
+      <p className="font-semibold text-primary">{row.label}{row.operating ? "" : " · Closed"}</p>
+      <p className="mt-1">Waste logs: <b>{row.count}</b></p>
+      {quantity && <p className="text-muted-foreground">Quantity: {quantity}</p>}
+      {compare && <p className="text-muted-foreground">Previous: <b>{row.previous}</b></p>}
+    </div>
+  );
+}
+
 function WeekdayWastePanel({ summary, compare }: { summary: CafeSummary; compare: boolean }) {
   const days = summary.waste.byWeekday;
   const data = days.map((day) => ({ ...day, display: day.count }));
   const max = Math.max(1, ...days.map((day) => day.count));
+  const [view, setView] = useChartView();
   return (
     <Panel>
-      <SectionTitle>Waste by day of the week <InfoTip text="Number of waste logs on each weekday in the selected period. Closed days follow the café's operating days." /></SectionTitle>
+      <SectionTitle right={<div className="w-32 shrink-0"><Segmented value={view} options={CHART_VIEWS} onChange={setView} /></div>}>Waste by day of the week <InfoTip text="Number of waste logs on each weekday in the selected period. Use Bar to compare days side by side, or Line to follow the pattern across the week. Closed days follow the café's operating days." /></SectionTitle>
       <div className="grid grid-cols-7 gap-2">
         {days.map((day) => (
           <div key={day.label} className={`rounded-lg border p-2 text-center ${day.count ? "border-primary/50 bg-primary/10" : "border-border bg-muted/30 opacity-60"}`}>
@@ -383,14 +417,27 @@ function WeekdayWastePanel({ summary, compare }: { summary: CafeSummary; compare
       </div>
       <div className="mt-4 h-48">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={12} />
-            <YAxis allowDecimals={false} domain={[0, max]} stroke="var(--muted-foreground)" fontSize={12} />
-            <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)" }} />
-            {compare && <Bar dataKey="previous" name="Previous period" fill="var(--muted-foreground)" fillOpacity={0.35} />}
-            <Bar dataKey="display" name="Waste logs" fill="var(--primary)" />
-          </BarChart>
+          {view === "Line" ? (
+            <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={12} />
+              <YAxis allowDecimals={false} domain={[0, max]} stroke="var(--muted-foreground)" fontSize={12} />
+              <Tooltip content={<WeekdayTooltip compare={compare} />} />
+              {compare && <Legend wrapperStyle={{ fontSize: 11 }} />}
+              {compare && <Line type="monotone" dataKey="previous" name="Previous period" stroke="var(--accent)" strokeWidth={2} strokeDasharray="6 4" dot={false} isAnimationActive={false} />}
+              <Line type="monotone" dataKey="display" name="Waste logs" stroke="var(--primary)" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} isAnimationActive={false} />
+            </LineChart>
+          ) : (
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={12} />
+              <YAxis allowDecimals={false} domain={[0, max]} stroke="var(--muted-foreground)" fontSize={12} />
+              <Tooltip content={<WeekdayTooltip compare={compare} />} />
+              {compare && <Legend wrapperStyle={{ fontSize: 11 }} />}
+              {compare && <Bar dataKey="previous" name="Previous period" fill="var(--muted-foreground)" fillOpacity={0.35} />}
+              <Bar dataKey="display" name="Waste logs" fill="var(--primary)" />
+            </BarChart>
+          )}
         </ResponsiveContainer>
       </div>
       {summary.waste.grid.length > 1 && (
