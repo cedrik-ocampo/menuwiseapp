@@ -2,7 +2,7 @@ import { addDays, daysBetween } from "./format";
 import { costPerUnit } from "./calc";
 import {
   datesBetween, expectedOperatingDates, manilaToday, monthEnd, monthStart, addMonths, mondayOf,
-  resolvePeriod, type PeriodSelection, type PeriodWindow,
+  reportingWeeks, resolvePeriod, type PeriodSelection, type PeriodWindow,
 } from "./admin-periods";
 import type { Batch, ChangeLog, DailyCheck, Ingredient, MenuItem, Purchase, Sale, Stage, Usage, WasteLog } from "./types";
 
@@ -152,13 +152,7 @@ const emptyFlow = (): FlowResult => ({ available: 0, wasted: 0, sold: 0, closing
 function inventoryFlows(records: Required<Pick<CafeRecordInput, "ingredients" | "menuItems" | "sales" | "batches" | "wasteLogs" | "purchases" | "usages">>, period: PeriodWindow, today: string) {
   const groups = new Map<string, FlowGroup>();
   const limitations = new Set<string>();
-  const selectedWeek = mondayOf(period.to);
-  const weeks = Array.from({ length: 8 }, (_, index) => {
-    const from = addDays(selectedWeek, -7 * (7 - index));
-    const scheduledTo = addDays(from, 6);
-    const to = from === selectedWeek && period.to < scheduledTo ? period.to : scheduledTo;
-    return { key: from, label: `Week ${index + 1}`, from, to, partial: to < scheduledTo };
-  });
+  const weeks = reportingWeeks(period);
   const getGroup = (stage: "Ingredient" | "Finished Product", unit: string): FlowGroup => {
     const group = unitGroup(unit);
     const key = `${stage === "Ingredient" ? "ingredient" : "finished"}-${group.key}`;

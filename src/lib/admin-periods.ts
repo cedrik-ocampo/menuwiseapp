@@ -102,6 +102,25 @@ export function datesBetween(from: string, to: string) {
   return Array.from({ length }, (_, index) => addDays(from, index));
 }
 
+/** Monday–Sunday closing-stock buckets clipped to the global reporting period. */
+export function reportingWeeks(period: PeriodWindow) {
+  const firstMonday = mondayOf(period.from);
+  const count = Math.floor(daysBetween(firstMonday, period.to) / 7) + 1;
+  return Array.from({ length: count }, (_, index) => {
+    const weekStart = addDays(firstMonday, index * 7);
+    const scheduledTo = addDays(weekStart, 6);
+    const from = weekStart < period.from ? period.from : weekStart;
+    const to = scheduledTo > period.to ? period.to : scheduledTo;
+    return {
+      key: weekStart,
+      label: count === 1 ? "Selected week" : `Week ${index + 1}`,
+      from,
+      to,
+      partial: from !== weekStart || to !== scheduledTo,
+    };
+  });
+}
+
 /** JavaScript weekday numbering: Sunday=0, Monday=1, … Saturday=6. */
 export function expectedOperatingDates(from: string, to: string, operatingDays: number[]) {
   const allowed = new Set(operatingDays);

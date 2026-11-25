@@ -264,7 +264,81 @@ function TrendTooltip({ active, payload, unit }: { active?: boolean; payload?: {
   return <div className="rounded-lg border border-border bg-card p-3 text-xs shadow"><p className="font-semibold text-primary">{range(point.currentFrom, point.currentTo)}{point.partial ? " · partial" : ""}</p><p className="mt-1">Current: <b>{value(point.current)}</b></p><p className="text-muted-foreground">Previous ({range(point.previousFrom, point.previousTo)}): <b>{value(point.previous)}</b></p></div>;
 }
 function InventoryPanel({ summary: s, compare }: { summary: CafeSummary; compare: boolean }) {
-  return <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Stat label="Incoming supplier deliveries" value={String(s.inventory.incomingSupplierDeliveries)} sub="Ingredient purchases + outsourced finished-product receipts" /><Stat label="In-house production" value={String(s.inventory.inHouseProduction)} sub="Kept separate from supplier deliveries" /><Stat label="Stockout frequency" value={`${s.inventory.stockouts.items} / ${s.inventory.stockouts.eligibleItems}`} sub="Reconstructed items ending with no available units" /><Stat label="Reconciliation discrepancies" value={String(s.inventory.reconciliation.discrepancies)} sub={`${s.inventory.reconciliation.eligible} eligible ingredient records`} /></div><div className="grid gap-4 lg:grid-cols-2"><Panel><SectionTitle>Inventory sell-through <InfoTip text="Sold units ÷ available units × 100, by compatible finished-product unit group." /></SectionTitle><UnitMetricList metrics={s.inventory.sellThrough} compare={compare} /></Panel><Panel className="min-w-0"><SectionTitle>Weekly closing stock <InfoTip text="Closing stock = opening stock + received/produced − sold/used − wasted. Totals are calculated separately for each stock type and compatible unit." /></SectionTitle>{s.inventory.closing.groups.length ? <Table head={["Week", "Reporting dates", ...s.inventory.closing.groups.map((group) => group.label)]} rows={s.inventory.closing.weeks.map((week) => [`${week.label}${week.partial ? " · partial" : ""}`, range(week.from, week.to), ...s.inventory.closing.groups.map((group) => { const value = week.values[group.key]; return value === null || value === undefined ? "Insufficient data" : `${fmtQty(value)} ${group.unit}`; })])} empty="No eligible weekly closing-stock history is available." /> : <Empty title="Insufficient Data" detail="No eligible closing stock reconstruction is available." />}<p className="mt-3 text-xs text-muted-foreground">Exact aggregate quantities are shown for the latest eight Monday–Sunday weeks in Asia/Manila. The latest week ends on the selected reporting date when incomplete. These are reconstructed totals, not independent physical counts; missing or incompatible records show as insufficient data.</p></Panel></div><Panel><SectionTitle>Inventory movement summary</SectionTitle><div className="grid grid-cols-2 gap-3 sm:grid-cols-5">{Object.entries(s.inventory.movement).map(([key, count]) => <Status key={key} label={key[0]!.toUpperCase() + key.slice(1)} value={String(count)} detail="records in selected period" />)}</div></Panel><Panel><SectionTitle>Inventory reconciliation <InfoTip text="Opening Stock + Received Stock = Used/Sold + Wasted + Closing Stock. Only current ingredient lots have an independent recorded closing balance." /></SectionTitle>{s.inventory.reconciliation.available ? <div className="grid gap-3 sm:grid-cols-3"><Status label="Balanced" value={String(s.inventory.reconciliation.balanced)} detail="eligible current ingredients" /><Status label="Discrepancies" value={String(s.inventory.reconciliation.discrepancies)} detail="identified, not auto-corrected" /><Status label="Reconciliation rate" value={pct(s.inventory.reconciliation.percentage)} detail="balanced ÷ eligible × 100" /></div> : <Empty title="Insufficient Data" detail="Select a period ending today and ensure ingredient lots have recorded closing balances. Finished goods and historical dates lack independent closing snapshots." />}</Panel></div>;
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Incoming supplier deliveries" value={String(s.inventory.incomingSupplierDeliveries)} sub="Ingredient purchases + outsourced finished-product receipts" />
+        <Stat label="In-house production" value={String(s.inventory.inHouseProduction)} sub="Kept separate from supplier deliveries" />
+        <Stat label="Stockout frequency" value={`${s.inventory.stockouts.items} / ${s.inventory.stockouts.eligibleItems}`} sub="Reconstructed items ending with no available units" />
+        <Stat label="Reconciliation discrepancies" value={String(s.inventory.reconciliation.discrepancies)} sub={`${s.inventory.reconciliation.eligible} eligible ingredient records`} />
+      </div>
+
+      <ClosingStockPanel summary={s} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel>
+          <SectionTitle>Inventory sell-through <InfoTip text="Sold units ÷ available units × 100, by compatible finished-product unit group." /></SectionTitle>
+          <UnitMetricList metrics={s.inventory.sellThrough} compare={compare} />
+        </Panel>
+        <Panel>
+          <SectionTitle>Inventory movement summary</SectionTitle>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {Object.entries(s.inventory.movement).map(([key, count]) => <Status key={key} label={key[0]!.toUpperCase() + key.slice(1)} value={String(count)} detail="records in selected period" />)}
+          </div>
+        </Panel>
+      </div>
+
+      <Panel>
+        <SectionTitle>Inventory reconciliation <InfoTip text="Opening Stock + Received Stock = Used/Sold + Wasted + Closing Stock. Only current ingredient lots have an independent recorded closing balance." /></SectionTitle>
+        {s.inventory.reconciliation.available ? <div className="grid gap-3 sm:grid-cols-3"><Status label="Balanced" value={String(s.inventory.reconciliation.balanced)} detail="eligible current ingredients" /><Status label="Discrepancies" value={String(s.inventory.reconciliation.discrepancies)} detail="identified, not auto-corrected" /><Status label="Reconciliation rate" value={pct(s.inventory.reconciliation.percentage)} detail="balanced ÷ eligible × 100" /></div> : <Empty title="Insufficient Data" detail="Select a period ending today and ensure ingredient lots have recorded closing balances. Finished goods and historical dates lack independent closing snapshots." />}
+      </Panel>
+    </div>
+  );
+}
+
+function ClosingStockPanel({ summary: s }: { summary: CafeSummary }) {
+  const { groups, weeks } = s.inventory.closing;
+  return (
+    <Panel>
+      <SectionTitle>Closing stock <InfoTip text="Closing stock = opening stock + received/produced − sold/used − wasted. Totals are calculated separately for each stock type and compatible unit." /></SectionTitle>
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <span className="font-semibold text-primary">{s.period.label}</span>
+        <span className="text-muted-foreground">{range(s.period.from, s.period.to)}</span>
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-primary">{weeks.length} reporting {weeks.length === 1 ? "week" : "weeks"}</span>
+      </div>
+      {!groups.length ? <Empty title="Insufficient Data" detail="No eligible closing stock reconstruction is available." /> : (
+        <div className="space-y-3">
+          {weeks.map((week) => (
+            <article key={week.key} className="rounded-xl border border-border bg-secondary/40 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-bold text-primary">{week.label}</h4>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Stock remaining at closing · {range(week.from, week.to)}</p>
+                </div>
+                {week.partial && <span className="rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">Partial week</span>}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {groups.map((group) => {
+                  const value = week.values[group.key];
+                  return (
+                    <div key={group.key} className="rounded-lg border border-border bg-card p-4">
+                      <p className="text-xs font-semibold text-muted-foreground">{group.label}</p>
+                      {value === null || value === undefined ? (
+                        <p className="mt-2 text-sm font-semibold text-muted-foreground">Insufficient data</p>
+                      ) : (
+                        <p className="mt-1 text-2xl font-bold text-primary">{fmtQty(value)} <span className="text-sm font-normal text-muted-foreground">{group.unit}</span></p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      <p className="mt-4 text-xs text-muted-foreground">Quantities follow the global reporting period in Asia/Manila. They are reconstructed totals—not independent physical counts—and missing or incompatible records remain insufficient data rather than zero.</p>
+    </Panel>
+  );
 }
 function QualityPanel({ summary: s, compare }: { summary: CafeSummary; compare: boolean }) {
   return <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Stat label="Record completeness" value={pct(s.quality.completeness.percentage)} sub={`${s.quality.completeness.complete} / ${s.quality.completeness.total} selected-period records`} /><Stat label="Exact duplicate records" value={String(s.quality.duplicates.count)} sub={`${pct(s.quality.duplicates.ratePct)} of ${s.quality.duplicates.checked} checked`} /><Stat label="Invalid references" value={String(s.quality.invalidReferences)} sub="Missing menu, ingredient or batch links" /><Stat label="Inventory reconciliation" value={pct(s.quality.reconciliation.percentage)} sub={`${s.quality.reconciliation.eligible} eligible records`} /></div><Panel><SectionTitle>Synchronization health & data freshness</SectionTitle><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Status label="Last successful sync" value="Unavailable" detail="Device success events are not transmitted" /><Status label="Pending sync" value="Unavailable" detail="Device-local queue is not transmitted" /><Status label="Failures / conflicts" value="Unavailable" detail="No server-side failure or conflict events" /><Status label="Latest operational event" value={s.quality.latestOperationalDate ? shortDate(s.quality.latestOperationalDate) : "No data"} detail="Uses sale, production, purchase, usage or waste event dates" /></div><p className="mt-3 text-xs text-muted-foreground">Latest synced record update: {s.quality.sync.latestRecordUpdatedAt ? new Date(s.quality.sync.latestRecordUpdatedAt).toLocaleString() : "No synced records"}. This timestamp is not substituted for transaction dates. Upsert retries with the same record ID are not counted as new transactions.</p></Panel><Panel><SectionTitle>System adoption & usage</SectionTitle><div className="mb-3 grid gap-3 sm:grid-cols-3"><Status label="Active usage days" value={`${s.usage.activeDays} / ${s.usage.expectedDays}`} detail="Any operational record on expected operating days" /><Status label="Daily closeout completion" value={pct(s.usage.closeoutCompletionPct)} detail="Explicit closeout records only" /><Status label="Overall daily completion" value={pct(s.kpis.logging.overall.current)} detail="Sales + inventory/production + waste check" /></div><div className="grid gap-3 sm:grid-cols-5">{s.usage.features.map((feature) => <Status key={feature.key} label={feature.label} value={`${feature.days} days`} detail="Aggregated; no employee activity shown" />)}</div></Panel><CoverageGrid summary={s} compare={compare} /><DataLimitations summary={s} /></div>;

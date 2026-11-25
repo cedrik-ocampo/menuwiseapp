@@ -119,7 +119,7 @@ describe("privacy-safe admin analytics", () => {
     expect(disabled.kpis.salesVolume.current).toBe(10);
   });
 
-  it("returns exact weekly closing totals with carry-forward and a marked partial week", () => {
+  it("returns exact closing totals within the selected reporting weeks", () => {
     const input: CafeRecordInput = {
       menuItems: [items[0]!],
       batches: [
@@ -130,11 +130,16 @@ describe("privacy-safe admin analytics", () => {
       ],
       sales: [sale("ws1", "2026-11-03", 10), sale("ws2", "2026-11-10", 20), sale("ws3", "2026-11-17", 5), sale("ws4", "2026-11-23", 10)],
     };
-    const result = summarize(input);
+    const current = summarize(input);
+    expect(current.inventory.closing.weeks).toHaveLength(1);
+    expect(current.inventory.closing.weeks[0]).toMatchObject({ label: "Selected week", from: "2026-11-23", to: "2026-11-24", partial: true });
+    expect(current.inventory.closing.weeks[0]?.values["finished-count"]).toBe(165);
+
+    const result = summarizeCafe(input, { key: "last-30" }, "2026-11-24", config);
     expect(result.inventory.closing.groups).toEqual([{ key: "finished-count", label: "Finished Product · Pieces (pc)", unit: "pc" }]);
-    expect(result.inventory.closing.weeks.map((week) => week.values["finished-count"])).toEqual([null, null, null, null, 90, 120, 135, 165]);
-    expect(result.inventory.closing.weeks[4]).toMatchObject({ label: "Week 5", from: "2026-11-02", to: "2026-11-08", partial: false });
-    expect(result.inventory.closing.weeks[7]).toMatchObject({ label: "Week 8", from: "2026-11-23", to: "2026-11-24", partial: true });
+    expect(result.inventory.closing.weeks.map((week) => week.values["finished-count"])).toEqual([null, 90, 120, 135, 165]);
+    expect(result.inventory.closing.weeks[1]).toMatchObject({ label: "Week 2", from: "2026-11-02", to: "2026-11-08", partial: false });
+    expect(result.inventory.closing.weeks[4]).toMatchObject({ label: "Week 5", from: "2026-11-23", to: "2026-11-24", partial: true });
     expect(JSON.stringify(result.inventory.closing)).not.toMatch(/Latte/);
   });
 
