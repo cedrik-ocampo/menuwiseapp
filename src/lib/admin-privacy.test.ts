@@ -119,6 +119,25 @@ describe("privacy-safe admin analytics", () => {
     expect(disabled.kpis.salesVolume.current).toBe(10);
   });
 
+  it("returns exact weekly closing totals with carry-forward and a marked partial week", () => {
+    const input: CafeRecordInput = {
+      menuItems: [items[0]!],
+      batches: [
+        { id: "wb1", menuItemId: "m1", producedAt: "2026-11-02T08:00:00+08:00", quantity: 100, expiryDate: "2026-12-01" },
+        { id: "wb2", menuItemId: "m1", producedAt: "2026-11-09T08:00:00+08:00", quantity: 50, expiryDate: "2026-12-01" },
+        { id: "wb3", menuItemId: "m1", producedAt: "2026-11-16T08:00:00+08:00", quantity: 20, expiryDate: "2026-12-01" },
+        { id: "wb4", menuItemId: "m1", producedAt: "2026-11-23T08:00:00+08:00", quantity: 40, expiryDate: "2026-12-01" },
+      ],
+      sales: [sale("ws1", "2026-11-03", 10), sale("ws2", "2026-11-10", 20), sale("ws3", "2026-11-17", 5), sale("ws4", "2026-11-23", 10)],
+    };
+    const result = summarize(input);
+    expect(result.inventory.closing.groups).toEqual([{ key: "finished-count", label: "Finished Product · Pieces (pc)", unit: "pc" }]);
+    expect(result.inventory.closing.weeks.map((week) => week.values["finished-count"])).toEqual([null, null, null, null, 90, 120, 135, 165]);
+    expect(result.inventory.closing.weeks[4]).toMatchObject({ label: "Week 5", from: "2026-11-02", to: "2026-11-08", partial: false });
+    expect(result.inventory.closing.weeks[7]).toMatchObject({ label: "Week 8", from: "2026-11-23", to: "2026-11-24", partial: true });
+    expect(JSON.stringify(result.inventory.closing)).not.toMatch(/Latte/);
+  });
+
   it("redacts names, recipes, prices, costs and individual transactions", () => {
     const result = summarize();
     const serialized = JSON.stringify(result);

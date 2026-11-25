@@ -120,15 +120,6 @@ function convert(quantity: number, from: string, to: string) {
   const targetFactor = target.units[to.trim().toLowerCase()] ?? 1;
   return quantity * sourceFactor / targetFactor;
 }
-function quantityRange(value: number) {
-  if (value <= 0) return "0";
-  if (value <= 10) return "1–10";
-  if (value <= 50) return "11–50";
-  if (value <= 200) return "51–200";
-  if (value <= 1000) return "201–1,000";
-  return "1,001+";
-}
-
 function periodLabel(period: PeriodWindow) {
   return `${period.from} to ${period.to}`;
 }
@@ -150,7 +141,7 @@ interface FlowGroup {
   baseUnit: string;
   current: FlowResult;
   previous: FlowResult;
-  closingRange: string;
+  weeklyClosing: (number | null)[];
   stockoutItems: number;
   eligibleItems: number;
   reconciliation: { eligible: number; balanced: number; discrepancies: number };
@@ -161,12 +152,19 @@ const emptyFlow = (): FlowResult => ({ available: 0, wasted: 0, sold: 0, closing
 function inventoryFlows(records: Required<Pick<CafeRecordInput, "ingredients" | "menuItems" | "sales" | "batches" | "wasteLogs" | "purchases" | "usages">>, period: PeriodWindow, today: string) {
   const groups = new Map<string, FlowGroup>();
   const limitations = new Set<string>();
+  const selectedWeek = mondayOf(period.to);
+  const weeks = Array.from({ length: 8 }, (_, index) => {
+    const from = addDays(selectedWeek, -7 * (7 - index));
+    const scheduledTo = addDays(from, 6);
+    const to = from === selectedWeek && period.to < scheduledTo ? period.to : scheduledTo;
+    return { key: from, label: `Week ${index + 1}`, from, to, partial: to < scheduledTo };
+  });
   const getGroup = (stage: "Ingredient" | "Finished Product", unit: string): FlowGroup => {
     const group = unitGroup(unit);
     const key = `${stage === "Ingredient" ? "ingredient" : "finished"}-${group.key}`;
     const label = `${stage} · ${group.label}${group.base ? ` (${group.base})` : ""}`;
     if (!groups.has(key)) groups.set(key, {
-      key, label, baseUnit: group.base, current: emptyFlow(), previous: emptyFlow(), closingRange: "0", stockoutItems: 0, eligibleItems: 0,
+      key, label, baseUnit: group.base, current: emptyFlow(), previous: emptyFlow(), weeklyClosing: weeks.map(() => null), stockoutItems: 0, eligibleItems: 0,
       reconciliation: { eligible: 0, balanced: 0, discrepancies: 0 },
     });
     return groups.get(key)!;
@@ -207,6 +205,10 @@ function inventoryFlows(records: Required<Pick<CafeRecordInput, "ingredients" | 
     const group = getGroup("Ingredient", ingredient.unit);
     if (current.valid) add(group.current, current);
     if (previous.valid) add(group.previous, previous);
+    weeks.forEach((week, index) => {
+      const result = flow(week.from, week.to);
+      if (result.valid) group.weeklyClosing[index] = (group.weeklyClosing[index] ?? 0) + result.closing;
+    });
     if (current.valid) {
       group.eligibleItems += 1;
       if (current.closing <= 0.01) group.stockoutItems += 1;
@@ -248,6 +250,10 @@ function inventoryFlows(records: Required<Pick<CafeRecordInput, "ingredients" | 
     const group = getGroup("Finished Product", item.unit);
     if (current.valid) add(group.current, current);
     if (previous.valid) add(group.previous, previous);
+    weeks.forEach((week, index) => {
+      const result = flow(week.from, week.to);
+      if (result.valid) group.weeklyClosing[index] = (group.weeklyClosing[index] ?? 0) + result.closing;
+    });
     if (current.valid) {
       group.eligibleItems += 1;
       if (current.closing <= 0.01) group.stockoutItems += 1;
@@ -257,9 +263,9 @@ function inventoryFlows(records: Required<Pick<CafeRecordInput, "ingredients" | 
   return {
     groups: [...groups.values()].map((group) => ({
       ...group,
-      closingRange: quantityRange(group.current.closing),
       reconciliation: period.to === today ? group.reconciliation : { eligible: 0, balanced: 0, discrepancies: 0 },
     })),
+    weeks,
     limitations: [...limitations],
   };
 }
@@ -569,7 +575,13 @@ export function summarizeCafe(input: CafeRecordInput, selection: PeriodSelection
     },
     inventory: {
       sellThrough,
-      closing: flows.groups.map((group) => ({ key: group.key, label: group.label, range: group.closingRange, unit: group.baseUnit })),
+      closing: {
+        groups: flows.groups.map((group) => ({ key: group.key, label: group.label, unit: group.baseUnit })),
+        weeks: flows.weeks.map((week, weekIndex) => ({
+          ...week,
+          values: Object.fromEntries(flows.groups.map((group) => [group.key, group.weeklyClosing[weekIndex] ?? null])),
+        })),
+      },
       stockouts: { items: sum(flows.groups, (group) => group.stockoutItems), eligibleItems: sum(flows.groups, (group) => group.eligibleItems) },
       reconciliation: { percentage: reconciliationPct, eligible: reconciliationEligible, balanced: reconciliationBalanced, discrepancies: sum(flows.groups, (group) => group.reconciliation.discrepancies), available: reconciliationEligible > 0 },
       incomingSupplierDeliveries,
