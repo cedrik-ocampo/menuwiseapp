@@ -187,6 +187,8 @@ function AdminCafe() {
             <Panel><SectionTitle>Waste stage breakdown <InfoTip text="Percentage share of calculated waste value across Ingredient, WIP and Finished Product stages." /></SectionTitle><ShareBars result={s.waste.stages} empty="Insufficient costed waste records for a privacy-safe breakdown." /></Panel>
             <Panel><SectionTitle>Waste reason breakdown <InfoTip text="Reasons come from actual waste records. Unsold is not reclassified as expired." /></SectionTitle><ShareBars result={s.waste.reasons} empty="Insufficient costed waste records for a privacy-safe reason breakdown." /></Panel>
           </div>
+          <WeekdayWastePanel summary={s} compare={compare} />
+          <WasteLogTable summary={s} />
         </div>
       )}
 
@@ -359,4 +361,96 @@ function PrivacyNote() {
 function Table({ head, rows, empty }: { head: string[]; rows: string[][]; empty: string }) {
   if (!rows.length) return <p className="py-6 text-center text-sm text-muted-foreground">{empty}</p>;
   return <div className="overflow-x-auto"><table className="w-full min-w-[520px] text-left text-sm [&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2.5 [&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0"><thead className="text-xs uppercase text-muted-foreground"><tr>{head.map((heading) => <th key={heading}>{heading}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={index} className="border-t border-border">{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>;
+}
+
+function WeekdayWastePanel({ summary, compare }: { summary: CafeSummary; compare: boolean }) {
+  const days = summary.waste.byWeekday;
+  const data = days.map((day) => ({ ...day, display: day.count }));
+  const max = Math.max(1, ...days.map((day) => day.count));
+  return (
+    <Panel>
+      <SectionTitle>Waste by day of the week <InfoTip text="Number of waste logs on each weekday in the selected period. Closed days follow the café's operating days." /></SectionTitle>
+      <div className="grid grid-cols-7 gap-2">
+        {days.map((day) => (
+          <div key={day.label} className={`rounded-lg border p-2 text-center ${day.count ? "border-primary/50 bg-primary/10" : "border-border bg-muted/30 opacity-60"}`}>
+            <div className="text-xs font-semibold">{day.label}</div>
+            <div className="mt-1 text-2xl font-bold">{day.count}</div>
+            <div className="text-[10px] text-muted-foreground">{day.operating ? (day.count === 1 ? "log" : "logs") : "Closed"}</div>
+            {compare && <div className="mt-1 text-[10px] text-muted-foreground">prev {day.previous}</div>}
+            <div className="mt-1 text-[10px] text-muted-foreground">{Object.entries(day.quantities).map(([unit, qty]) => `${fmtQty(qty)} ${unit}`).join(" · ")}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 h-48">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={12} />
+            <YAxis allowDecimals={false} domain={[0, max]} stroke="var(--muted-foreground)" fontSize={12} />
+            <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)" }} />
+            {compare && <Bar dataKey="previous" name="Previous period" fill="var(--muted-foreground)" fillOpacity={0.35} />}
+            <Bar dataKey="display" name="Waste logs" fill="var(--primary)" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      {summary.waste.grid.length > 1 && (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-center text-xs">
+            <thead><tr><th className="p-1 text-left">Week</th>{days.map((day) => <th key={day.label} className="p-1">{day.label}</th>)}</tr></thead>
+            <tbody>
+              {summary.waste.grid.map((week) => (
+                <tr key={week.key} className="border-t border-border">
+                  <td className="p-1 text-left whitespace-nowrap">{week.label} <span className="text-muted-foreground">{shortDate(week.from)}</span></td>
+                  {week.days.map((day) => (
+                    <td key={day.date} className="p-1">
+                      {day.count === null ? <span className="text-muted-foreground">–</span> : <span className={`inline-block min-w-7 rounded px-1.5 py-0.5 ${day.count ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground"}`}>{day.count}</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function WasteLogTable({ summary }: { summary: CafeSummary }) {
+  const logs = summary.waste.logs;
+  const [page, setPage] = useState(0);
+  useEffect(() => setPage(0), [summary.period.from, summary.period.to]);
+  const pages = Math.max(1, Math.ceil(logs.length / 25));
+  const rows = logs.slice(page * 25, page * 25 + 25);
+  return (
+    <Panel>
+      <SectionTitle>Waste logs · anonymous ({logs.length}) <InfoTip text="Every waste log in the selected period. Item names, staff, peso values and notes stay hidden." /></SectionTitle>
+      {logs.length === 0 ? <p className="text-sm text-muted-foreground">No waste logs in this period.</p> : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs text-muted-foreground"><tr><th className="p-2">Date</th><th className="p-2">Quantity</th><th className="p-2">Reason</th><th className="p-2">Stage</th></tr></thead>
+              <tbody>
+                {rows.map((log, index) => (
+                  <tr key={`${log.date}-${page}-${index}`} className="border-t border-border">
+                    <td className="p-2 whitespace-nowrap">{log.weekday}, {shortDate(log.date)}</td>
+                    <td className="p-2">{fmtQty(log.quantity)} {log.unit}</td>
+                    <td className="p-2">{log.reason}</td>
+                    <td className="p-2">{log.stage}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {pages > 1 && (
+            <div className="mt-3 flex items-center justify-end gap-2 text-xs">
+              <button className="rounded border border-border px-2 py-1 disabled:opacity-40" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</button>
+              <span>Page {page + 1} of {pages}</span>
+              <button className="rounded border border-border px-2 py-1 disabled:opacity-40" disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>Next</button>
+            </div>
+          )}
+        </>
+      )}
+    </Panel>
+  );
 }

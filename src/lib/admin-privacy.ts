@@ -345,6 +345,34 @@ function reasonCategory(waste: WasteLog): string {
   return "Other";
 }
 
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const weekdayIndex = (date: string) => (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7;
+
+/** Anonymous waste rows and weekday patterns: no item, staff, value, note or ID fields. */
+export function anonymousWaste(wasteLogs: WasteLog[], period: PeriodWindow, operatingDays: number[]) {
+  const pick = (from: string, to: string) => wasteLogs.filter((waste) => inRange(wasteDate(waste), from, to));
+  const current = pick(period.from, period.to);
+  const previous = pick(period.previousFrom, period.previousTo);
+  const logs = current
+    .map((waste) => ({ date: wasteDate(waste), weekday: WEEKDAYS[weekdayIndex(wasteDate(waste))]!, quantity: Number(waste.quantity) || 0, unit: waste.unit ?? "", reason: reasonCategory(waste), stage: waste.stage ?? "" }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const byWeekday = WEEKDAYS.map((label, index) => {
+    const rows = current.filter((waste) => weekdayIndex(wasteDate(waste)) === index);
+    const quantities: Record<string, number> = {};
+    for (const row of rows) quantities[row.unit ?? ""] = round1((quantities[row.unit ?? ""] ?? 0) + (Number(row.quantity) || 0));
+    return { label, count: rows.length, previous: previous.filter((waste) => weekdayIndex(wasteDate(waste)) === index).length, quantities, operating: operatingDays.includes((index + 1) % 7) };
+  });
+  const grid = reportingWeeks(period).map((week) => ({
+    ...week,
+    days: WEEKDAYS.map((_, index) => {
+      const date = addDays(week.key, index);
+      const inPeriod = inRange(date, week.from, week.to);
+      return { date, inPeriod, count: inPeriod ? current.filter((waste) => wasteDate(waste) === date).length : null };
+    }),
+  }));
+  return { logs, byWeekday, grid };
+}
+
 function duplicateCount(records: { sales: Sale[]; batches: Batch[]; wasteLogs: WasteLog[]; purchases: Purchase[]; usages: Usage[] }, period: PeriodWindow) {
   const keys: string[] = [];
   for (const sale of records.sales.filter((row) => inRange(saleDate(row), period.from, period.to))) keys.push(`sale|${saleDate(sale)}|${sale.menuItemId}|${sale.quantity}|${sale.unitPrice ?? "current"}`);
@@ -575,6 +603,7 @@ export function summarizeCafe(input: CafeRecordInput, selection: PeriodSelection
       trend: wasteTrend(records, period),
       stages,
       reasons,
+      ...anonymousWaste(records.wasteLogs, period, configuration.operatingDays),
     },
     inventory: {
       sellThrough,
