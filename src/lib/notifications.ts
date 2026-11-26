@@ -16,7 +16,8 @@ export function adminNotices(logs: ChangeLog[]): AdminNotice[] {
   return [...groups.entries()].map(([key, g]) => {
     let l = g[0]!;
     let text: string;
-    if (l.action === "viewed") { text = "MenuWise Admin viewed your café's privacy-safe summary"; l = { ...l, note: "Nothing was changed. Your sales, prices, costs, recipes and item names stay private — admins only see percentages and counts." }; }
+    if (l.action === "exported") { text = "MenuWise Admin downloaded your café's anonymized research dataset"; l = { ...l, note: "Nothing was changed. Item names, prices, costs, revenue, notes and staff names were removed before download." }; }
+    else if (l.action === "viewed") { text = "MenuWise Admin viewed your café's privacy-safe summary"; l = { ...l, note: "Nothing was changed. Your sales, prices, costs, recipes and item names stay private — admins only see percentages and counts." }; }
     else if (g.length > 1) text = `MenuWise Admin ${l.action === "created" ? "added" : l.action} ${plural(l.collection, g.length)}`;
     else {
       const name = l.changes.find((c) => c.field === "name")?.to;

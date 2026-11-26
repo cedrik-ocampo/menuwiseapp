@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
-import { AlertTriangle, CheckCircle2, Info, LockKeyhole, ShieldCheck } from "lucide-react";
-import { getCafe } from "@/lib/admin.functions";
+import { Download, AlertTriangle, CheckCircle2, Info, LockKeyhole, ShieldCheck } from "lucide-react";
+import { exportResearchDataset, getCafe } from "@/lib/admin.functions";
 import { isPeriodKey, PERIOD_OPTIONS, type PeriodKey } from "@/lib/admin-periods";
 import type { CafeSummary, MetricComparison, ShareMetric, TrendPoint, UnitMetric } from "@/lib/admin-privacy";
 import { InventoryAccessToggle } from "@/components/mw/InventoryAccessToggle";
@@ -97,6 +97,7 @@ function AdminCafe() {
       </Callout>
       <div className="mt-4">
         <PageTitle back={{ to: "/admin", label: "Café Monitoring" }} title={q.data.cafe.name} subtitle={`Created ${shortDate(q.data.cafe.created_at)} · Reporting in Asia/Manila`} />
+        <ResearchExportButton id={q.data.cafe.id} consent={q.data.cafe.research_consent !== false} />
       </div>
 
       <Panel className="mb-4 mt-4">
@@ -499,5 +500,36 @@ function WasteLogTable({ summary }: { summary: CafeSummary }) {
         </>
       )}
     </Panel>
+  );
+}
+
+function ResearchExportButton({ id, consent }: { id: string; consent: boolean }) {
+  const fn = useServerFn(exportResearchDataset);
+  const [state, setState] = useState<{ busy: boolean; blob?: Blob; name?: string; error?: string }>({ busy: false });
+  async function prepare() {
+    setState({ busy: true });
+    try {
+      const { files, token } = await fn({ data: { id } });
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      for (const f of files) zip.file(f.name, f.content);
+      setState({ busy: false, blob: await zip.generateAsync({ type: "blob" }), name: `menuwise-research-${token}-${new Date().toISOString().slice(0, 10)}.zip` });
+    } catch (e) { setState({ busy: false, error: e instanceof Error ? e.message : "Export failed" }); }
+  }
+  function save() {
+    if (!state.blob || !state.name) return;
+    const url = URL.createObjectURL(state.blob); const a = document.createElement("a");
+    a.href = url; a.download = state.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
+  if (!consent) return <p className="mt-2 text-xs text-muted-foreground">Research dataset unavailable — the café owner turned off research reporting.</p>;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-3">
+      {state.blob
+        ? <button type="button" className={btnPrimary} onClick={save}><Download className="mr-1.5 inline h-4 w-4" />Download ZIP</button>
+        : <button type="button" className={btnPrimary} disabled={state.busy} onClick={prepare}><Download className="mr-1.5 inline h-4 w-4" />{state.busy ? "Preparing dataset…" : "Prepare research dataset"}</button>}
+      <span className="text-xs text-muted-foreground">Full history as CSV files. Names, prices, costs, notes and staff are removed; the café is notified.</span>
+      {state.error && <span className="text-xs font-semibold text-destructive">{state.error}</span>}
+    </div>
   );
 }

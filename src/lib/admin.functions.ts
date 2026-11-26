@@ -255,3 +255,23 @@ export const adminPresetCafe = createServerFn({ method: "POST" })
     if (e2) throw new Error("Café created, but the owner invite failed");
     return { id: ws.id };
   });
+
+/** Full-history anonymized research bundle; refused when the café owner opted out of research. */
+export const exportResearchDataset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
+    const { buildResearchExport } = await import("./research-export");
+    const { data: ws } = await sb.from("workspaces").select("id,research_consent").eq("id", data.id).maybeSingle();
+    if (!ws) throw new Error("Café not found");
+    if (ws.research_consent === false) throw new Error("This café's owner has turned off research reporting.");
+    const { data: recs } = await fetchAll<{ collection: string; data: unknown }>((a, b) => sb.from("records").select("id,collection,data").eq("workspace_id", data.id).eq("deleted", false).in("collection", ["ingredients", "menuItems", "sales", "batches", "wasteLogs", "purchases", "usages", "dailyChecks"]).order("collection").order("id").range(a, b));
+    const col = (n: string) => recs.filter((r) => r.collection === n).map((r) => r.data) as never[];
+    const now = new Date().toISOString(); const logId = `export-${data.id}-${Date.now()}`;
+    await sb.from("records").upsert({ id: logId, collection: "changeLogs", user_id: context.userId, workspace_id: data.id, updated_at: now, deleted: false,
+      data: { id: logId, collection: "workspace", recordId: data.id, action: "exported", at: now, by: context.userId, byName: "MenuWise Admin", changes: [], adminEdit: true } as never }, { onConflict: "workspace_id,collection,id" });
+    const files = buildResearchExport({ ingredients: col("ingredients"), menuItems: col("menuItems"), sales: col("sales"), batches: col("batches"), wasteLogs: col("wasteLogs"), purchases: col("purchases"), usages: col("usages"), dailyChecks: col("dailyChecks") }, `CAFE-${data.id.slice(0, 8)}`);
+    return { files, token: `CAFE-${data.id.slice(0, 8)}` };
+  });

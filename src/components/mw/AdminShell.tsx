@@ -40,7 +40,7 @@ export function AdminEditNotice() {
   const [seen, setSeen] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => { setSeen(localStorage.getItem(SEEN_KEY)); setHydrated(true); }, []);
-  const edits = db.changeLogs.filter((c) => c.adminEdit && c.action !== "viewed" && (c.collection === "menuItems" || c.collection === "ingredients")).sort((a, b) => b.at.localeCompare(a.at));
+  const edits = db.changeLogs.filter((c) => c.adminEdit && c.action !== "viewed" && c.action !== "exported" && (c.collection === "menuItems" || c.collection === "ingredients")).sort((a, b) => b.at.localeCompare(a.at));
   const unseen = edits.filter((c) => !seen || c.at > seen);
   if (!hydrated || !unseen.length) return null;
   const name = (c: (typeof edits)[number]) => {

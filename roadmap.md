@@ -39,3 +39,4 @@
 - [x] Simplify menu-item costing, recipe setup, and recipe-based file imports.
 - [x] Reorder the seven main tabs, separate Menu Items from Menu Map, and support an unselected subcategory.
 - [x] Notification bell for MenuWise Admin activity (owners and staff)
+- Admin research dataset export (ZIP of anonymized CSVs) — done

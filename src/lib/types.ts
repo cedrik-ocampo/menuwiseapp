@@ -143,7 +143,7 @@ export interface ChangeLog {
   id: string;
   collection: string;
   recordId: string;
-  action: "created" | "edited" | "deleted" | "viewed";
+  action: "created" | "edited" | "deleted" | "viewed" | "exported";
   at: string;
   by: string;
   byName: string;
