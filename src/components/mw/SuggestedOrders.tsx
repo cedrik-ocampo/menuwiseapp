@@ -163,11 +163,38 @@ export function SuggestedOrders({ showBatches = true }: { showBatches?: boolean 
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{b.explanation}</p>
                   {fb ? <p className="mt-1 text-xs font-semibold text-muted-foreground">{fb.action === "ignored" ? "Ignored" : `Planned ${fb.editedValue ?? fb.suggested}`}</p> : editing === key ? (
-                    <div className="mt-2 flex items-center gap-2">
-                      <input type="number" aria-label="Edited batch" className={`${inputCls} h-9 w-24`} value={editValue} onChange={(e) => setEditValue(e.target.value)} />
-                      <button type="button" className={btnPrimary} onClick={() => { const v = Number(editValue); if (!(v >= 0)) return; record("edited", v); setEditing(null); }}>Save</button>
-                    </div>
-                  ) : (
+                    editing === key ? (
+  <div className="mt-2 flex items-center gap-2">
+    <input 
+      type="number" 
+      aria-label="Edited batch" 
+      className={`${inputCls} h-9 w-24`} 
+      value={editValue} 
+      onChange={(e) => setEditValue(e.target.value)}
+      onKeyDown={(e) => { if (e.key === "Escape") setEditing(null); }}
+    />
+    <button 
+      type="button" 
+      className={btnPrimary} 
+      onClick={() => { 
+        const v = Number(editValue); 
+        if (!(v >= 0)) return; 
+        record("edited", v); 
+        setEditing(null); 
+      }}
+    >
+      Save
+    </button>
+    <button 
+      type="button" 
+      className={btnSecondary} 
+      onClick={() => setEditing(null)}
+    >
+      Cancel
+    </button>
+  </div>
+) : (
+
                     <div className="mt-2 flex gap-2">
                       <button type="button" className={btnPrimary} onClick={() => record("accepted")}>Accept</button>
                       <button type="button" className={btnSecondary} onClick={() => { setEditing(key); setEditValue(String(b.batch)); }}>Edit</button>
