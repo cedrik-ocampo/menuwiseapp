@@ -18,6 +18,9 @@ export function DailyCloseout() {
   const [closeout, setCloseout] = useState(false);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [soldOut, setSoldOut] = useState<string[]>([]);
+  const batchItems = db.menuItems.filter((m) => m.type !== "Made-to-order" && m.available !== false).sort((a, b) => a.name.localeCompare(b.name));
+  useEffect(() => { setSoldOut(existing?.soldOut ?? []); }, [existing?.id, existing?.soldOut?.join("|")]);
   useEffect(() => {
     setNoWaste(existing?.noWaste ?? false);
     setCloseout(existing?.closeout ?? false);
@@ -27,12 +30,12 @@ export function DailyCloseout() {
   const canEdit = !existing || permissions.canEdit("dailyChecks", existing.id);
 
   function save() {
-    if (!noWaste && !closeout) return void toast.error("Select no waste, daily closeout, or both");
+    if (!noWaste && !closeout && !soldOut.length) return void toast.error("Select no waste, daily closeout, or a sold-out item");
     if (noWaste && wasteCount > 0) return void toast.error("Waste is already logged for this date. Remove the no-waste confirmation.");
     if (!canEdit) return void toast.error("Employees can edit only their own latest daily check");
     setSaving(true);
     try {
-      const record: DailyCheck = { id, date, noWaste, closeout, notes: notes.trim() || undefined };
+      const record: DailyCheck = { id, date, noWaste, closeout, notes: notes.trim() || undefined, ...(soldOut.length ? { soldOut } : {}) };
       put("dailyChecks", record);
       toast.success(existing ? "Daily check updated" : "Daily check saved");
     } catch (error) {
@@ -60,6 +63,18 @@ export function DailyCloseout() {
           <span><span className="block font-semibold text-primary">Daily closeout completed</span><span className="text-xs text-muted-foreground">Confirm the café's daily records have been reviewed.</span></span>
         </label>
       </div>
+      {batchItems.length > 0 && (
+        <div className="mt-4">
+          <p className="text-sm font-semibold text-primary">Sold out today · optional</p>
+          <p className="text-xs text-muted-foreground">Tap items that ran out before closing. Suggested batches won't shrink because of these days.</p>
+          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Sold-out items">
+            {batchItems.map((m) => {
+              const on = soldOut.includes(m.id);
+              return <button key={m.id} type="button" aria-pressed={on} onClick={() => setSoldOut((cur) => on ? cur.filter((x) => x !== m.id) : [...cur, m.id])} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>{m.name}</button>;
+            })}
+          </div>
+        </div>
+      )}
       <button type="button" className={`${btnPrimary} mt-4`} disabled={saving || !canEdit} onClick={save}><CheckCircle2 className="h-4 w-4" />{saving ? "Saving…" : existing ? "Update daily check" : "Save daily check"}</button>
       {existing && <p className="mt-2 text-xs text-muted-foreground">Your saved check: {existing.noWaste ? "no waste confirmed" : "waste not confirmed"} · {existing.closeout ? "closeout completed" : "closeout not completed"}.</p>}
     </Panel>

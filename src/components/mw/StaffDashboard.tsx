@@ -2,7 +2,8 @@ import { Link } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, PackagePlus, PhilippinePeso, Trash2, TrendingUp, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDB } from '@/lib/store';
+import { useDB, usePermissions } from '@/lib/store';
+import { SuggestedOrders } from './SuggestedOrders';
 import { daysBetween, fmtQty, shortDate, timeOf, todayISO } from '@/lib/format';
 import { shiftDashboard } from '@/lib/shift-dashboard';
 import { ProductionImport, SalesImport } from './DailyImports';
@@ -10,6 +11,7 @@ import { WasteImport } from './WasteImport';
 
 export function StaffDashboard() {
   const db = useDB();
+  const perm = usePermissions();
   const today = todayISO();
   const shift = useMemo(() => shiftDashboard(db, today), [db, today]);
   const expiredCount = shift.alerts.filter((a) => daysBetween(today, a.expiry) < 0).length;
@@ -73,5 +75,6 @@ export function StaffDashboard() {
       </ul>}
       {shift.activity.length > 20 && <p className="mt-2 text-xs text-muted-foreground">Showing the latest 20 entries. All entries remain on their daily log pages.</p>}
     </section>
+    {perm.canInventory && <SuggestedOrders />}
   </div>;
 }

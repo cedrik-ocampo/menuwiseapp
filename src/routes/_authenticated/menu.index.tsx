@@ -2,11 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 const PREVIEW = 5;
 import { PackagePlus } from "lucide-react";
-import { useDB } from "@/lib/store";
+import { useDB, usePermissions } from "@/lib/store";
 import { menuMap, QUADRANTS, wasteColor } from "@/lib/calc";
 import { formatPeso } from "@/lib/format";
 import { PageTitle } from "@/components/mw/AppShell";
 import { ProductionHistory } from "@/components/mw/History";
+import { MenuSuggestions } from "@/components/mw/MenuSuggestions";
 import { Panel, SectionTitle, Segmented, btnPrimary, btnSecondary } from "@/components/mw/ui";
 import { MenuMapChart } from "@/components/mw/MenuMapChart";
 import { Switch } from "@/components/ui/switch";
@@ -33,6 +34,7 @@ const DESC: Record<string, string> = {
 };
 
 function MenuMap() {
+  const { isOwner } = usePermissions();
   const db = useDB();
   const [view, setView] = useState<"Bubble Chart" | "Analysis">("Bubble Chart");
   const [withWip, setWithWip] = useState(false);
@@ -146,6 +148,8 @@ function MenuMap() {
           </div>
         )}
       </Panel>
+
+      {isOwner && <MenuSuggestions />}
 
       <Panel className="mt-6">
         <SectionTitle>Production History</SectionTitle>

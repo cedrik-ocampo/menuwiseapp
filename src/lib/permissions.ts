@@ -12,7 +12,7 @@ export const INVENTORY_COLLECTIONS: CollectionName[] = ['ingredients', 'purchase
 export function mayAdd(role: WorkspaceRole, collection: CollectionName, inventory = false) {
   // Staff may also add (never edit) a missing menu item during a shift.
   if (role === 'staff' && inventory && INVENTORY_COLLECTIONS.includes(collection)) return true;
-  return role === 'owner' || (role === 'staff' && (DAILY_COLLECTIONS.includes(collection) || collection === 'menuItems'));
+  return role === 'owner' || (role === 'staff' && (DAILY_COLLECTIONS.includes(collection) || collection === 'menuItems' || collection === 'suggestionFeedback'));
 }
 
 export function mayEdit(role: WorkspaceRole, userId: string | null, collection: CollectionName, id: string, rows: (Audit & { id: string })[], inventory = false) {

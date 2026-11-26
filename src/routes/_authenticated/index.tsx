@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Check, AlertTriangle } from "lucide-react";
 import { SetupWizard } from "@/components/mw/SetupWizard";
 import { SetupModal } from "@/components/mw/SetupModal";
+import { SuggestedOrders } from "@/components/mw/SuggestedOrders";
+import { CalendarConfirmBanner } from "@/components/mw/CafeCalendar";
 import { StaffDashboard } from "@/components/mw/StaffDashboard";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { BatchResolveDialog } from "@/components/mw/BatchResolveDialog";
@@ -100,6 +102,7 @@ function OwnerDashboard() {
     <div className="space-y-6">
       <SetupWizard />
       <SetupModal />
+      <CalendarConfirmBanner />
       <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -175,6 +178,8 @@ function OwnerDashboard() {
           <p className="text-xs text-muted-foreground">Benchmark 2–5%. Green under 3%, amber 3–5%, red over 5%.</p>
         </Panel>
       </div>
+
+      <SuggestedOrders />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Ongoing Insights */}

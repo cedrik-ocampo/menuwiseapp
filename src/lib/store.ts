@@ -36,6 +36,8 @@ export interface DBView {
   dailyChecks: Collections["dailyChecks"][];
   changeLogs: Collections["changeLogs"][];
   insightResponses: Collections["insightResponses"][];
+  cafeSettings: Collections["cafeSettings"][];
+  suggestionFeedback: Collections["suggestionFeedback"][];
   pendingCollections: Set<CollectionName>;
   online: boolean;
 }

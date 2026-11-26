@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { currentWorkspace } from "@/lib/store";
+import { currentWorkspace, useDB } from "@/lib/store";
+import { cafeSettingsOf } from "@/lib/suggestions-data";
+import { saveCafeSettings } from "./CafeCalendar";
 import { Panel, SectionTitle, btnPrimary } from "./ui";
 
 const WEEKDAYS = [
@@ -13,6 +15,7 @@ const WEEKDAYS = [
 /** Owner-controlled reporting schedule and research opt-out. */
 export function ReportingSettings({ isOwner }: { isOwner: boolean }) {
   const workspaceId = currentWorkspace();
+  const db = useDB();
   const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [consent, setConsent] = useState(true);
   const [initialConsent, setInitialConsent] = useState(true);
@@ -44,6 +47,7 @@ export function ReportingSettings({ isOwner }: { isOwner: boolean }) {
     setSaving(false);
     if (error) return void toast.error("Could not save reporting settings");
     setInitialConsent(consent);
+    saveCafeSettings(cafeSettingsOf(db), { weekdays: days, calendarConfirmed: true });
     toast.success("Reporting settings saved");
   }
 
@@ -52,7 +56,7 @@ export function ReportingSettings({ isOwner }: { isOwner: boolean }) {
       <SectionTitle>Reporting & research privacy</SectionTitle>
       <div>
         <p className="text-sm font-semibold text-primary">Expected café operating days</p>
-        <p className="mt-1 text-xs text-muted-foreground">Admin logging coverage uses these days instead of assuming every calendar day is an operating day.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Suggested orders, batches and admin logging coverage count only these days. Saving confirms your open days.</p>
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Expected café operating days">
           {WEEKDAYS.map((day) => {
             const selected = days.includes(day.value);

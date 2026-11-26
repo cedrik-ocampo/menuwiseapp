@@ -11,6 +11,7 @@ import { PageTitle } from "@/components/mw/AppShell";
 import { Panel, SectionTitle } from "@/components/mw/ui";
 import { WasteList, WasteLogForm } from "@/components/mw/WasteLogForm";
 import { PurchaseEntries } from "@/components/mw/History";
+import { OrderingDetails } from "@/components/mw/OrderingDetails";
 
 export const Route = createFileRoute("/_authenticated/ingredients/$id")({
   head: () => ({
@@ -132,6 +133,8 @@ function IngredientView() {
           </button>
         )}
       </Panel>
+
+      <OrderingDetails ingredient={ing} />
 
       <Panel className="mt-4">
         <SectionTitle>Ingredient entries</SectionTitle>

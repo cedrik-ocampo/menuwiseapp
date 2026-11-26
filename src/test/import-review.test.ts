@@ -6,7 +6,7 @@ import type { DBView } from '@/lib/store';
 import type { Row } from '@/lib/import';
 import { todayISO } from '@/lib/format';
 
-const db: DBView = { ready: true, online: true, pendingCollections: new Set(), ingredients: [{ id: 'ING-1', name: 'Flour', category: 'Dry goods', storage: 'Pantry', unit: 'kg', unitCost: 100 }], purchases: [], usages: [], menuItems: [], batches: [], sales: [], wasteLogs: [], dailyChecks: [], changeLogs: [], insightResponses: [] };
+const db: DBView = { ready: true, online: true, pendingCollections: new Set(), ingredients: [{ id: 'ING-1', name: 'Flour', category: 'Dry goods', storage: 'Pantry', unit: 'kg', unitCost: 100 }], purchases: [], usages: [], menuItems: [], batches: [], sales: [], wasteLogs: [], dailyChecks: [], changeLogs: [], insightResponses: [], cafeSettings: [], suggestionFeedback: [] };
 const outsourced: Row = { menuitemname: 'Cookie', category: 'Pastry', type: 'Outsourced item', sellingprice: '80', batchpurchaseprice: '500', piecesperbatch: '10', shelflifedays: '3', expireswhen: 'After the shelf life', description: 'Fresh cookie', tags: 'sweet, snack', supplier: 'Bakery', available: 'false', __line: '2' };
 const menu = parseMenuRows([outsourced], db)[0].item;
 const cafe = { ...db, menuItems: menu ? [menu] : [] };

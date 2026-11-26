@@ -18,6 +18,14 @@ export interface Ingredient {
   supplier?: string;
   notes?: string;
   image?: string; // data URL
+  /** Days from ordering to delivery (default 2). */
+  leadTimeDays?: number;
+  packSize?: number;
+  supplierMinimum?: number;
+  /** Weekdays the supplier delivers (0 = Sunday). */
+  deliveryDays?: number[];
+  /** Used when a purchase has no expiry date. */
+  defaultShelfLifeDays?: number;
 }
 
 /** A purchase lot of an ingredient. */
@@ -29,6 +37,9 @@ export interface Purchase {
   quantity: number;
   remaining: number;
   unitCost: number;
+  /** Placed with the supplier but not received yet; remaining stays 0 until received. */
+  ordered?: boolean;
+  expectedDate?: string;
 }
 
 /** Ingredient taken out of stock for production. */
@@ -158,6 +169,35 @@ export interface DailyCheck {
   noWaste: boolean;
   closeout: boolean;
   notes?: string;
+  /** Menu items that sold out that day; their demand was higher than sales show. */
+  soldOut?: string[];
+}
+
+/** Café-wide suggestion settings and operating calendar (one record, id "settings"). */
+export interface CafeSettings {
+  id: string;
+  weekdays: number[];
+  closures: { date: string; note?: string }[];
+  calendarConfirmed: boolean;
+  wasteCapPct: number;
+  borderlinePct: number;
+  eligibilityDays: number;
+  categoryMin: number;
+  safetyBufferDays: number;
+  historyWeeks: number;
+}
+
+/** What happened to a suggestion, used to compare settings such as waste caps. */
+export interface SuggestionFeedback {
+  id: string;
+  kind: "reorder" | "batch" | "menu";
+  targetId: string;
+  date: string;
+  suggested: number;
+  action: "accepted" | "edited" | "ignored";
+  editedValue?: number;
+  wasteCapPct: number;
+  confidence: string;
 }
 
 export interface Collections {
@@ -171,6 +211,8 @@ export interface Collections {
   dailyChecks: DailyCheck;
   changeLogs: ChangeLog;
   insightResponses: InsightResponse;
+  cafeSettings: CafeSettings;
+  suggestionFeedback: SuggestionFeedback;
 }
 export type CollectionName = keyof Collections;
-export const COLLECTIONS: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs", "dailyChecks", "changeLogs", "insightResponses"];
+export const COLLECTIONS: CollectionName[] = ["ingredients", "purchases", "usages", "menuItems", "batches", "sales", "wasteLogs", "dailyChecks", "changeLogs", "insightResponses", "cafeSettings", "suggestionFeedback"];

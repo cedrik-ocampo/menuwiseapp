@@ -18,6 +18,7 @@ import { Avatar, useMe, useSignOut } from "@/components/mw/UserMenu";
 import { Field, Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "@/components/mw/ui";
 import { InventoryAccessToggle } from "@/components/mw/InventoryAccessToggle";
 import { ReportingSettings } from "@/components/mw/ReportingSettings";
+import { SuggestionSettingsPanel } from "@/components/mw/CafeCalendar";
 import { leaveWorkspace, deleteAccount } from "@/lib/account.functions";
 import { cancelWorkspaceInvite, createWorkspaceInvite } from "@/lib/invitations.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -233,6 +234,7 @@ function Profile() {
       </Panel>
 
       <ReportingSettings isOwner={isOwner} />
+      <SuggestionSettingsPanel isOwner={isOwner} />
 
       <Panel className="space-y-4">
         <SectionTitle>Preferences</SectionTitle>
