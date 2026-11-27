@@ -3,11 +3,10 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageTitle } from "@/components/mw/AppShell";
 import { Callout } from "@/components/mw/ui";
-import { WasteList, WasteLogForm } from "@/components/mw/WasteLogForm";
+import { WasteLogBrowser, WasteLogForm } from "@/components/mw/WasteLogForm";
 import { WasteImport } from "@/components/mw/WasteImport";
 import { DailyCloseout } from "@/components/mw/DailyCloseout";
 import { useDB } from "@/lib/store";
-import { byNewest } from "@/lib/calc";
 
 export const Route = createFileRoute("/_authenticated/log-waste")({
   head: () => ({
@@ -56,8 +55,8 @@ function LogWaste() {
         <Section title="Waste Log Form" open>
           <WasteLogForm />
         </Section>
-        <Section title="Recent waste logs">
-          <WasteList logs={[...db.wasteLogs].sort(byNewest).slice(0, 20)} />
+        <Section title="Waste logs">
+          <WasteLogBrowser logs={db.wasteLogs} />
         </Section>
 
         <Callout tone="warning" title="Avoid Double Counting">

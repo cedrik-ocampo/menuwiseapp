@@ -1,7 +1,8 @@
 import { QuickAddItem } from "./QuickAddItem";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { Check, Calculator, Trash2, Pencil } from "lucide-react";
+import { Check, Calculator, Trash2, Pencil, ArrowDown, ArrowUp } from "lucide-react";
+import { WASTE_SORT_OPTIONS, sortWaste, type WasteSortKey } from "@/lib/waste-sort";
 import { AuditCaption } from "./Audit";
 import { EditWasteDialog } from "./EditDialogs";
 import { toast } from "sonner";
@@ -249,7 +250,54 @@ function ItemBox({ label, value, onChange, suggestions, custom, error }: { label
   );
 }
 
-export function WasteList({ logs, empty = "No waste history yet." }: { logs: WasteLog[]; empty?: string }) {
+const selCls = "mt-1 block max-w-[16rem] rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-foreground";
+
+/** Every waste log with sort and item / stage filters (sort remembered per device). */
+export function WasteLogBrowser({ logs }: { logs: WasteLog[] }) {
+  const db = useDB();
+  const [sortKey, setSortKeyState] = useState<WasteSortKey>("date-desc");
+  const [item, setItem] = useState("all");
+  const [stage, setStage] = useState("all");
+  useEffect(() => {
+    const v = localStorage.getItem("menuwise:wasteSort");
+    if (v && WASTE_SORT_OPTIONS.some((o) => o.key === v)) setSortKeyState(v as WasteSortKey);
+  }, []);
+  const setSortKey = (k: WasteSortKey) => { setSortKeyState(k); localStorage.setItem("menuwise:wasteSort", k); };
+  const label = (w: WasteLog) => wasteItemLabel(w, db);
+  const items = useMemo(() => [...new Set(logs.map(label))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [logs, db]);
+  const list = useMemo(() => sortWaste(logs.filter((w) => (item === "all" || label(w) === item) && (stage === "all" || w.stage === stage)), sortKey, label),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [logs, db, item, stage, sortKey]);
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-xs font-semibold text-muted-foreground">Sort by
+          <select className={selCls} value={sortKey} onChange={(e) => setSortKey(e.target.value as WasteSortKey)}>
+            {WASTE_SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+        </label>
+        <label className="text-xs font-semibold text-muted-foreground">Item
+          <select className={selCls} value={item} onChange={(e) => setItem(e.target.value)}>
+            <option value="all">All items</option>
+            {items.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+        <label className="text-xs font-semibold text-muted-foreground">Waste type
+          <select className={selCls} value={stage} onChange={(e) => setStage(e.target.value)}>
+            <option value="all">All</option>
+            {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <span className="pb-2 text-xs text-muted-foreground">{list.length} entries</span>
+      </div>
+      <WasteList logs={list} empty={logs.length ? "No waste logs match these filters." : undefined} sortKey={sortKey} onSort={setSortKey} />
+    </div>
+  );
+}
+
+export function WasteList({ logs, empty = "No waste history yet.", sortKey, onSort }: { logs: WasteLog[]; empty?: string; sortKey?: WasteSortKey; onSort?: (k: WasteSortKey) => void }) {
   const perm = usePermissions();
   const db = useDB();
   const [editing, setEditing] = useState<WasteLog | null>(null);
@@ -258,7 +306,10 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       {editing && <EditWasteDialog log={editing} onClose={() => setEditing(null)} />}
       <div className="grid grid-cols-[1fr_1fr_4rem] bg-secondary px-4 py-2 text-xs font-bold uppercase text-primary">
-        <span>Date / Waste type</span><span className="text-right">Quantity / Value</span><span />
+        {onSort ? (<>
+          <span className="flex gap-3">{sortBtn("Date", "date-desc", "date-asc", sortKey, onSort)}{sortBtn("Item", "name-asc", "name-desc", sortKey, onSort)}</span>
+          <span className="flex justify-end gap-3">{sortBtn("Quantity", "qty-desc", "qty-asc", sortKey, onSort)}{sortBtn("Value", "value-desc", "value-asc", sortKey, onSort)}</span><span />
+        </>) : (<><span>Date / Waste type</span><span className="text-right">Quantity / Value</span><span /></>)}
       </div>
       {logs.map((w) => (
         <div key={w.id} className="grid grid-cols-[1fr_1fr_4rem] items-center border-t border-border px-4 py-3 text-sm">
@@ -294,6 +345,15 @@ export function WasteList({ logs, empty = "No waste history yet." }: { logs: Was
         </div>
       ))}
     </div>
+  );
+}
+
+function sortBtn(label: string, desc: WasteSortKey, asc: WasteSortKey, key: WasteSortKey | undefined, onSort: (k: WasteSortKey) => void) {
+  const active = key === desc || key === asc;
+  return (
+    <button type="button" aria-sort={active ? (key === asc ? "ascending" : "descending") : "none"} className="inline-flex items-center gap-1 uppercase hover:underline" onClick={() => onSort(key === desc ? asc : desc)}>
+      {label}{active && (key === asc ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+    </button>
   );
 }
 
