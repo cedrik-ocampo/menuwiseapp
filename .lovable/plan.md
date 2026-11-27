@@ -27,3 +27,10 @@ On phones and narrow screens the modules stack in the same order.
 - `src/routes/_authenticated/index.tsx`: top grid becomes `lg:grid-cols-3` holding the waste panel, sales panel and Menu Distribution panel (moved up); bottom grid `lg:grid-cols-2` holding Ongoing Insights and `<SuggestedOrders />`.
 - Add an optional `collapsible` prop to `SuggestedOrders` so only the Home usage gets the arrow.
 - Collapse state stored via the existing localStorage prefs pattern (`src/lib/prefs.ts`), read after mount to avoid hydration mismatch.
+
+## Use the full width, no awkward gaps
+- Both rows stretch across the whole content area with the same gap between every module.
+- Modules in the same row line up to the same height, so no empty patches under shorter cards; content sits at the top and the card background fills the rest.
+- Collapsed lists keep both bottom modules the same compact height; expanded lists scroll inside the card (max height) instead of pushing the page down unevenly.
+- Menu Distribution Overview uses a tighter layout to fit its column without leaving blank space.
+- Check at wide desktop, laptop and phone widths.
