@@ -183,6 +183,15 @@ export function wasteColor(intensity: number) {
   return `oklch(0.62 0.17 ${hue})`;
 }
 
+/** On-hand finished stock: all produced − sold − finished-product waste (same unit), never below 0. Null for made-to-order items. */
+export function menuItemStock(db: DBView, m: Pick<MenuItem, "id" | "type" | "batchUnit">, today = todayISO()): number | null {
+  if (m.type === "Made-to-order") return null;
+  const made = db.batches.filter((b) => b.menuItemId === m.id && b.producedAt.slice(0, 10) <= today).reduce((a, b) => a + b.quantity, 0);
+  const sold = db.sales.filter((s) => s.menuItemId === m.id && s.date <= today).reduce((a, s) => a + s.quantity, 0);
+  const wasted = db.wasteLogs.filter((w) => w.stage === "Finished Product" && w.menuItemId === m.id && w.unit === m.batchUnit && w.at.slice(0, 10) <= today).reduce((a, w) => a + w.quantity, 0);
+  return Math.max(0, made - sold - wasted);
+}
+
 /* ---------- Dashboard ---------- */
 export function totalWaste(db: DBView, from: string, to: string) {
   const ws = db.wasteLogs.filter((w) => w.at.slice(0, 10) >= from && w.at.slice(0, 10) <= to);

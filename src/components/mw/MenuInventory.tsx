@@ -5,8 +5,8 @@ import { Pencil, Trash2, X, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { put, type DBView } from "@/lib/store";
 import { deleteMenuItem } from "@/lib/deletes";
-import { costPerUnit, margin, wasteColor, type Quadrant } from "@/lib/calc";
-import { formatPeso } from "@/lib/format";
+import { costPerUnit, margin, menuItemStock, wasteColor, type Quadrant } from "@/lib/calc";
+import { formatPeso, fmtQty } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image";
 import { ITEM_TYPES, type ItemType, type MenuItem } from "@/lib/types";
 import { ITEM_TYPE_LABELS, itemTypeFromLabel } from "@/lib/menu-costing";
@@ -93,6 +93,7 @@ export function MenuInventory({ db, rows, focusId, onFocusDone }: { db: DBView; 
                 <span className="text-xs text-muted-foreground">{r.item.category}</span>
                 {r.item.tags?.includes(NEEDS_REVIEW_TAG) && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-semibold text-warning">Needs cost / recipe</span>}
                 <span className="text-xs font-semibold text-primary">{formatPeso(r.item.retailPrice)}</span>
+                {(() => { const st = menuItemStock(db, r.item); return <span className="text-sm font-semibold text-primary">{st === null ? "Made to order" : `${fmtQty(st)} ${r.item.batchUnit} in stock`}</span>; })()}
                 {r.waste > 0 && (
                   <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: wasteColor(r.intensity), color: "white" }}>
                     Waste {formatPeso(r.waste)}
@@ -152,6 +153,7 @@ export function MenuInventory({ db, rows, focusId, onFocusDone }: { db: DBView; 
                     <p className="font-bold" style={{ color: wasteColor(live.intensity) }}>{formatPeso(live.waste)}</p>
                   </div>
                 </div>
+                {(() => { const st = menuItemStock(db, live.item); return st !== null && <p className="mt-3 text-sm font-semibold text-primary">Current stock: {fmtQty(st)} {live.item.batchUnit}</p>; })()}
                 <p className="mt-3 text-xs text-muted-foreground">
                   {ITEM_TYPE_LABELS[live.item.type]} · Batch unit: {live.item.batchUnit} · {live.item.available ? "Available on the menu" : "Hidden from the menu"}
                 </p>

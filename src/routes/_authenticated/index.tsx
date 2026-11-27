@@ -8,6 +8,7 @@ import { CalendarConfirmBanner } from "@/components/mw/CafeCalendar";
 import { StaffDashboard } from "@/components/mw/StaffDashboard";
 import { InsightActions } from "@/components/mw/InsightActions";
 import { BatchResolveDialog } from "@/components/mw/BatchResolveDialog";
+import { IngredientResolveDialog } from "@/components/mw/IngredientResolveDialog";
 import { QuadrantLabel } from "@/components/mw/QuadrantLabel";
 import { useDB, usePermissions } from "@/lib/store";
 import { batchesExpiringWithin, compareWeeks, expiringWithin, menuMap, totalSales, totalWaste, QUADRANTS, wasteColor, WEEK_OPTIONS, weekName } from "@/lib/calc";
@@ -71,6 +72,7 @@ function OwnerDashboard() {
   const [selectedWasteStage, setSelectedWasteStage] = useState<Stage | null>(null);
   const [threshold, setThreshold] = useThreshold();
   const [resolveId, setResolveId] = useState<string | null>(null);
+  const [resolveLotId, setResolveLotId] = useState<string | null>(null);
   const t = todayISO();
 
   const wc = compareWeeks((f, to) => totalWaste(db, f, to).total, wasteWeek, t);
@@ -85,12 +87,15 @@ function OwnerDashboard() {
   const resp = new Map(db.insightResponses.map((r) => [r.id, r]));
   const visible = expiring.filter(({ lot }) => {
     const r = resp.get(`exp:${lot.id}`);
-    return !r || (r.status === "snoozed" && (r.until ?? "") <= nowIso);
+    // Older "Accept" clicks only acknowledged the alert without clearing stock; resurface them so the stock can be resolved.
+    const legacyAccept = r?.status === "accepted" && !r.label.includes(" — ") && lot.remaining > 0;
+    return !r || legacyAccept || (r.status === "snoozed" && (r.until ?? "") <= nowIso);
   });
   const expiringBatches = batchesExpiringWithin(db, threshold, t).filter(({ batch }) => {
     const r = resp.get(`exp:batch:${batch.id}`);
     return !r || (r.status === "snoozed" && (r.until ?? "") <= nowIso);
   });
+  const resolvingLot = visible.find((x) => x.lot.id === resolveLotId);
   const resolving = expiringBatches.find((b) => b.batch.id === resolveId);
   const actioned = db.insightResponses.filter((r) => r.status === "accepted").sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
   const map = useMemo(() => menuMap(db, false), [db]);
@@ -236,7 +241,7 @@ function OwnerDashboard() {
                         {d <= 0 ? "Expires today" : d === 1 ? "1 day left" : `${d} days left`}
                       </span>
                     </Link>
-                    <InsightActions id={key} label={label} />
+                    <InsightActions id={key} label={label} onAccept={() => setResolveLotId(lot.id)} />
                   </li>
                 );
               })}
@@ -245,6 +250,10 @@ function OwnerDashboard() {
           {resolving && (
             <BatchResolveDialog open onOpenChange={(o) => !o && setResolveId(null)} batch={resolving.batch} item={resolving.item} left={resolving.left}
               insightId={`exp:batch:${resolving.batch.id}`} label={`${resolving.item.name} batch ${resolving.batch.id} · expiry ${shortDate(resolving.batch.expiryDate)}`} />
+          )}
+          {resolvingLot && (
+            <IngredientResolveDialog open onOpenChange={(o) => !o && setResolveLotId(null)} ingredient={resolvingLot.ingredient} lot={resolvingLot.lot}
+              insightId={`exp:${resolvingLot.lot.id}`} label={`${resolvingLot.ingredient.name} · expiry ${shortDate(resolvingLot.lot.expiryDate)}`} />
           )}
           {actioned.length > 0 && (
             <details className="mt-3 text-sm">
