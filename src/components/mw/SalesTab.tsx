@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
+import { SALES_SORT_OPTIONS, sortSales, type SalesSortKey } from "@/lib/sales-sort";
 import { toast } from "sonner";
 import { remove, useDB, usePermissions } from "@/lib/store";
 import { saleRevenue, saleUnitPrice, salesTrend, weekStart, type TrendPoint } from "@/lib/calc";
@@ -18,6 +19,13 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Sale | null>(null);
+  const [sortKey, setSortKeyState] = useState<SalesSortKey>("date-desc");
+  const [itemFilter, setItemFilter] = useState("all");
+  useEffect(() => {
+    const v = localStorage.getItem("menuwise:salesSort");
+    if (v && SALES_SORT_OPTIONS.some((o) => o.key === v)) setSortKeyState(v as SalesSortKey);
+  }, []);
+  const setSortKey = (k: SalesSortKey) => { setSortKeyState(k); localStorage.setItem("menuwise:salesSort", k); };
   const t = todayISO(), ws = weekStart();
   const nameOf = (id: string) => db.menuItems.find((m) => m.id === id)?.name ?? id;
 
@@ -30,9 +38,27 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
     weekSales.forEach((s) => units.set(s.menuItemId, (units.get(s.menuItemId) ?? 0) + s.quantity));
     const top = [...units.entries()].sort((a, b) => b[1] - a[1])[0];
     const weeks = salesTrend(db.sales, rev, t);
-    const list = [...db.sales].sort((a, b) => b.date.localeCompare(a.date) || ((b as Audit).createdAt ?? "").localeCompare((a as Audit).createdAt ?? ""));
+    const rows = db.sales
+      .filter((s) => itemFilter === "all" || s.menuItemId === itemFilter)
+      .map((s) => ({ sale: s, date: s.date, createdAt: (s as Audit).createdAt, quantity: s.quantity, name: db.menuItems.find((m) => m.id === s.menuItemId)?.name ?? s.menuItemId, unitPrice: saleUnitPrice(db, s), revenue: rev(s) }));
+    const list = sortSales(rows, sortKey).map((r) => r.sale);
     return { today, week, top, weeks, list };
-  }, [db, t, ws]);
+  }, [db, t, ws, sortKey, itemFilter]);
+  const soldItems = useMemo(() => {
+    const ids = new Set(db.sales.map((s) => s.menuItemId));
+    return [...ids].map((id) => ({ id, name: nameOf(id) })).sort((a, b) => a.name.localeCompare(b.name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db]);
+  const headerSort = (label: string, desc: SalesSortKey, asc: SalesSortKey, right = false) => {
+    const active = sortKey === desc || sortKey === asc;
+    return (
+      <th className={`px-3 py-2 ${right ? "text-right" : ""}`} aria-sort={active ? (sortKey === asc ? "ascending" : "descending") : "none"}>
+        <button type="button" className={`inline-flex items-center gap-1 uppercase hover:underline ${right ? "flex-row-reverse" : ""}`} onClick={() => setSortKey(sortKey === desc ? asc : desc)}>
+          {label}{active && (sortKey === asc ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+        </button>
+      </th>
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -57,13 +83,28 @@ export function SalesTab({ compactHeader = false }: { compactHeader?: boolean })
 
       <WeeklyRevenue points={weeks} hasSales={db.sales.length > 0} />
 
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-xs font-semibold text-muted-foreground">Sort by
+          <select className="mt-1 block rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-foreground" value={sortKey} onChange={(e) => setSortKey(e.target.value as SalesSortKey)}>
+            {SALES_SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+        </label>
+        <label className="text-xs font-semibold text-muted-foreground">Menu item
+          <select className="mt-1 block max-w-[16rem] rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-foreground" value={itemFilter} onChange={(e) => setItemFilter(e.target.value)}>
+            <option value="all">All items</option>
+            {soldItems.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </label>
+        <span className="pb-2 text-xs text-muted-foreground">{list.length} entries</span>
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-secondary text-left text-xs font-bold uppercase text-primary">
-            <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Menu Item</th><th className="px-3 py-2 text-right">Quantity</th><th className="px-3 py-2 text-right">Unit Price</th><th className="px-3 py-2 text-right">Revenue</th><th className="px-3 py-2">Notes</th><th className="px-3 py-2 text-right">Actions</th></tr>
+            <tr>{headerSort("Date", "date-desc", "date-asc")}{headerSort("Menu Item", "name-asc", "name-desc")}{headerSort("Quantity", "qty-desc", "qty-asc", true)}<th className="px-3 py-2 text-right">Unit Price</th>{headerSort("Revenue", "rev-desc", "rev-asc", true)}<th className="px-3 py-2">Notes</th><th className="px-3 py-2 text-right">Actions</th></tr>
           </thead>
           <tbody>
-            {list.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">No sales logged yet.</td></tr>}
+            {list.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">{db.sales.length === 0 ? "No sales logged yet." : "No sales for this menu item."}</td></tr>}
             {list.map((s) => (
               <tr key={s.id} className="cursor-pointer border-t border-border align-top hover:bg-muted" onClick={() => navigate({ to: "/menu/$id", params: { id: s.menuItemId } })}>
                 <td className="px-3 py-2 font-semibold text-primary">{shortDate(s.date)}</td>
