@@ -14,6 +14,8 @@ Sort options:
 8. Quantity: low to high
 9. Unit price: high to low
 
+Menu item filter: a dropdown listing every menu item (with "All items" as the default). Picking one, for example Classic Americano, shows only that item's sales, still in the chosen sort order. Combined with Menu item A to Z, this covers sorting and finding by name.
+
 Ties fall back to newest date first, so rows stay predictable.
 
 The chosen sort is remembered on this device, so the page opens the way it was left.
@@ -22,10 +24,9 @@ The chosen sort is remembered on this device, so the page opens the way it was l
 Totals, cards, the weekly chart, editing and deleting stay as they are. Only the row order changes.
 
 ## Technical details
-- `src/components/mw/SalesTab.tsx`: add `sortKey` state (persisted in localStorage via `src/lib/prefs.ts` pattern), a `<select>` above the table, and sortable `<th>` buttons with `aria-sort`.
+- `src/components/mw/SalesTab.tsx`: add `sortKey` state (persisted in localStorage via `src/lib/prefs.ts` pattern), a menu item filter `<select>`, a sort `<select>` above the table, and sortable `<th>` buttons with `aria-sort`.
 - Extract a pure `sortSales(rows, key, db)` helper in `src/lib/` with a small Vitest test (revenue high→low, name A→Z, tie-break by date).
 
 ## Optional ideas
-- Search box to filter by menu item name.
 - Date range filter (This week, Last 30 days).
 - Show 50 rows with "Load more" to shorten the long list.
