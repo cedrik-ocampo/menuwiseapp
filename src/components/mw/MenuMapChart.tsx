@@ -23,10 +23,10 @@ export function MenuMapChart({ map, interactive = true, onSelect }: { map: Map; 
     return <p className="py-24 text-center text-sm font-medium text-muted-foreground">No sales data yet. Log sales to see the menu map.</p>;
   }
   return (
-    <div className="mx-auto w-full max-w-[640px]">
-      <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-border bg-card/40 shadow-sm">
+    <div className="w-full">
+      <div className="relative aspect-square min-h-[360px] w-full overflow-hidden md:aspect-[4/3] rounded-2xl border border-border bg-card/40 shadow-sm">
       <ResponsiveContainer>
-        <ScatterChart margin={{ top: 20, right: 20, bottom: 32, left: 8 }}>
+        <ScatterChart margin={{ top: 36, right: 132, bottom: 36, left: 8 }}>
           <defs>
             {QUADS.map((q) => (
               <radialGradient key={q.key} id={`mmq-${q.key}`} cx={q.cx} cy={q.cy} r="1.1">
@@ -156,8 +156,8 @@ function QuadLabel({ q, viewBox }: { q: Quad; viewBox?: VB }) {
 function PillLabel({ text, at, viewBox }: { text: string; at: "top" | "right"; viewBox?: VB }) {
   const { x = 0, y = 0, width = 0 } = viewBox ?? {};
   const w = text.length * 6.6 + 18;
-  const cx = at === "top" ? x : x + width - w / 2 - 8;
-  const cy = at === "top" ? y + 46 : y;
+  const cx = at === "top" ? x : x + width + 8 + w / 2;
+  const cy = at === "top" ? y - 18 : y;
   return (
     <g pointerEvents="none">
       <rect x={cx - w / 2} y={cy - 10} width={w} height={20} rx={10} fill="var(--card)" stroke="var(--border)" />
