@@ -4,6 +4,8 @@ import { TrendingDown, TrendingUp, Trash2, PackagePlus, ChevronRight, Plus, Chec
 import { SetupWizard } from "@/components/mw/SetupWizard";
 import { SetupModal } from "@/components/mw/SetupModal";
 import { SuggestedOrders } from "@/components/mw/SuggestedOrders";
+import { CollapseToggle } from "@/components/mw/CollapseToggle";
+import { useCollapsed } from "@/components/mw/useCollapsed";
 import { CalendarConfirmBanner } from "@/components/mw/CafeCalendar";
 import { StaffDashboard } from "@/components/mw/StaffDashboard";
 import { InsightActions } from "@/components/mw/InsightActions";
@@ -73,6 +75,7 @@ function OwnerDashboard() {
   const [threshold, setThreshold] = useThreshold();
   const [resolveId, setResolveId] = useState<string | null>(null);
   const [resolveLotId, setResolveLotId] = useState<string | null>(null);
+  const [insightsOpen, setInsightsOpen] = useCollapsed("home-insights");
   const t = todayISO();
 
   const wc = compareWeeks((f, to) => totalWaste(db, f, to).total, wasteWeek, t);
@@ -108,8 +111,8 @@ function OwnerDashboard() {
       <SetupWizard />
       <SetupModal />
       <CalendarConfirmBanner />
-      <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
-      <Panel>
+      <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <Panel className="h-full">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-primary">Total Waste Value</p>
           <WeekSelect value={wasteWeek} onChange={setWasteWeek} label="Waste period" />
@@ -170,7 +173,7 @@ function OwnerDashboard() {
           </div>
         )}
       </Panel>
-        <Panel>
+        <Panel className="h-full">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-primary">Total Sales Value</p>
             <WeekSelect value={salesWeek} onChange={setSalesWeek} label="Sales period" />
@@ -182,23 +185,59 @@ function OwnerDashboard() {
           </p>
           <p className="text-xs text-muted-foreground">Benchmark 2–5%. Green under 3%, amber 3–5%, red over 5%.</p>
         </Panel>
+        {/* Menu Distribution Overview */}
+        <div
+          role="link"
+          tabIndex={0}
+          onClick={() => navigate({ to: "/menu" })}
+          onKeyDown={(e) => e.key === "Enter" && navigate({ to: "/menu" })}
+          className="h-full cursor-pointer rounded-2xl md:col-span-2 xl:col-span-1 border border-border bg-card p-5 transition-colors hover:border-accent"
+        >
+          <SectionTitle right={<ChevronRight className="h-5 w-5 text-muted-foreground" />}>Menu Distribution Overview</SectionTitle>
+          <div className="grid grid-cols-2 gap-3">
+            {QUADRANTS.map((q) => {
+              const items = map.plottedRows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
+              return (
+                <div key={q} className="rounded-xl bg-muted p-3">
+                  <QuadrantLabel quadrant={q} className="text-xs font-bold uppercase text-primary" />
+                  {items.length === 0 && <p className="mt-1 text-xs text-muted-foreground">None</p>}
+                  <ul className="mt-1 space-y-1">
+                    {items.map((r) => (
+                      <li key={r.item.id}>
+                        <Link
+                          to="/menu/$id"
+                          params={{ id: r.item.id }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 text-sm text-primary hover:underline"
+                        >
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: wasteColor(r.intensity) }} />
+                          <span className="truncate">{r.item.name}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <SuggestedOrders />
-
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         {/* Ongoing Insights */}
         <div className="rounded-2xl border border-border bg-card p-5">
           <SectionTitle
             right={
-              <select className={`${inputCls} h-9 w-auto`} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} aria-label="Expiry threshold">
+              <select className={`${inputCls} h-9 w-40! shrink-0`} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} aria-label="Expiry threshold">
                 {THRESHOLD_OPTIONS.map((o) => <option key={o.days} value={o.days}>Within {o.label}</option>)}
               </select>
             }
           >
-            <Link to="/ingredients" className="inline-flex items-center gap-1 hover:underline">Ongoing Insights <ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>
+            <Link to="/ingredients" className="inline-flex items-center gap-1 whitespace-nowrap hover:underline">Ongoing Insights <ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>
           </SectionTitle>
           <p className="-mt-2 mb-3 text-xs text-muted-foreground">Time-sensitive stock and waste actions based on your selected expiry threshold.</p>
+          <CollapseToggle open={insightsOpen} onToggle={() => setInsightsOpen(!insightsOpen)} label={`${visible.length + expiringBatches.length} insight${visible.length + expiringBatches.length === 1 ? "" : "s"}${actioned.length ? ` · ${actioned.length} actioned` : ""}`} />
+          {insightsOpen && (<div className="mt-3 max-h-[70vh] overflow-y-auto pr-1">
           {visible.length === 0 && expiringBatches.length === 0 ? (
             <p className="py-4 text-sm text-muted-foreground">{db.ingredients.length > 0 || db.batches.length > 0 ? `No pastries, menu items or ingredients expiring in ${thresholdLabel(threshold)}.` : "No ongoing insights."}</p>
           ) : (
@@ -263,44 +302,10 @@ function OwnerDashboard() {
               </ul>
             </details>
           )}
+          </div>)}
         </div>
 
-        {/* Menu Distribution Overview */}
-        <div
-          role="link"
-          tabIndex={0}
-          onClick={() => navigate({ to: "/menu" })}
-          onKeyDown={(e) => e.key === "Enter" && navigate({ to: "/menu" })}
-          className="cursor-pointer rounded-2xl border border-border bg-card p-5 transition-colors hover:border-accent"
-        >
-          <SectionTitle right={<ChevronRight className="h-5 w-5 text-muted-foreground" />}>Menu Distribution Overview</SectionTitle>
-          <div className="grid grid-cols-2 gap-3">
-            {QUADRANTS.map((q) => {
-              const items = map.plottedRows.filter((r) => r.quadrant === q).sort((a, b) => b.waste - a.waste);
-              return (
-                <div key={q} className="rounded-xl bg-muted p-3">
-                  <QuadrantLabel quadrant={q} className="text-xs font-bold uppercase text-primary" />
-                  {items.length === 0 && <p className="mt-1 text-xs text-muted-foreground">None</p>}
-                  <ul className="mt-1 space-y-1">
-                    {items.map((r) => (
-                      <li key={r.item.id}>
-                        <Link
-                          to="/menu/$id"
-                          params={{ id: r.item.id }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 text-sm text-primary hover:underline"
-                        >
-                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: wasteColor(r.intensity) }} />
-                          <span className="truncate">{r.item.name}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <SuggestedOrders collapsible />
       </div>
 
       {/* Quick Actions */}

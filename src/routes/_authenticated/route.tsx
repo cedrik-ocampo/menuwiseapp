@@ -63,7 +63,7 @@ function CafeLayout() {
       <NavBar />
       <div className="min-w-0 flex-1 pb-24 md:pb-10">
         <AppHeader cafeName={cafe} />
-        <main className="mx-auto max-w-6xl px-5 py-6 md:px-8">
+        <main className="mx-auto max-w-[1600px] px-5 py-6 md:px-8">
           {db.ready && <AdminEditNotice />}
           {db.ready && ownerOnly && !(perm.isOwner || (path === "/ingredients/new" && perm.canInventory)) ? <p className="py-20 text-center text-muted-foreground">Only the café owner can add ingredients and menu items. You can log production, waste, and sales.</p> : db.ready ? <Outlet /> : <p className="py-20 text-center text-muted-foreground">Loading your café data…</p>}
         </main>

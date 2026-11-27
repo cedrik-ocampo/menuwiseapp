@@ -8,6 +8,8 @@ import { CAP_OPTIONS, compareCaps, type Confidence } from "@/lib/reorder";
 import { batchList, calendarOf, reorderList, suggestionSettings } from "@/lib/suggestions-data";
 import { shiftDate } from "@/lib/operating-calendar";
 import type { Ingredient, Purchase, SuggestionFeedback } from "@/lib/types";
+import { CollapseToggle } from "./CollapseToggle";
+import { useCollapsed } from "./useCollapsed";
 import { Field, Panel, SectionTitle, btnPrimary, btnSecondary, inputCls } from "./ui";
 
 const confTone: Record<Confidence, string> = { High: "bg-success/15 text-success", Medium: "bg-warning-soft text-warning", Low: "bg-muted text-muted-foreground" };
@@ -53,7 +55,9 @@ function receive(p: Purchase, shelf: number | undefined) {
 }
 
 /** "Suggested orders and batches" — reorder list for stock managers, batches for everyone who plans production. */
-export function SuggestedOrders({ showBatches = true }: { showBatches?: boolean }) {
+export function SuggestedOrders({ showBatches = true, collapsible = false }: { showBatches?: boolean; collapsible?: boolean }) {
+  const [openState, setOpenState] = useCollapsed("home-suggestions");
+  const open = !collapsible || openState;
   const db = useDB();
   const today = manilaToday();
   const settings = suggestionSettings(db);
@@ -75,7 +79,9 @@ export function SuggestedOrders({ showBatches = true }: { showBatches?: boolean 
 
   return (
     <Panel>
-      <SectionTitle right={<span className="text-xs text-muted-foreground">Waste cap {settings.wasteCapPct}%{calendar.confirmed ? "" : " · open days estimated"}</span>}>Suggested orders and batches</SectionTitle>
+      <SectionTitle right={<span className="text-right text-xs text-muted-foreground">Waste cap {settings.wasteCapPct}%{calendar.confirmed ? "" : " · open days estimated"}</span>}>Suggested orders and batches</SectionTitle>
+      {collapsible && <CollapseToggle open={open} onToggle={() => setOpenState(!openState)} label={`${actionable.length} to order${showBatches ? ` · ${batches.rows.length} batch${batches.rows.length === 1 ? "" : "es"}` : ""}`} />}
+      {open && (<div className={collapsible ? "mt-3 max-h-[70vh] overflow-y-auto pr-1" : ""}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm font-bold text-primary"><Truck className="h-4 w-4" />Reorder list</p>
         <div className="flex gap-2">
@@ -181,6 +187,7 @@ export function SuggestedOrders({ showBatches = true }: { showBatches?: boolean 
           </ul>
         </div>
       )}
+      </div>)}
       {ordering && <OrderDialog ingredient={ordering.ing} qty={ordering.qty} arrival={ordering.arrival} onClose={() => setOrdering(null)} onSaved={(q) => logFeedback({ kind: "reorder", targetId: ordering.ing.id, suggested: reorders.find((x) => x.ingredient.id === ordering.ing.id)?.result.order ?? q, action: q === (reorders.find((x) => x.ingredient.id === ordering.ing.id)?.result.order) ? "accepted" : "edited", editedValue: q, wasteCapPct: settings.wasteCapPct, confidence: ordering.conf })} />}
       <p className="mt-3 text-[11px] text-muted-foreground">By {currentUser().name || "you"} · suggestions never change stock until you save an order or a delivery.</p>
     </Panel>

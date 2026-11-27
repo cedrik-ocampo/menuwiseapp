@@ -158,7 +158,7 @@ export function AppHeader({ cafeName }: { cafeName: string }) {
   const db = useDB();
   return (
     <header className="bg-header text-header-foreground">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-6 md:px-8">
+      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-5 py-6 md:px-8">
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold">Today is {shortDate(todayISO())}.</h1>
           <CafeName initial={cafeName} />
