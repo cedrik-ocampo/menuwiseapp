@@ -23,10 +23,11 @@ export function MenuMapChart({ map, interactive = true, onSelect }: { map: Map; 
     return <p className="py-24 text-center text-sm font-medium text-muted-foreground">No sales data yet. Log sales to see the menu map.</p>;
   }
   return (
-    <div className="w-full">
-      <div className="relative aspect-square min-h-[360px] w-full overflow-hidden md:aspect-[4/3] rounded-2xl border border-border bg-card/40 shadow-sm">
+    <div className="min-w-0 w-full">
+      <div className="w-full overflow-x-auto rounded-2xl border border-border bg-card/40 shadow-sm">
+      <div className="relative aspect-square min-w-[480px] w-full">
       <ResponsiveContainer>
-        <ScatterChart margin={{ top: 36, right: 132, bottom: 36, left: 8 }}>
+        <ScatterChart margin={{ top: 24, right: 24, bottom: 24, left: 24 }}>
           <defs>
             {QUADS.map((q) => (
               <radialGradient key={q.key} id={`mmq-${q.key}`} cx={q.cx} cy={q.cy} r="1.1">
@@ -40,15 +41,15 @@ export function MenuMapChart({ map, interactive = true, onSelect }: { map: Map; 
             const bottom = q.cy === "100%";
             return <ReferenceArea key={q.key} x1={right ? mx : xDomain[0]} x2={right ? xDomain[1] : mx} y1={bottom ? yDomain[0] : my} y2={bottom ? my : yDomain[1]} fill={`url(#mmq-${q.key})`} fillOpacity={1} stroke="none" ifOverflow="hidden" label={<QuadLabel q={q} />} />;
           })}
-          <XAxis type="number" dataKey="x" name="Popularity" domain={xDomain} ticks={ticks(xDomain)} allowDataOverflow tickFormatter={(v: number) => (v < 0 ? "" : fmtNum(v))} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}>
-            <Label value="Popularity (total units sold, all time) →" position="bottom" offset={10} style={{ fontSize: 12, fill: "var(--primary)", fontWeight: 600 }} />
+          <XAxis height={72} type="number" dataKey="x" name="Popularity" domain={xDomain} ticks={ticks(xDomain)} allowDataOverflow tickFormatter={(v: number) => (v < 0 ? "" : fmtNum(v))} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}>
+            <Label value="Popularity (total units sold, all time) →" position="insideBottom" offset={12} style={{ fontSize: 12, fill: "var(--primary)", fontWeight: 600 }} />
           </XAxis>
-          <YAxis type="number" dataKey="y" name="Profitability" domain={yDomain} ticks={ticks(yDomain)} allowDataOverflow axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v: number) => `₱${fmtNum(v)}`}>
+          <YAxis width={72} type="number" dataKey="y" name="Profitability" domain={yDomain} ticks={ticks(yDomain)} allowDataOverflow axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v: number) => `₱${fmtNum(v)}`}>
             <Label value="Profitability (margin/unit) →" angle={-90} position="insideLeft" style={{ fontSize: 12, fill: "var(--primary)", fontWeight: 600, textAnchor: "middle" }} />
           </YAxis>
           <ZAxis type="number" dataKey="z" range={[80, 1400]} name="Waste value" />
-          {hasQuadrants && <ReferenceLine x={mx} stroke="var(--muted-foreground)" strokeOpacity={0.55} strokeDasharray="5 5" label={<PillLabel text={`Median: ${fmtNum(mx)} units`} at="top" />} />}
-          {hasQuadrants && <ReferenceLine y={my} stroke="var(--muted-foreground)" strokeOpacity={0.55} strokeDasharray="5 5" label={<PillLabel text={`Median: ${formatPeso(my)}`} at="right" />} />}
+          {hasQuadrants && <ReferenceLine x={mx} stroke="var(--muted-foreground)" strokeOpacity={0.55} strokeDasharray="5 5" />}
+          {hasQuadrants && <ReferenceLine y={my} stroke="var(--muted-foreground)" strokeOpacity={0.55} strokeDasharray="5 5" />}
           <Tooltip
             cursor={false}
             content={({ payload }) => {
@@ -81,7 +82,12 @@ export function MenuMapChart({ map, interactive = true, onSelect }: { map: Map; 
         </ScatterChart>
       </ResponsiveContainer>
       </div>
+      </div>
       <div className="mt-2 space-y-1 text-center text-xs text-muted-foreground">
+        {hasQuadrants && <p className="flex flex-wrap justify-center gap-x-4 gap-y-1 font-semibold text-foreground">
+          <span>Median popularity: {fmtNum(mx)} units</span>
+          <span>Median margin: {formatPeso(my)}</span>
+        </p>}
         <p className="flex flex-wrap items-center justify-center gap-2">
           <span>Lower waste</span>
           <span className="h-2 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${wasteColor(0)}, ${wasteColor(0.5)}, ${wasteColor(1)})` }} />
@@ -148,20 +154,8 @@ function QuadLabel({ q, viewBox }: { q: Quad; viewBox?: VB }) {
   return (
     <g pointerEvents="none">
       <rect x={px} y={py} width={w} height={22} rx={11} fill={q.color} fillOpacity={0.16} stroke={q.color} strokeOpacity={0.45} />
-      <text x={px + w / 2} y={py + 15} textAnchor="middle" fontSize={11} fontWeight={700} fill={q.color} style={{ letterSpacing: "0.04em" }}>{`${q.icon} ${q.name.toUpperCase()}`}</text>
+      <text x={px + w / 2} y={py + 15} textAnchor="middle" fontSize={11} fontWeight={700} fill={q.color}>{`${q.icon} ${q.name.toUpperCase()}`}</text>
     </g>
   );
 }
 
-function PillLabel({ text, at, viewBox }: { text: string; at: "top" | "right"; viewBox?: VB }) {
-  const { x = 0, y = 0, width = 0 } = viewBox ?? {};
-  const w = text.length * 6.6 + 18;
-  const cx = at === "top" ? x : x + width + 8 + w / 2;
-  const cy = at === "top" ? y - 18 : y;
-  return (
-    <g pointerEvents="none">
-      <rect x={cx - w / 2} y={cy - 10} width={w} height={20} rx={10} fill="var(--card)" stroke="var(--border)" />
-      <text x={cx} y={cy + 4} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--foreground)">{text}</text>
-    </g>
-  );
-}
