@@ -15,6 +15,7 @@ import { MenuSalesHistory } from "@/components/mw/SalesTab";
 import { SaleDialog } from "@/components/mw/SaleDialog";
 import { EditBatchDialog } from "@/components/mw/EditDialogs";
 import type { Batch } from "@/lib/types";
+import { RecipeEditor } from "@/components/mw/RecipeEditor";
 import { ingredientAmountCost, ITEM_TYPE_LABELS } from "@/lib/menu-costing";
 
 export const Route = createFileRoute("/_authenticated/menu/$id")({
@@ -37,6 +38,7 @@ function MenuItemView() {
   const db = useDB();
   const [editBatch, setEditBatch] = useState<Batch | null>(null);
   const [saleOpen, setSaleOpen] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState(false);
   const navigate = useNavigate();
   const m = db.menuItems.find((x) => x.id === id);
   if (!m) {
@@ -75,8 +77,11 @@ function MenuItemView() {
       </div>
 
       <Panel className="mt-6">
-        <SectionTitle>Recipe</SectionTitle>
-        {m.recipe.length === 0 ? (
+        <div className="flex items-center justify-between gap-2">
+          <SectionTitle>Recipe</SectionTitle>
+          {perm.isOwner && !editingRecipe && <button type="button" className={btnSecondary} onClick={() => setEditingRecipe(true)}>{m.type === "Outsourced" ? "Edit cost" : "Edit recipe"}</button>}
+        </div>
+        {editingRecipe ? <RecipeEditor item={m} onClose={() => setEditingRecipe(false)} /> : m.recipe.length === 0 ? (
           <p className="text-sm text-muted-foreground">{m.type === "Outsourced" ? "Outsourced item — no recipe tracked." : "No recipe ingredients recorded yet."}</p>
         ) : (() => {
           const lines = m.recipe.map((r) => {

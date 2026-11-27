@@ -47,3 +47,20 @@ export function itemTypeFromLabel(value: string): ItemType | null {
   if (normalized.includes("outsource")) return "Outsourced";
   return null;
 }
+export interface RecipeDraftLine { ingredientId: string; quantity: number; unit: string }
+
+/** Returns a list of problems; empty means the recipe can be saved. */
+export function validateRecipeDraft(lines: RecipeDraftLine[], ingredients: Pick<Ingredient, "id" | "unit">[]) {
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  lines.forEach((line, i) => {
+    const row = `Row ${i + 1}`;
+    const ing = ingredients.find((x) => x.id === line.ingredientId);
+    if (!line.ingredientId || !ing) { errors.push(`${row}: choose an ingredient.`); return; }
+    if (seen.has(line.ingredientId)) errors.push(`${row}: ingredient is listed twice.`);
+    seen.add(line.ingredientId);
+    if (!Number.isFinite(line.quantity) || line.quantity <= 0) errors.push(`${row}: amount must be more than 0.`);
+    if (!compatibleRecipeUnits(ing.unit).includes(line.unit as never)) errors.push(`${row}: unit ${line.unit} doesn't match the ingredient's unit (${ing.unit}).`);
+  });
+  return errors;
+}
